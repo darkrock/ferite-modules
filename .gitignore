@@ -35,4 +35,18 @@ shtool
 src/ferite_parser.output
 modules-config.m4
 scratch
+*.libs
+*.o
+*.la
+*.so
+*.slo
+*.lo
+MHash/MHash/MHash_*.[ch]
+config.*
+MHash/libtool
+MHash/stamp-h1
+apache/apache/apache_*.[ch]
+apache/stamp-h.in
+apache/stamp-h1
+*FarmYard
 
