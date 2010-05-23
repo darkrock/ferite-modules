@@ -1,0 +1,251 @@
+/*
+ * Copyright (c) 2004, Chris Ross
+ * Copyright (C) 2002, Sveinung Haslestad 
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+uses "crypt.lib";
+module-header {
+#include "utility.h"
+#include "base.h"
+#define selfCrypt ((MCRYPT)(self->odata))
+}
+
+/**
+ * @class Crypt
+ * @brief Objects of this class provide a mechanism for encrypting and decripting strings of data.
+ * @description Please check the examples directory in your installation for an example script.
+ */
+class Crypt
+{
+    number _iv_salt;
+    
+    /**
+     * @function constructor
+     * @declaration function constructor(string algo, string mode)
+     * @brief Create the instance with a specified algorithm and mode.
+     * @param string algo The algorithm to use. For the full list please consult the man page for mcrypt.
+     * @param string mode The encryption mode. As with the algorithm, please consult the man page.
+     */
+    native function constructor(string algo, string mode) {
+        self->odata  = mcrypt_module_open(algo->data, NULL,mode->data, NULL);
+        if( selfCrypt == MCRYPT_FAILED ) {
+            ferite_error(script, 0, "Error, couldn't initialize crypt module\n");
+            FE_RETURN_NULL_OBJECT;
+        }
+    }
+
+    /**
+     * @function setSalt
+     * @declaration function setSalt( number s )
+     * @param number s The new value for the encryption salt.
+     */    
+    function setSalt( number s ) {
+        self._iv_salt = s;
+    }
+    
+    /**
+     * @function setSecrets
+     * @brief This function is used to set the pass phrase for the encryption as well as setup the key length
+       required.
+     * @declaration function setSecrets( string pwd, number key_len )
+     * @param string pwd The pass phrase
+     * @param number key_len The length of key to use. Passing 0 will set the key length to be the default for
+	the algorithm being used.
+     */
+    native function setSecrets( string pwd, number key_len ) {
+        char *key,*iv = NULL;
+        int iv_size, iv_seed, err, flag;
+        
+        iv_seed = 42;
+        if( selfCrypt == NULL ) {
+            ferite_error( script, 0, "Internal error\n" );
+            FE_RETURN_FALSE;
+        }
+        
+        
+        key_len  /= 8;
+        if( key_len <= 0)
+	    key_len = mcrypt_enc_get_key_size( selfCrypt );
+        key = create_key( pwd->data, key_len);
+        if(flag = mcrypt_enc_mode_has_iv( selfCrypt )){
+	    FeriteVariable *salt;
+	    salt = ferite_hash_get(script,self->variables->variables,"_iv_salt");
+	    if( VAI(salt) )
+                iv_seed = VAI(salt);
+	    iv_size =  mcrypt_enc_get_iv_size( selfCrypt );
+	    iv = create_iv( iv_size, iv_seed );
+        }
+        
+        err = mcrypt_generic_init( selfCrypt, key, key_len, iv);
+        
+        if( err < 0 ) {
+	    mcrypt_perror(err);
+	    ferite_error(script, 0,"");
+	    FE_RETURN_FALSE;
+        }
+        FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function encrypt
+     * @brief Return the encrypted version of a given string.
+     * @declaration     function encrypt(string buf)
+     * @param string buf The string to encrypt.
+     * @return false if it fails, the encrypted string otherwise.
+     * @warning This function will throw an exception if the encryption fails.
+     */
+    native function encrypt(string buf){
+	int err; 	
+	FeriteVariable *ret_str;
+	if( selfCrypt == NULL ) {
+            ferite_error( script, 0, "Internal error\n");
+            FE_RETURN_FALSE;
+	}
+	ret_str = fe_new_str( "crypt_str", buf->data,buf->length,FE_CHARSET_DEFAULT );
+	err = mcrypt_generic (selfCrypt, VAS(ret_str)->data, VAS( ret_str)->length );
+	if( err ) {
+            ferite_variable_destroy( script , ret_str );
+            mcrypt_perror( err );
+            ferite_error( script, 0, "error\n" );
+            FE_RETURN_FALSE;
+	}
+	FE_RETURN_VAR( ret_str );
+    }
+    
+    /**
+     * @function decrypt
+     * @brief Return the decrypted version of a given string.
+     * @declaration     function decrypt(string buf)
+     * @param string buf The string to decrypt.
+     * @return false if it fails, the decrypted string otherwise.
+     * @warning This function will throw an exception if the encryption fails.
+     */
+    native function decrypt(string buf) {
+	FeriteVariable *ret_str;
+	ret_str = fe_new_str("new_str",buf->data,buf->length  ,FE_CHARSET_DEFAULT);
+	mdecrypt_generic (selfCrypt, VAS(ret_str)->data , VAS(ret_str)->length );
+	FE_RETURN_VAR(ret_str);
+    }
+    
+    /**
+     * @function needsIv
+     * @brief Discover if the specified encryption algorithm requires salt.
+     * @declaration     function needsIv()
+     * @return true if the algorithm does require salt, false otherwise.
+     */
+    native function needsIv(){
+        int flag;
+        if( selfCrypt == NULL ) {
+            ferite_error( script, 0, "Internal error\n");
+            FE_RETURN_FALSE;
+        }
+        flag = mcrypt_enc_mode_has_iv( selfCrypt );
+        FE_RETURN_LONG(flag);
+    }
+    
+    /**
+     * @function maxKeyLength
+     * @brief Discover the maximum key length for the given algorithm
+     * @declaration     function maxKeyLength()
+     * @return The size of the key
+     */
+    native function maxKeyLength(){
+        int len ;
+        if( selfCrypt == NULL ) {
+	    ferite_error( script, 0, "Internal error\n");
+	    FE_RETURN_FALSE;
+        }
+        //Fixme, check if module_open() is called
+        
+        len =  mcrypt_enc_get_key_size( selfCrypt );
+        FE_RETURN_LONG(len*8);
+    }
+
+    native function destructor()
+    {
+        if( selfCrypt == NULL ) {
+            ferite_error( script, 0, "Internal error\n");
+            FE_RETURN_FALSE;
+        }
+        mcrypt_generic_deinit(selfCrypt);
+        mcrypt_module_close(selfCrypt);
+    }
+    
+    
+    /**
+     * @function b64Encrypt
+     * @brief Return the base64 encoded encrypted version of a given string.
+     * @declaration     function b64Encrypt(string buf)
+     * @param string buf The string to encrypt.
+     * @return false if it fails, the encrypted string otherwise.
+     * @warning This function will throw an exception if the encryption fails.
+     */
+    function b64Encrypt(string plain) {
+        string enc = self.encrypt(plain);
+	return self._b64_encode( enc );
+    }
+    
+    /**
+     * @function b64Decrypt
+     * @brief Return the decrypted version of a base64 encoded encrypted string.
+     * @declaration     function b64Decrypt(string buf)
+     * @param string buf The string to decrypt.
+     * @return false if it fails, the decrypted string otherwise.
+     * @warning This function will throw an exception if the encryption fails.
+     */
+    function b64Decrypt( string cipher ) {
+	string bin;
+	bin = self._b64_decode( cipher );
+	return self.decrypt( bin );
+    }
+    
+    private native function _b64_encode(string text) {
+	FeriteVariable *str;
+	char* enc = base64encode( text->data, text->length );
+ 	//FIXME
+	//FE_RETURN_STR(enc,0);
+ 	str = fe_new_str( "string",enc ,  0 , FE_CHARSET_DEFAULT );
+	ffree( enc );
+	FE_RETURN_VAR( str );
+    }
+    
+    private native function _b64_decode( string bin ) {
+	FeriteVariable *str;
+	int len;
+	unsigned char* text ;
+	text = fmalloc( base64decode_len( bin->data ) );
+	len = base64decode( text, bin->data );
+	str = fe_new_str( "string",text , len, FE_CHARSET_DEFAULT );
+	ffree( text );
+	FE_RETURN_VAR( str );
+    }
+}
+/**
+ * @end
+ */
+

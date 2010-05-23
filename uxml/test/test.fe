@@ -1,0 +1,115 @@
+uses "test","uxml","console","sys","string","array";
+
+class uXML_test extends Test
+{
+    string data = "<main><a>Foo</a><b><c>1</c><c>2</c></b></main>";
+
+    function uXML_test( )
+    {
+	super.Test();
+    }
+    function parse( )
+    {
+	object xml = new uXML();
+	if( xml.parse( self.data ) )
+	    return 0;
+	return 1;
+    }
+    function parsefile( )
+    {
+	object xml = new uXML();
+	if( !xml.parsefile("data.xml") )
+	    return 1;
+	if( xml.path_asString("main.d.e") != "foo" )
+	    return 2;
+	return 0;
+    }
+    function asObject( )
+    {
+	object o, xml = new uXML();
+	if( !xml.parse( self.data ) )
+	    return 1;
+	if( !(o = xml.asObject()) )
+	    return 2;
+	iferr {
+	    if( o.main.b.c[0] != "1" )
+		return 3;
+	} fix {
+	    return 4;
+	}
+	return 0;
+    }
+    function path_asString( )
+    {
+	object xml = new uXML();
+	if( !xml.parse( self.data ) )
+            return 1;
+	if( xml.path_asString("main.a") != "Foo" )
+	    return 2;
+	if( xml.path_asString("main.b") != "<c>1</c><c>2</c>" )
+	    return 3;
+	return 0;
+    }
+    function path_asArray( )
+    {
+	object xml = new uXML();
+	array a;
+
+	if( !xml.parse( self.data ) )
+            return 1;
+	a = xml.path_asArray("main.a");
+	if( a[0] != "Foo")
+	    return 2;
+	a = xml.path_asArray("main.b.c");
+	if( a[0] != "1" )
+	    return 3;
+	if( a[1] != "2" )
+	    return 4;
+	return 0;
+    }
+    function path_asRef( )
+    {
+	object o, p, xml = new uXML();
+	if( !xml.parse( self.data ) )
+            return 1;
+	if( !(o = xml.path_asRef("main")) )
+	    return 2;
+	if( !(p = o.path_asRef("b")) )
+	    return 3;
+	if( p.path_asString("c") != "1" )
+	    return 4;
+	return 0;
+    }
+    function path_addLeaf( )
+    {
+	object xml = new uXML();
+	if( !xml.parse( self.data ) )
+	    return 1;
+	if( !xml.path_addLeaf("main", "foo","Hello world"))
+	    return 2;
+	if( xml.path_asString("main.foo") != "Hello world" )
+	    return 3;
+	return 0;
+    }
+    function parse_query( )
+    {
+	object xml = new uXML();
+	array a;
+	if( !xml.parse_query( "foo=bar&a=1&b=2&c=a%20a&foo=baz" ) )
+	    return 1;
+	if( xml.path_asString( "c" ) != "a a" )
+	    return 2;
+	
+	if( !a = xml.path_asArray( "foo" ) )
+	    return 3;
+	if( a[0] != "baz" )
+	    return 4;
+	if( a[1] != "bar" )
+	    return 5;
+	return 0;
+    }
+}
+
+object o = new uXML_test();
+o.run("uXML");
+

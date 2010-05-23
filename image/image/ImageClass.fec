@@ -1,0 +1,768 @@
+uses "image.lib";
+uses "Polygon.fec","Font.fec";
+
+/**
+ * @class Image
+ * @description this class provide the facility to create and manipulate images from 
+   ferite.
+ */ 
+class Image 
+{ 	
+	/**
+	 * @variable lastLoaded
+	 * @type string
+	 * @brief The path of the last loaded image
+	 */
+	string lastLoaded;
+	
+    /**
+     * @function create
+     * @declaration function create( number x,number y )
+     * @brief Use this function to create a new image to work with. A blank canvas if you will.
+     * @param number x
+     * @param number y
+     * @return number true on success false on failure.
+     */
+    native function create( number x, number y ) 
+    {
+		if( SelfImg != NULL ) free_image( SelfImg );
+		
+		self->odata = create_image(VAI(params[0]), VAI(params[1]));
+		if( SelfImg == NULL ) {
+			ferite_error(script, 0, "[ferite::image] Error, failed to create image\n");
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+    }
+      
+    /**
+     * @function saveAsType
+     * @declaration function saveAsType( string path, string format )
+     * @brief save an image on disk with a specified image type.
+     * @param string path the complete path to where the image should be written.
+     * @param string format the format of the image for example png, jpg, or gif.
+     * @return number true on success false on failure.
+     */
+    native function saveAsType( string path, string format )
+    {
+		int err;
+		err = save_image( SelfImg, path->data, format->data );
+		if( err ) {
+			ferite_set_error( script, -1, "[ferite::image] Error, failed to save %s/%s\n",
+							  path->data, format->data);
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function saveTmpGif
+     * @declaration function saveTmpGif( string dir ) 
+     * @brief use this function to save the image in a temporary file.
+     * @param string dir. The directory where you want to store the temporary image file.
+     * @return string the full path to the newly created tmeporary image file.
+     */
+    native function saveTmpGif( string dir ) {
+		int err;
+		char *path;
+		FeriteVariable *fe_path;
+		
+		set_image( script, SelfImg );
+		
+		//Fixme, check if directory is valid
+		if( strlen(dir->data) == 0 ) {
+			ferite_error(script, 0, "[ferite::image] Error, can't write to directory %s\n", dir->data);
+			FE_RETURN_FALSE;
+		}
+		
+		//get an uniqe filename ( full path )
+		path = tempnam( dir->data, "gif_" );
+		if( path == NULL ) {
+			ferite_error(script, 0, "[ferite::image] Error, couldn't create tempfile in %s\n", dir->data);
+			FE_RETURN_FALSE;
+		}
+		
+		if ( err = save_image( SelfImg, path , "gif")) {
+			ferite_error( script, 0, "[ferite::image] Error, saving image FAILED\n" );
+			FE_RETURN_FALSE;
+		}
+		
+		fe_path = fe_new_str("foo", path, 0, FE_CHARSET_DEFAULT );
+		FE_RETURN_VAR( fe_path );
+    }
+    
+    native function destructor( ) 
+    {
+	if( SelfImg ) {
+	    free_image( SelfImg );
+	    SelfImg == NULL;
+	}
+    }
+
+    /**
+     * @function save
+     * @declaration function save( string path ) 
+     * @brief save the image to disk
+     * @param string path the filename
+     * @return number true on success or false on failure.
+     */    	
+    native function save( string path ) 
+    {
+		char err;
+		err = save_image( SelfImg, path->data, NULL);
+		if( err ){
+			ferite_error(script, 0, "[ferite::image] Error, couldn't save image %s\n", path->data);
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+    }
+	
+	/**
+	 * @function setAntiAlias
+	 * @declaration function setAntiAlias( number toggle )
+	 * @brief Turn on/off anti aliasing
+	 * @param number toggle true for on, false for off
+	 */
+	native function setAntiAlias( number toggle ) {
+		imlib_context_set_anti_alias( VAI(params[0]) );
+	}
+	
+    /**
+     * @function load
+     * @declaration function load( string path ) 
+     * @brief load an image from file to work with
+     * @param string path the name of the file to open
+     * @return number true on success or false on failure.
+     */  
+	function load( string path ) {
+		.lastLoaded = path;
+		return .__load(path);
+	}
+    native function __load( string path ) 
+    {		
+		if( SelfImg )
+			free_image( SelfImg );
+		
+		self->odata = load_image( path->data );
+		if( SelfImg == NULL ) {
+			ferite_error( script, 0,"[ferite::image] Error, couldn't load image %s\n", path->data);
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+    }
+
+	
+    //* **********************************
+    // Functions for getting image info
+    //* **********************************
+    /**
+     * @function getWidth
+     * @declaration function getWidth()
+     * @brief get the width of the image you are working with
+     * @return number width
+     */  
+    native function getWidth( )
+    {
+	set_image( script, SelfImg );
+	FE_RETURN_LONG( imlib_image_get_width() );		
+    }
+    
+    /**
+     * @function getHeight
+     * @declaration function getHeight( )
+     * @brief get the height of the image you are working with
+     * @return number heigth
+     */
+    native function getHeight( )
+    {
+	set_image( script, SelfImg );
+	FE_RETURN_LONG( imlib_image_get_height() );		
+    }
+
+	
+    //* ****************************
+    // Copy operations
+    //* ****************************
+
+    /**
+     * @function copy
+     * @declaration function copy( )
+     * @brief create a copy of the current image
+     * @return object an new object of type image
+     */
+    native function copy( )
+    {
+	FeriteNamespaceBucket *nsb;
+	FeriteVariable *image_copy;
+		
+	set_image( script, SelfImg );
+	
+	nsb = ferite_find_namespace( script, script->mainns, "Image", FENS_CLS );
+	if( nsb == NULL ) {
+	    ferite_error(script, 0, "[ferite::image] Error creating image object\n");
+	    FE_RETURN_NULL_OBJECT;
+	}
+
+	image_copy = ferite_new_object( script, nsb->data, NULL );
+	
+	if( image_copy == NULL ) {
+	    ferite_error(script, 0, "[ferite::image] Error, creating image object\n");
+	    FE_RETURN_NULL_OBJECT;
+	}
+	
+	VAO(image_copy)->odata = imlib_clone_image();
+	FE_RETURN_VAR( image_copy );
+    }
+
+    /**
+     * @function copyPart
+     * @declaration function copyPart( number  x,number y, number  w, number h ) 
+     * @brief copy a part of the current image to a new image
+     * @param number x the x coordinate to start from
+     * @param number y the y coordinate to start from
+     * @param number w the length of the new image from x
+     * @param number h the higth of the new from y
+     * @return object an new object of type image
+     */
+    native function copyPart( number  x, number y, number  w, number h ) 
+    {
+	FeriteNamespaceBucket *nsb;
+	FeriteVariable *image_copy;
+
+	set_image( script, SelfImg );
+
+	nsb = ferite_find_namespace( script, script->mainns, "Image", FENS_CLS );
+	if( nsb == NULL ){
+	    ferite_error(script, 0, "error creating image object\n");
+	    FE_RETURN_NULL_OBJECT;
+	}
+
+	image_copy = ferite_new_object( script,nsb->data,NULL);
+	if( image_copy == NULL ) {
+	    ferite_error(script, 0, "[ferite::image] Error, creating image object\n");
+	    FE_RETURN_NULL_OBJECT;
+	}
+
+	VAO(image_copy)->odata = imlib_create_cropped_scaled_image( (int)x, (int)y, (int)w, (int)h, (int)w, (int)h);
+	FE_RETURN_VAR(image_copy);
+    }
+
+    //* ***********************************
+    // Image manipulation 
+    //* ***********************************
+    /**
+     * @function resize
+     * @declaration function resize( number w, number h ) 
+     * @brief resize the image 
+     * @param number w the width of the image after scaling
+     * @param number h the height of the image after scaling
+     * @return number true on success false on failure
+     */
+    native function resize( number w, number h ) 
+    {
+		Imlib_Image copy;
+		
+		set_image( script, SelfImg );
+		if( (copy = imlib_create_cropped_scaled_image(0, 0, imlib_image_get_width() , imlib_image_get_height() , 
+													  (int)w, (int)h )) != NULL) {
+			
+			free_image(SelfImg);
+			self->odata=copy;
+			FE_RETURN_TRUE;
+		}
+		FE_RETURN_FALSE;
+    }
+
+    /**
+     * @function crop
+     * @declaration function crop( number x, number y, number w, number h )
+     * @brief crop an image
+     * @param number x The x co-ordinate
+     * @param number y The y co-ordinate
+     * @param number w The width
+     * @param number h The height
+     * @return number true on success false on failure
+     */
+    native function crop( number x, number y, number w, number h )
+    {
+		Imlib_Image tmp;
+		
+		set_image( script, SelfImg );
+		
+		tmp = imlib_create_cropped_image((int) x, (int)y ,(int)w, (int) h);
+		free_image(SelfImg);
+		self->odata=tmp;
+		
+		FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function rotate
+     * @declaration function rotate( number angle ) 
+     * @brief rotate an image
+     * @param number angle 
+     */ 	
+    native function rotate( number angle ) 
+    {	
+		int a = angle;
+		
+		set_image( script, SelfImg );
+		if( a % 90 == 0)
+			imlib_image_orientate(a/90);
+		else {		     
+			Imlib_Image tmp;
+			tmp = imlib_create_rotated_image(RAD(a));
+			/* printf("angle: %f\n", RAD(a)); */
+			free_image(SelfImg);
+			self->odata=tmp;
+		}
+		
+		FE_RETURN_TRUE;		
+    }
+
+    /**
+     * @function mirrorX
+     * @declaration function mirrorX( )
+     * @brief This will flip the image horizontally
+     * @return true 
+     */ 	
+    native function mirrorX( )
+    {
+		
+	set_image( script, SelfImg );
+	imlib_image_flip_horizontal();
+	
+	FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function mirrorY
+     * @declaration function mirrorY( ) 
+     * @brief This will flip the image vertically
+     * @return true 
+     */ 
+    native function mirrorY( ) 
+    {
+	set_image( script, SelfImg );
+	imlib_image_flip_vertical();
+	
+	FE_RETURN_TRUE;	
+    }
+
+    //* *************************
+    // Text drawing functions 
+    // ( Functions fot caculating text-size is found in the Font class )
+    //* *************************
+    
+    /**
+     * @function writeCenter
+     * @declaration function writeCenter( string str, object fnt ) 
+     * @brief write text at the center of the image
+     * @param string, the string to write
+     * @param object an font object to use for writing
+     * @return true on success false on failure
+     */ 
+    native function writeCenter( string str, object fnt ) 
+    {
+	FeriteVariable *col;
+	col = ferite_object_get_var( script, fnt, "color" );
+	if( col == NULL ) {
+	    ferite_error( script, 0, "[ferite::image] Error, font object has no color \n");
+	    FE_RETURN_FALSE;
+	}
+
+	set_color( script, VAO(col) );
+	draw_text( SelfImg , str->data ,  -1, -1 , fnt->odata, 0);
+	FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function write
+     * @declaration function write( string str , object fnt , number x, number y, number angle ) 
+     * @brief write text starting at a specified coordinate
+     * @param string, the string to write 
+     * @param object an font object to use for writing
+     * @param number the x cooradinate 
+     * @param number the y cooradinate
+     * @param number the angle
+     * @return true on success false on failure
+     */ 
+    native function write( string str , object fnt , number x, number y, number angle ) 
+    {
+	FeriteVariable *col;
+	col = ferite_object_get_var( script, fnt, "color" );
+	if( col == NULL )
+	    ferite_error( script, 0, "error, font object has no color \n");
+	set_color( script, VAO(col) );
+	draw_text( SelfImg , str->data , (int) x, (int) y , fnt->odata, (int) angle);
+    }
+
+    //* ****************************
+    // Drawing primitives
+    //* ***************************
+
+    /**
+     * @function drawLine
+     * @declaration function drawLine( number x1, number y1, number x2, number y2, object color)
+     * @brief draw a line ...
+     * @param number the x coordiante to start drawing
+     * @param number the y coordiante to start drawing
+     * @param number the x coordiante to stop drawing
+     * @param number the y coordiante to stop drawing
+     * @param object an font object to use for writing
+     * @return true
+     */ 
+    native function drawLine( number x1, number y1, number x2, number y2, object color)
+    {
+	set_image( script, SelfImg );
+	set_color(script,color);
+	imlib_image_draw_line((int) x1,(int) y1, (int) x2 , (int) y2, 0); 
+	FE_RETURN_TRUE;
+    }
+    
+    /**
+     * @function drawRectangle
+     * @declaration function drawRectangle( number x, number y, number w, number h, object color, number fill )
+     * @brief draw a ractangle on the image
+     * @param number the x coordiante 
+     * @param number the y coordiante 
+     * @param number the w the width
+     * @param number the h the height
+     * @param object an font object to use for writing
+     * @param number true to fill the rectangle false to just draw the outline.
+     * @return true
+     */ 
+    native function drawRectangle( number x, number y, number w, number h, object color, number fill )
+    {
+
+	set_image( script, SelfImg );
+	set_color(script,color);
+	
+	if( fill )
+	    imlib_image_fill_rectangle((int) x,(int )y, (int) w, (int) h);
+	else
+	    imlib_image_draw_rectangle((int) x,(int )y, (int) w, (int) h);
+	FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function drawGradientRectangle
+     * @declaration function drawGradientRectangle( number x, number y, number w, 
+     *                              number h, object start_color, object end_color, number angle ) 
+     * @brief draw a gradient ractangle
+     * @param number the x coordiante 
+     * @param number the y coordiante 
+     * @param number the w the width
+     * @param number the h the height
+     * @param object an color object for the start color
+     * @param object an color object for the end color
+     * @param number the angle to use
+     * @return true
+     */ 	
+    native function drawGradientRectangle( number x, number y, number w, 
+	    number h, object start_color, object end_color, number angle ) 
+    {
+	Imlib_Color_Range range; 
+	
+	set_image( script, SelfImg );
+	
+	range = imlib_create_color_range();
+	imlib_context_set_color_range( range ); 
+	set_color(script, start_color ); 
+	imlib_add_color_to_color_range(0); 
+	set_color(script, end_color ); 
+	imlib_add_color_to_color_range( sqrt(w*w+h*h) );
+	
+	imlib_image_fill_color_range_rectangle( (int)x, (int)y , (int)w, (int)h, (double)angle);//angle in degrees !?
+	imlib_free_color_range();
+	FE_RETURN_TRUE;
+
+    }
+
+    /**
+     * @function fill
+     * @declaration function fill( object color )
+     * @brief fill the hole image with a color
+     * @param object an color object 
+     * @return true
+     */	
+    native function fill( object color )
+    {
+	set_image( script, SelfImg );
+	set_color(script,color);
+	imlib_image_fill_rectangle( 0, 0, imlib_image_get_width() , imlib_image_get_height() );
+	FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function blend
+     * @declaration function blend( object src, number x, number y ) 
+     * @brief blend in another image
+     * @param object the image
+     * @param number the x coordiante  
+     * @param number the y coordiante 
+     * @return true
+     */	
+    native function blend( object src, number x, number y ) 
+    {
+	//We don't need to set context,  but set_image() will check for errors
+	set_image( script, SelfImg );
+	set_image( script, src->odata);
+	blend_image( SelfImg, src->odata, (int) x , (int) y );
+    }
+		
+    /**
+     * @function drawCircle
+     * @declaration function drawCircle( number x, number y, number R, object color, number open ) 
+     * @brief draw a cirle in your image
+     * @param number the x coordiante  
+     * @param number the y coordiante 
+     * @param number the R radius
+     * @param object the color the use
+     * @param number if true fill the circle, false to leave it open
+     */	
+    native function drawCircle( number x, number y, number R, object color, number open ) 
+    {
+	set_image( script, SelfImg );
+	set_color( script, color );
+
+	if( (int) open )
+	    imlib_image_fill_ellipse( (int) x, (int) y, (int) R, (int) R);
+	else
+	    imlib_image_draw_ellipse( (int) x, (int) y, (int) R, (int) R);
+    }
+
+    /**
+     * @function drawEllipse
+     * @declaration function drawEllipse( number x, number y, number a, number b, object color, number open )
+     * @brief draw a ellipse 
+     * @param number the x coordiante  
+     * @param number the y coordiante 
+     * @param number a the radius for the height
+     * @param number b the radius for the width
+     * @param object the color the use
+     * @param number if true fill the ellipse, false to leave it open
+     */	
+    native function drawEllipse( number x, number y, number a, number b, object color, number open )
+    {
+		
+	set_image( script, SelfImg );
+	set_color( script, color );
+	
+	if( (int) open )
+	    imlib_image_fill_ellipse( (int) x, (int) y, (int) a, (int) b);
+	else
+	    imlib_image_draw_ellipse( (int) x, (int) y, (int) a, (int) b);
+    }
+
+    /**
+     * @function addPolygon
+     * @declaration function addPolygon( object polygon, object color, number closed )
+     * @brief add a polygon
+     * @param object polygon  
+     * @param object color
+     * @param number closed
+     * @return true
+     */
+    native function addPolygon( object polygon, object color, number closed )
+    {
+	set_image( script, SelfImg );
+	set_color( script, color );
+	imlib_image_draw_polygon(polygon->odata, (int) closed);
+	FE_RETURN_TRUE;
+    }	
+    
+    /**
+     * @function toARGBString
+     * @description Get a string with the contents of the image as ARGB format
+     * @declaration function toARGBString()
+     */
+    native function toARGBString() {
+        FeriteString *ret = NULL;
+        set_image( script, SelfImg ); {
+            DATA32 *data = imlib_image_get_data_for_reading_only();
+            int width = imlib_image_get_width();
+            int height = imlib_image_get_height();
+            int length = (width * height); /* 4 == bytes per pixel */
+            ret = ferite_str_new( script, (char*)data, length * 4, FE_CHARSET_DEFAULT );
+            FE_RETURN_STR( ret, FE_TRUE );
+        }
+    }
+    /**
+     * @function toRGBAString
+     * @description Get a string with the contents of the image as ARGB format
+     * @declaration function toRGBAString()
+     */
+    native function toRGBAString() {
+        FeriteString *ret = NULL;
+        set_image( script, SelfImg ); {
+            char *data = (char*)imlib_image_get_data_for_reading_only();
+            char *returndata = NULL;
+            int width = imlib_image_get_width();
+            int height = imlib_image_get_height();
+            int length = (width * height); /* 4 == bytes per pixel */
+            char r, g, b, a;
+            int i = 0;
+            
+            returndata = fmalloc(length * 4);
+            for( i = 0; i < length; i++ ) {
+                a = data[i * 4];
+                r = data[(i * 4) + 1];
+                g = data[(i * 4) + 2];
+                b = data[(i * 4) + 3];
+                returndata[i * 4] = r;
+                returndata[(i * 4) + 1] = g;
+                returndata[(i * 4) + 2] = b;
+                returndata[(i * 4) + 3] = a;
+            }
+            ret = ferite_str_new( script, (char*)returndata, length * 4, FE_CHARSET_DEFAULT );
+            ffree( returndata);
+            FE_RETURN_STR( ret, FE_TRUE );
+        }
+    }
+/*
+	native function bumpMap( number angle, number elevation, number depth, number red, number green, number blue, number ambient ) {
+		self->odata = bump_map( SelfImg, (int)angle, (int)elevation, (int)depth, (int)red, (int)green, (int)blue, (int)ambient );
+	}
+	native function bumpMapPoint( number x, number y, number z, number depth, number red, number green, number blue, number ambient ) {
+		self->odata = bump_map_point( SelfImg, (int)x, (int)y, (int)z, (int)depth, (int)red, (int)green, (int)blue, (int)ambient );
+	}
+*/	
+	native function blur( number radius ) {
+		set_image( script, SelfImg );
+		imlib_image_blur( (int)radius );
+	}
+	native function sharpen( number radius ) {
+		set_image( script, SelfImg );
+		imlib_image_sharpen( (int)radius );
+	}
+}
+/**
+ * @end class image
+ */
+
+/**
+ * @class Color
+ * @brief Color object used for specifying a rgba colour (red,green,blue,alpha)
+ */
+class Color 
+{
+    /**
+     * @variable r
+     * @type number
+     * @brief The amount of red.
+     */
+    number r;
+    /**
+     * @variable g
+     * @type number
+     * @brief The amount of green.
+     */
+    number g;
+    /**
+     * @variable b
+     * @type number
+     * @brief The amount of blue.
+     */
+    number b;
+    /**
+     * @variable a
+     * @type number
+     * @brief The alpha channel
+     */
+    number a;
+    
+    /**
+     * @function constructor
+     * @declaration function constructor( number R, number G, number B, number A )
+     * @brief the constructor ot the color object
+     * @param number red
+     * @param number green
+     * @param number blue
+     * @param number alpha channel
+     * @return the newly created color object
+     */
+    function constructor( number R, number G, number B, number A )
+    {
+	self.r = R;
+	self.g = G;
+	self.b = B;
+	self.a = A;
+    }
+}
+/**
+ * @end class color
+ */
+
+/**
+ * @class Point
+ * @brief a class to hold a coordiante
+ */
+class Point 
+{
+    /**
+     * @variable x
+     * @type number
+     * @brief the x coordinate
+     */
+    number x;
+    /**
+     * @variable y
+     * @type number
+     * @brief the y coordinate
+     */
+    number y;
+}
+/**
+ * @end class point
+ */
+
+/**
+ * @class Size
+ * @brief a class to hold a width and height
+ */
+class Size
+{
+    /**
+     * @variable width
+     * @type number
+     */
+    number width;
+    /**
+     * @variable height
+     * @type number
+     */
+    number height;
+}
+/**
+ * @end
+ */
+
+/**
+ * @class Rect
+ * @brief holds two objects, a point and size object
+ */
+class Rect 
+{
+    /**
+     * @variable origin
+     * @type object
+     * @brief The origin of the rectangle
+     */
+    object origin;
+    /**
+     * @variable size
+     * @type object
+     * @brief The size of the rectangle
+     */
+    object size;
+
+    function constructor( object o, object s ) 
+    {
+	.origin = o;
+	.size = s;
+    }
+}
+/**
+ * @end
+ */

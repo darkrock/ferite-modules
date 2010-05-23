@@ -1,0 +1,5 @@
+uses "iconv", "console";
+
+object o = iconv.open( 'UTF-8', 'ISO-8859-2' );
+
+Console.println( o.convert('Hello World') );

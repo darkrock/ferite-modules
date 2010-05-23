@@ -1,0 +1,14 @@
+uses "embfer";
+uses "array";
+uses "console";
+
+object file = null;
+object compiler = new Embfer();
+
+if( Array.size(argv) > 0 )
+    file = Sys.openfile( argv[0], Sys.O_RDONLY );
+else
+    file = Sys.stdin();
+
+compiler.setOutputFunction( "Console.println" );
+eval( compiler.fromString(file.toString()) );

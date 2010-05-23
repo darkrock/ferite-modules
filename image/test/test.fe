@@ -1,0 +1,9 @@
+uses "console","image";
+
+object fnt = new Font("cinema",20);
+object col= new Color(255,2,2,2);
+
+object pic = new Image();
+pic.load("logo.png");
+pic.write("Hello world",fnt,3,5,12);
+pic.save("new.jpg");

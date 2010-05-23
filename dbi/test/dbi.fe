@@ -1,0 +1,319 @@
+#!/usr/bin/env ferite
+
+uses "test";
+uses  "regexp"; 
+uses "console"; 
+uses "sys"; 
+uses "dbi";
+
+
+global {
+    string proto = "pgsql";
+    string username = "postgres";
+    string password = "";
+    string host = "localhost";
+    string database = "template1";
+}
+
+class testDbi 
+extends Test
+{
+
+    object dbh;     
+    constructor()
+    {
+	super();
+	self.dbh = Dbi.connect(proto, username, password, host, database);
+    }
+    destructor()
+    {
+	self.dbh.disconnect();
+	return 0;
+    }
+    
+    function query( ) 
+    {
+	object res = self.dbh.query("SELECT 1");
+	if( res == null )
+	    return 1;
+	
+	return 0;
+    }
+
+    function lastQueryString( ) 
+    {
+	string testQueryLast = "Tinky winky!";
+	self.dbh.query(testQueryLast);
+	if( self.dbh.lastQueryString() != testQueryLast )
+	    return 1;
+	
+	return 0;
+    }
+    
+    function queryBinary( ) 
+    {
+	object res = self.dbh.queryBinary("SELECT 1");
+	if( res == null )
+	    return 1;
+	
+	return 0;
+    }
+    
+    function errstr( ) 
+    {
+	object res = self.dbh.query("SELECT fake FRO error");
+	if(! self.dbh.errstr() )
+	    return 1;
+
+	return 0;
+    }
+
+    function connectInfo( ) 
+    {
+	array arr = self.dbh.connectInfo();
+	if(arr["username"] != "postgres")
+	    return 1;
+	if(arr["password"] != "")
+	    return 2;
+	if(arr["protocol"] != "pgsql")
+	    return 3;
+	
+	return 0;
+    }
+    
+    function seqCurrVal( ) 
+    {
+	if( self.dbh.seqCurrVal("my_sequence") == true)
+	    return 1;
+	
+	return 0;
+    }
+    function seqNextVal( ) 
+    {
+	if( self.dbh.seqNextVal("my_sequence") == false)
+	    return 1;
+	
+	return 0;
+    }
+    
+    function isReservedWord( ) 
+    {
+	if(! self.dbh.isReservedWord("UPDATE") )
+	    return 1;
+	return 0;
+    }
+
+    function quote( ) 
+    {
+	if( self.dbh.quote("\'") != "\\'" )
+	    return 1;
+	
+	return 0;
+    }
+    
+    function driverName( ) 
+    {
+	string str = self.dbh.driverName();
+	if (str != "pgsql")
+	    return 1;
+	
+	return 0;
+    }
+    function changeDatabase( ) 
+    {
+	if(! self.dbh.changeDatabase("pgsql") )
+	    return 1;
+	
+	return 0;
+    }
+    
+    function clearOptions( ) 
+    {
+	if(! self.dbh.clearOptions() )
+	    return 1;
+	
+	return 0; 
+    }   
+    
+    function setOption( ) 
+    {
+	if(! self.dbh.setOption("test", "test") )
+	    return 1;
+	
+	return 0; 
+    }   
+ 
+   function setOptionNumeric( ) 
+   {
+       if(! self.dbh.setOptionNumeric("test", 2) )
+	   return 1;
+       
+       return 0; 
+   }
+   
+   function connect( ) 
+   {
+       return 0; 
+   }
+   
+   function disconnect( ) 
+   {
+       return 0; 
+   }
+   function method_missing()
+   {
+       return 0;
+   }
+
+    function listDbs( ) 
+    {
+	object res = self.dbh.listDbs();
+	if( res == null )
+	    return 1;
+	
+	return 0;
+    }
+
+    function listTables( ) 
+    {
+	object res = self.dbh.listTables("");
+	if( res == null )
+	    return 1;
+	
+	return 0;
+    }
+
+
+}
+
+class testDbiResult 
+extends Test
+{
+    object dbh;
+
+    constructor( )
+    {
+	super();
+	self.dbh = Dbi.connect(proto, username, password, host, database);
+    }
+    
+    function rows( ) 
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");
+
+	if( res.rows() <= 0 )
+	    return 1;
+	
+        return 0;
+    }
+
+    function nextRecord( )
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");
+	if(! res.nextRecord() )
+	    return 1;
+
+        return 0;
+    }
+
+    function allRecords( )
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");
+	if(! res.allRecords() )
+	    return 1;
+
+        return 0;
+    }
+    
+    function nextObject( ) 
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");	
+	if(! res.nextObject())
+	    return 1;
+
+	return 0;
+    }
+
+    function allObjects( ) 
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");	
+	if(! res.allObjects() )
+	    return 1;
+	
+	return 0;
+    }
+
+    function columns()
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");	
+	if( res.columns() != 1 )
+	    return 1;
+
+	return 0;
+    }
+
+    function columnIsNull( ) 
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP");	
+	object row = res.nextObject();
+	if( res.columnIsNull(0) )
+	    return 0;
+	
+	return 1;
+    }
+
+    function columnName( )
+    {
+        object res = self.dbh.query("SELECT CURRENT_TIMESTAMP AS tttt");	
+	object row = res.nextObject();
+	if( res.columnName(0) != "t_time")
+	    return 0;
+	
+	return 1;
+    }
+    function columnLength( )
+    {
+	object res = self.dbh.query("SELECT CURRENT_TIMESTAMP AS tttt");	
+	object row = res.nextObject();
+ 	if( res.columnLength(0) != 4 )
+	    return 0;
+	
+	return 1;
+    }
+
+
+    /* leave them for now. */
+    function finish( ) 
+    {
+	return 0;
+    }
+
+ 
+    function setRecordPreviousRecord( )
+    {
+        return 0;
+    }
+    
+    function setRecordFirstRecord( )
+    {
+        return 0;
+    }
+    
+    function setRecordLastRecord( ) 
+    {
+	return 0;
+    }
+    
+    function setRecordThisRecord( )
+    {
+        return 0;
+    }
+}
+
+
+
+object t = new testDbi();
+t.run("Dbi");
+
+t = new testDbiResult();
+t.run("DbiResult");

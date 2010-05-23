@@ -1,0 +1,177 @@
+uses "template.lib", "array";
+
+module-header 
+{
+#include "utility.h"
+#define SelfObj ((void *)(self->odata))
+}
+
+/**	
+ * @class Template
+ * @brief A fast template library custom written for ferite.
+ */
+class Template
+{
+    private object o;
+    private string path;
+    private number debug;
+   
+    /**
+     * @function constructor
+     * @declaration function constructor( void a )
+     * @brief The constructor takes a variable that defines the information to be used within the template.
+     * @param void a The variable containing the information to be used.
+     */
+    native function constructor( void a )
+    {
+		struct tag_ctx *ctx = fcalloc( 1, sizeof(struct tag_ctx) );
+		self->odata = ctx;
+		ctx->mother = ferite_get_variable_ref( script, a );
+		ctx->parts = ferite_create_uarray_variable( script, "parts", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+    }
+
+    native function destructor( )
+    {
+		struct tag_ctx *ctx = self->odata;
+
+		if( ctx->tree )
+			tag_free( ctx->tree );
+		if( ctx->filedata )
+			ffree( ctx->filedata);
+		if( ctx->mother ) 
+			ferite_variable_destroy( script, ctx->mother );
+		ferite_variable_destroy( script, ctx->parts );
+		ffree(ctx);
+    }
+
+    /**
+     * @function parse
+     * @declaration function parse( string str )
+     * @brief parse a template from a string 
+     * @param string str the template string to parse.
+     * @return true on success false on failure. 
+     */
+    native function parse( string str )
+    {
+	struct tag_ctx *ctx = self->odata;
+	if( ctx->tree )
+	    tag_free( ctx->tree );
+	if( ctx->filedata )
+	    ffree( ctx->filedata);
+
+	if( (ctx->tree = tag_parse(script, ctx, str->data)) == NULL )
+	    FE_RETURN_FALSE;
+        FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function parseFile
+     * @declaration function parseFile( string str ) 
+     * @brief parse a template from a file.
+     * @param string the path to the templtefile to parse. 
+     * @return true on success false on failure.
+     */
+    native function parseFile( string str ) 
+    {
+	int fd;
+	struct stat in;
+	char *ptr;
+	struct tag_ctx *ctx = self->odata;
+
+	if( ctx->tree )
+	    tag_free( ctx->tree );
+	if( ctx->filedata )
+	    ffree( ctx->filedata);
+
+	if((fd = open( str->data, O_RDONLY )) != -1) {
+            char *oldpath, *p, newpath[200];
+	    fstat(fd, &in);
+            ptr = fmalloc( in.st_size + 1 );
+            read( fd, ptr, in.st_size );
+	    ptr[in.st_size] = 0;
+	    ctx->filedata = ptr;
+            oldpath = ctx->path;
+
+            if( (p = strrchr( str->data, '/' ) ) )
+            {
+                if (ctx->path)
+                        snprintf( newpath, 200, "%s/%.*s", ctx->path, p - str->data, str->data );
+                else
+                        snprintf( newpath, 200, "%.*s", p - str->data, str->data );
+                ctx->path = newpath;
+            }
+
+	    ctx->tree = tag_parse(script, ctx, ptr);
+            ctx->path = oldpath;
+            close(fd);
+	}
+	if( ctx->tree == NULL )
+	    FE_RETURN_FALSE;
+	FE_RETURN_TRUE;
+    }
+
+    /**
+     * @function setPath
+     * @declaration function setPath( string s )
+     * @brief set the path in which to search for include files.
+     * @param string s, 
+     */
+    function setPath( string s )
+    {
+	self.path = path;
+    }
+
+    /**
+     * @function debug
+     * @declaration function debug( number n )
+     * @brief toggle the template class  debug mode,
+     *  while in debug mode the class prints alot of debug 
+        information to stdout.
+     * @param number debug, true to turn on debug mode, false to turn it of.  
+     */
+    native function debug( number n )
+    {
+	struct tag_ctx *ctx = self->odata;
+	ctx->debug = (int)n;
+    }
+
+    /**
+     * @function run
+     * @declaration function run( )
+     * @brief apply the data object into the template and generate a string
+     * @return string with the data object merged into the template
+     */
+    native function run( )
+    {
+		FeriteVariable *v;
+		struct tag_ctx *ctx = self->odata;
+		
+		ctx->current = ctx->mother;
+		v = ferite_object_get_var(script,self,"path");
+		ctx->path = FE_STR2PTR(v);
+		ctx->buf = ferite_buffer_new(script,0);
+		tag_run( script, ctx, ctx->tree, ctx->mother, NULL, 0 );
+		v = ferite_buffer_to_var( script, ctx->buf );
+		ferite_buffer_delete( script, ctx->buf );
+		
+		FE_RETURN_VAR( v );
+    }
+
+    /**
+     * @function dump
+     * @declaration function dump( )
+     * @brief dump the state of the templte engine into a string.
+     * @return string 
+     */
+    native function dump( )
+    {
+		struct tag_ctx *ctx = self->odata;
+		FeriteBuffer *buf = ferite_buffer_new( script, 0 );
+		FeriteVariable *v;
+		tag_dump( buf, ctx->tree, 0 );
+		v = ferite_buffer_to_var( script, buf );
+		ferite_buffer_delete( script, buf );
+		FE_RETURN_VAR( v );
+    }
+}
+/** @end */

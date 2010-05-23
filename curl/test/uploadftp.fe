@@ -1,0 +1,20 @@
+uses "curl","console","string";
+
+object crl;
+string content, headers;
+string data = "crut rocks";
+
+crl = new Curl.Curl();
+
+Console.println( "Curl Object: "+ crl );
+
+crl.setOption(Curl.CURLOPT_UPLOAD, true);
+crl.setOption(Curl.CURLOPT_URL,"ftp://localhost/test.txt");
+crl.setOption(Curl.CURLOPT_IPRESOLVE, Curl.CURL_IPRESOLVE_V4);
+crl.setOption(Curl.CURLOPT_USERPWD, "username:password");
+crl.setOption(Curl.CURLOPT_INFILESIZE, data.length());
+crl.setOption(Curl.CURLOPT_INFILE, 1);
+crl.setContent(data);
+
+Console.println("Content: " + crl.getContent());
+Console.println( "Exec: "+ crl.exec() );

@@ -1,0 +1,281 @@
+uses "uxml.lib";
+module-header {
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <sys/types.h>
+	#include <sys/stat.h>
+	#include <fcntl.h>
+	#include <unistd.h>
+	#include "uxml.h"
+}
+class uXML_object{ }
+
+class uXML
+{
+	native function constructor( )
+	{
+	    struct uxml_ctx *ctx;
+	    ctx = self->odata = fcalloc( 1, sizeof(struct uxml_ctx) );
+	    ctx->mother = 1;
+	    ctx->buf = ferite_buffer_new(0);
+	}
+	native function destructor( )
+	{
+	    struct uxml_ctx *ctx = self->odata;
+	    if( ctx->mother )
+	    {
+		if( ctx->tree )
+		    uxml_free( ctx->tree );
+	        if( ctx->ptr )
+		    ffree( ctx->ptr );
+		if( ctx->buf )
+		    ferite_buffer_delete( ctx->buf );
+	    }
+	    ffree( self->odata );
+	}
+	native function parse( string str )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		if( ctx->ptr )
+		    free( ctx->ptr );
+		if( ctx->tree )
+		    uxml_free( ctx->tree );
+		ctx->ptr = fstrdup( str->data );
+		if( (ctx->tree = uxml_parse( script, ctx->ptr )) == NULL )
+		    FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+	}
+	native function parse_query( string query )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		char *ptr, *p, *pair, *key;
+		struct node *node;
+		unsigned int i, hash, key_length, pair_length;
+
+		if( ctx->ptr )
+                    free( ctx->ptr );
+                if( ctx->tree )
+                    uxml_free( ctx->tree );
+
+		ctx->ptr = NULL;
+		ctx->tree = NULL;
+		p = ptr = fstrdup( query->data );
+
+		while( (pair = strsep(&p, "&")) )
+		{
+		    uxml_plustospace( pair );
+		    if( (key = strsep(&pair,"=")) && pair )
+		    {
+			uxml_unescape_url(key);
+			uxml_unescape_url(pair);
+			key_length = strlen( key );
+			pair_length = strlen( pair );
+
+			node = fcalloc( 1, sizeof( struct node ) );
+
+			node->name = ferite_buffer_alloc( ctx->buf, key_length );
+			memcpy( node->name, key, key_length );
+
+			node->start = ferite_buffer_alloc( ctx->buf, pair_length );
+			memcpy( node->start, pair, pair_length );
+			for( i = 0, hash = 0; i < key_length; i++ )
+			    hash = key[i] + 31 * hash;
+			node->id = hash;
+			node->name_length = key_length;
+			node->length = pair_length;
+			node->next = ctx->tree;
+			ctx->tree = node;
+		    }
+		}
+		ffree( ptr );
+		FE_RETURN_TRUE;
+	}
+	native function asObject( )
+	{
+		FeriteClass *cls;
+		FeriteVariable *obj;
+		struct uxml_ctx *ctx = self->odata;
+
+		cls = ferite_find_class( script, script->mainns, "uXML_object" );
+		obj = ferite_new_object( script, cls, NULL );
+		uxml_create_ferite_object_tree( script, ctx, ctx->tree, obj, UXML_REAL );
+		FE_RETURN_VAR( obj );
+	}
+	native function asRefObject( )
+	{
+		FeriteClass *cls;
+		FeriteVariable *obj;
+		struct uxml_ctx *ctx = self->odata;
+
+		cls = ferite_find_class( script, script->mainns, "uXML_object" );
+		obj = ferite_new_object( script, cls, NULL );
+		uxml_create_ferite_object_tree( script, ctx, ctx->tree, obj, UXML_REFS );
+		FE_RETURN_VAR( obj );
+
+	}
+	native function asString( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		char *p = ( !ctx->tree || ctx->tree->length == 0 ) ? NULL: ctx->tree->start;
+		return fe_new_str( "uxml_string", p, ctx->tree->length, FE_CHARSET_DEFAULT );
+	}
+	native function asArray( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FeriteString path;
+		path.data = ".";
+		path.length = 1;
+		FE_RETURN_VAR( uxml_path_to_array( script, &path, ctx->tree ) );
+	}
+	native function asLong( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_LONG( strtol( ctx->tree->start, NULL, 10 ) );
+	}
+	native function asDouble( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_DOUBLE( strtod( ctx->tree->start, NULL ) );
+	}
+	native function path_asObject( string path )
+	{
+		FeriteClass *cls;
+		FeriteVariable *obj;
+		struct uxml_ctx *ctx = self->odata;
+		struct node *node;
+
+		node = uxml_path_search( path, ctx->tree );
+		if( node == NULL )
+		    FE_RETURN_NULL_OBJECT;
+		cls = ferite_find_class( script, script->mainns, "uXML_object" );
+		obj = ferite_new_object( script, cls, NULL );
+		uxml_create_ferite_object_tree( script, ctx, node->child, obj, UXML_REAL );
+		FE_RETURN_VAR( obj );
+	}
+	native function path_asRefObject( string path )
+	{
+		FeriteClass *cls;
+		FeriteVariable *obj;
+		struct uxml_ctx *ctx = self->odata;
+		struct node *node;
+
+		node = uxml_path_search( path, ctx->tree );
+		if( node == NULL )
+		    FE_RETURN_NULL_OBJECT;
+		cls = ferite_find_class( script, script->mainns, "uXML_object" );
+		obj = ferite_new_object( script, cls, NULL );
+		uxml_create_ferite_object_tree( script, ctx, node->child, obj, UXML_REFS );
+		FE_RETURN_VAR( obj );
+	}
+	native function path_asArray( string path )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_VAR( uxml_path_to_array( script, path, ctx->tree ) );
+	}
+	native function path_asString( string path )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_VAR( uxml_path_to_string( script, path, ctx->tree ) );
+	}
+	native function path_asLong( string path )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_VAR( uxml_path_to_long( script, path, ctx->tree ) );
+	}
+	native function path_asDouble( string path )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_VAR( uxml_path_to_double( script, path, ctx->tree ) );
+	}
+	native function path_asRef( string path )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		struct node *node;
+
+		node = uxml_path_search( path, ctx->tree );
+		FE_RETURN_VAR( uxml_make_child_object( script, ctx, node ) );
+	}
+	native function addLeaf( string name, string val )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		uxml_add_leaf( ctx, ctx->tree, name, val );
+		FE_RETURN_TRUE;
+	}
+	native function path_addLeaf( string path, string name, string val )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		struct node *tree;
+		if( (tree = uxml_path_search( path, ctx->tree )) == NULL)
+		    FE_RETURN_FALSE;
+		uxml_add_leaf( ctx, tree, name, val );
+		FE_RETURN_TRUE;
+	}
+	native function nodeNext( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FE_RETURN_VAR( uxml_make_child_object( script, ctx, ctx->tree->next ) );
+	}
+	native function nodeChild( )
+	{
+		struct uxml_ctx *ctx = self->odata;		
+		FE_RETURN_VAR( uxml_make_child_object( script, ctx, ctx->tree->child ) );
+	}
+	native function nodeName( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		char *p = ( ctx->tree->name_length == 0 ) ? NULL : ctx->tree->name;
+		FE_RETURN_VAR( fe_new_str( "nodeName", p, ctx->tree->name_length, FE_CHARSET_DEFAULT ) );
+	}
+	native function nodeValue( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		char *p = ( ctx->tree->length == 0 ) ? NULL : ctx->tree->start;
+		FE_RETURN_VAR( fe_new_str( "nodeValue", p, ctx->tree->length, FE_CHARSET_DEFAULT ) );
+	}
+	native function nodeAttribs( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		FeriteVariable *a, *v;
+		char str[200], *p;
+		struct uxml_arg *arg = ctx->tree->args;
+		a = ferite_create_uarray_variable( script, "uxml_array", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+		while( arg )
+		{
+			p = ( arg->length == 0 ) ? NULL : arg->start ;
+			v = fe_new_str( "uxml_arg", p, arg->length, FE_CHARSET_DEFAULT );
+			snprintf( str, 200, "%.*s", arg->name_length, arg->name );
+			ferite_uarray_add( script, VAUA(a), v, str, FE_ARRAY_ADD_AT_END);
+		}
+		FE_RETURN_VAR( a );
+	}
+	native function parsefile( string filename )
+	{
+		int fd;
+		struct stat in;
+		struct uxml_ctx *ctx = self->odata;
+
+		if( ctx->ptr )
+                    free( ctx->ptr );
+                if( ctx->tree )
+                    uxml_free( ctx->tree );
+
+		if((fd = open( filename->data, O_RDONLY )) != -1) {
+			fstat(fd, &in);
+			ctx->ptr = fmalloc( in.st_size + 1 );
+			read( fd, ctx->ptr, in.st_size );
+			ctx->ptr[in.st_size] = 0;
+			close( fd );
+
+                	if( (ctx->tree = uxml_parse( script, ctx->ptr )) == NULL )
+			    FE_RETURN_FALSE;
+			FE_RETURN_TRUE;
+                }
+		FE_RETURN_FALSE;
+	}
+	native function dump( )
+	{
+		struct uxml_ctx *ctx = self->odata;
+		uxml_dump( ctx->tree, 0 );
+	}
+}
+

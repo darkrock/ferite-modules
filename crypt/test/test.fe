@@ -1,0 +1,78 @@
+uses "crypt","console","array";
+
+array plain;
+array bencrypted;
+array encrypted;
+array bdecrypted;
+array decrypted;
+array algoritm;
+number keylen;
+string passphrase;
+
+object c; 
+object dc; 
+number error, nerrors, i, j, nwords;
+
+
+keylen = 0;
+passphrase = "kajlsdfh iu";
+algoritm = ["blowfish","twofish","des","saferplus"];
+
+Array.push(plain , "lkaösdjf asdflkja sdflökja sdfölkja sdflö kjasd föjq+02938541345723475 v2358917354098 17 klsandfkajsdhf");
+Array.push(plain , "A");
+Array.push(plain , "Abcdefghijklmo90´-.,");
+Array.push(plain , "Abcdefghijasdf asdfiljasdklfja sklfklmo90´-.,");
+Array.push(plain , "Abcde,");
+
+nwords = Array.size( plain );
+
+
+
+for( i=0; i < Array.size( algoritm ); i++ ) {
+	
+	c = new Crypt( algoritm[i],"cfb");
+	dc = new Crypt( algoritm[i],"cfb");
+	if( not ( c && dc ) ) {
+		Console.println("Error, couldn't load  " +  algoritm[i] + " module "); 
+		Sys.exit();
+	}
+
+	c.setSecrets( passphrase  , keylen );  
+	dc.setSecrets( passphrase, keylen );
+	error = 0;
+	
+	//Clear results
+	bencrypted = encrypted =  decrypted = bdecrypted = [];
+
+	for( j = 0; j < nwords; j++ ) {
+		Array.push( bencrypted , c.b64Encrypt( plain[j] ));
+		Array.push( encrypted,  c.encrypt( plain[j] ));
+	        Array.push( bdecrypted,  dc.b64Decrypt( bencrypted[j] ));
+		Array.push( decrypted,  dc.decrypt( encrypted[j] ));
+
+		if( bdecrypted[j] != plain[j] ) {
+			error = 1;
+			break;
+		}
+		
+		if( decrypted[j] != plain[j] ) {
+			error = 1;
+			break;
+		}
+	}
+
+	if( error ) {
+		++nerrors;
+		Console.println( algoritm[i] + " Failed ");
+	}
+	else
+		Console.println( algoritm[i] + " OK ");
+}	
+
+if( nerrors )
+	Console.println( "Warning: errors detected ");
+else
+	Console.println( "\nAll tests passed ");
+
+
+

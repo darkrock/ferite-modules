@@ -1,0 +1,25 @@
+uses "curl","console","string";
+
+object crl;
+string content, headers;
+
+crl = new Curl.Curl();
+
+Console.println( "Curl Object: "+ crl );
+
+Console.println( "Set URL: "+ crl.setOption(Curl.CURLOPT_URL,"ftp://ftp.redhat.com/pub/redhat/") );
+Console.println( "Set FTP List Only: "+ crl.setOption(Curl.CURLOPT_FTPLISTONLY, 1) );
+Console.println( "Set IP_V4 Only: "+ crl.setOption(Curl.CURLOPT_IPRESOLVE, Curl.CURL_IPRESOLVE_V4) );
+Console.println( "Set Anonymous FTP User/Pass: "+ crl.setOption(Curl.CURLOPT_USERPWD, "anonymous:ferite-curl-test@ferite.org") );
+Console.println( "Set Return Data: "+ crl.setOption(Curl.CURLOPT_RETURNTRANSFER, 1) );
+
+Console.println( "Exec: "+ crl.exec() );
+
+headers = crl.getHeaders();
+content = crl.getContent();
+
+Console.println( "Headers Length: "+ String.length(headers) );
+Console.println( "Content Length: "+ String.length(content) );
+Console.println( "Headers: "+ headers);
+Console.println( "Content: "+ content);
+

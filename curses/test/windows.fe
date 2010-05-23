@@ -1,0 +1,53 @@
+#!/usr/bin/env ferite
+
+uses "curses", "sys";
+
+number ch;
+object scr, w1, w2, w3;
+
+scr = Curses.init();
+Curses.start_color();
+Curses.cbreak(true);
+Curses.echo(false);
+Curses.nl(false);
+scr.intrflush(false);
+scr.keypad(true);
+
+Curses.init_pair(1, Curses.COLOR_WHITE, Curses.COLOR_BLUE);
+Curses.init_pair(2, Curses.COLOR_YELLOW, Curses.COLOR_BLUE);
+Curses.init_pair(3, Curses.COLOR_BLACK, Curses.COLOR_WHITE);
+
+w1 = Curses.newwin(0, 0, Curses.COLS / 2, Curses.LINES / 2);
+w1.bkgd(Curses.color_pair(1));
+w1.attrset(Curses.color_pair(1) | Curses.A_BOLD);
+w1.scrollok(true);
+w1.refresh();
+w1.nodelay(true);
+
+w2 = Curses.newwin(Curses.COLS / 2, 0, Curses.COLS - (Curses.COLS / 2),
+							Curses.LINES / 2);
+w2.bkgd(Curses.color_pair(2));
+w2.attrset(Curses.color_pair(2) | Curses.A_BOLD);
+w2.scrollok(true);
+w2.refresh();
+
+w3 = Curses.newwin(0, Curses.LINES / 2, Curses.COLS,
+			Curses.LINES - (Curses.LINES / 2));
+w3.bkgd(Curses.color_pair(3));
+w3.attrset(Curses.color_pair(3) | Curses.A_UNDERLINE);
+w3.scrollok(true);
+w3.refresh();
+
+do {
+	ch = w1.getch();
+	w1.addstr(" One! ");
+	w2.addstr(" Two! ");
+	w3.addstr("Three ");
+	w1.noutrefresh();
+	w2.noutrefresh();
+	w3.noutrefresh();
+	Curses.doupdate();
+	Sys.usleep(10000);
+} while(ch != Curses.KEY_BREAK);
+
+scr.close();

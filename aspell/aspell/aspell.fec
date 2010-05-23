@@ -1,0 +1,298 @@
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*- */
+/*
+ * Copyright (C) 2003 Christian M. Stamgren
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+uses "aspell.lib";
+
+
+module-header 
+{
+
+   #include <aspell.h>
+   #include "utility.h"
+
+	typedef struct aspell_rec_s 
+	{
+		AspellSpeller *speller;
+		AspellConfig *config;
+	} aspell_rec_t;
+}
+
+/**
+ * @class Aspell
+ * @brief This class provides an interface to aspell
+ * @description With instances of this class it is possible to check words,
+   obtain suggestions, modify the personal dictionary and save it.
+ */
+class Aspell 
+{
+	
+	/**
+	 * @function constructor
+	 * @declaration function constructor(string lang)
+	 * @param    string the language to use
+	 */
+	native function constructor(string lang) 
+	{
+		
+		aspell_rec_t *arec = self->odata = fmalloc( sizeof( aspell_rec_t ));
+		AspellCanHaveError *possible_err;
+		
+		arec->config = new_aspell_config(); 
+		aspell_config_replace( arec->config, "lang",lang->data ); 
+		
+		possible_err = new_aspell_speller( arec->config );
+		
+		if ( aspell_error_number( possible_err ) != 0)
+			ferite_error( script, 0, (char *)aspell_error_message( possible_err ) );
+		else
+			arec->speller = to_aspell_speller( possible_err ); 
+		
+	}
+
+	function constructor( ) 
+        {
+		self.aspell("sv_SE");
+	}
+
+	native function desctructor( ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		delete_aspell_speller( arec->speller );
+		delete_aspell_config( arec->config);
+		ffree( arec );
+	}
+
+	/**
+	 * @function setConfigOption
+	 * @declaration function setConfigOption( string option, string lang )
+	 * @brief  This function set config params for the aspell library.
+	 * @param string option consult your aspell man page for this options
+	 * @param string value the value for the option
+	 */
+	native function setConfigOption( string option, string value ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		aspell_config_replace( arec->config, option->data ,value->data ); 
+	}
+
+	/**
+	 * @function getConfigOption
+	 * @declaration native function getConfigOption(string option)
+	 * @brief  This function get config params from the aspell library.
+	 * @param string option consult your aspell man page for this options
+	 * @return string value the param
+	 */
+	native function getConfigOption(string option) 
+        {
+		FeriteVariable *v;
+		const char *string;
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		string = aspell_config_retrieve(arec->config, option->data);
+		
+		v = ferite_create_string_variable_from_ptr(script, "aspell::get_option.retval", 
+				(char *)string, 0, FE_CHARSET_DEFAULT, FE_ALLOC);
+		FE_RETURN_VAR(v);
+	}
+
+	/**
+	 * @function check
+	 * @declaration native function check( string word )
+	 * @brief  Check if a word is correctly spelled.
+	 * @param string word the word to spell check
+	 * @return number true if the word is correct false if its not.
+	 */
+	native function check( string word ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		if( (aspell_speller_check( arec->speller, word->data, -1 )) > 0 ) {
+			FE_RETURN_TRUE;
+		} 
+	  
+		FE_RETURN_FALSE;
+	}
+
+	/**
+	 * @function suggestions
+	 * @declaration function suggestions( string word )
+	 * @brief Get suggestions for alternative spellings for a word
+	 * @param string word the word fetch suggestions for
+	 * @return array suggestions suggestions from aspell
+	 */
+	native function suggestions( string word ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		FeriteVariable *array;
+
+		const AspellWordList *suggestions = aspell_speller_suggest( arec->speller, 
+				(const char *)word->data, (int)word->length );
+		
+		array = create_array_from_word_list(script, suggestions);
+		
+		FE_RETURN_VAR( array );
+	}
+
+	/**
+	 * @function addToPersonal
+	 * @declaration function addToPersonal(string word)
+	 * @brief Add a word to your personal wordlist
+	 * @param string word The word to add.
+	 * @return number bool 
+	 */
+	native function addToPersonal(string word) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		aspell_speller_add_to_personal(arec->speller, word->data, -1);
+		
+		if (aspell_speller_error(arec->speller) != 0) 
+			FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+
+	}
+
+	/**
+	 * @function addToSession
+	 * @declaration function addToSession(string word)
+	 * @brief Add a word to session wordlist
+	 * @description The session word list is temporary for the session, this is how 
+	   'Ignore' is implemented within existing spell checkers.
+	 * @param string word The word to add.
+	 * @return number bool 
+	 */
+	native function addToSession(string word) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		aspell_speller_add_to_session(arec->speller, word->data, -1);
+	
+		if (aspell_speller_error(arec->speller) != 0) 
+			FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+
+	}
+
+	/**
+	 * @function clearSession
+	 * @declaration function clearSession()
+	 * @brief Clear the session word list
+	 * @return number bool 
+	 */
+	native function clearSession( ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+	
+		aspell_speller_clear_session(arec->speller);
+		
+		if (aspell_speller_error(arec->speller) != 0) 
+			FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function saveWordList
+	 * @declaration function saveWordLists()
+	 * @brief Save all word lists
+	 * @return number bool 
+	 */
+	native function saveWordLists( ) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+	
+		aspell_speller_save_all_word_lists(arec->speller);
+
+		if (aspell_speller_error(arec->speller) != 0) 
+			FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function sessionWordList
+	 * @declaration function sessionWordLists()
+	 * @brief list all the word in your session list
+	 * @return array words
+	 */
+	native function sessionWordList() 
+        {
+		FeriteVariable *array;
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		const AspellWordList *words = aspell_speller_session_word_list( arec->speller );
+		array = create_array_from_word_list(script, words);
+		
+		FE_RETURN_VAR( array );
+	}
+
+	/**
+	 * @function personalWordList
+	 * @declaration function personalWordLists()
+	 * @brief list all the words in your personal list
+	 * @return array words
+	 */
+	native function personalWordList( ) 
+        {		
+		FeriteVariable *array;
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		const AspellWordList *words = aspell_speller_personal_word_list( arec->speller );
+		array = create_array_from_word_list(script, words);
+		
+		FE_RETURN_VAR( array );
+	}
+
+	/**
+	 * @function storeReplacement
+	 * @declaration function storeReplacement(string old,string rep)
+	 * @brief store a replacement for a wrong spelling
+	 * @param string old The word to replace
+	 * @param string rep The word to replace with
+	 * @return number bool
+	 */
+	native function storeReplacement(string old,string rep) 
+        {
+		aspell_rec_t *arec = (aspell_rec_t *)self->odata;
+		
+		aspell_speller_store_replacement(arec->speller, old->data, -1, rep->data, -1);
+		
+		if (aspell_speller_error(arec->speller) != 0) 
+			FE_RETURN_FALSE;
+		FE_RETURN_TRUE;
+	}
+	
+	
+	
+} /* End class Aspell */
+
+/**
+ * @end
+ */

@@ -1,0 +1,326 @@
+/*
+ * Copyright (C) 2002-2007 Christian M. Stamgren, Stephan Engström, Chris Ross
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @class DbiObject
+ * @brief used to return a result as an object   
+ */
+class DbiObject 
+{
+
+}
+/**
+ *  @end
+ */
+
+
+/**
+ * @class DbiResult
+ * @brief object encapsulation all funtions avalible on a dbi result set.
+ */
+class DbiResult 
+{
+    native function constructor( )
+    {
+	    RESData *result = fmalloc( sizeof( RESData ) );
+	    result->result = NULL;
+		result->errormsg = NULL;
+		result->dbi = NULL;
+		self->odata = result;
+    }
+    
+    native function destructor( )
+    {
+	    RESData *res = self->odata;
+	    
+	    /* The parent object is responible for free()'ing the result; */
+	    /* but why not free it right away? When we can... */
+	    if( res->result != NULL ) 
+			ferite_remove_from_result_list( res );
+		if( res->errormsg )
+			printf("------------------------------------------------------------------------------%p: %s\n", res->errormsg, res->errormsg);
+	    ffree( self->odata );
+    }
+
+    /**
+     * @function finish
+     * @declaration native function finish( )
+     * @brief    Free all resorces connected to result. 
+     *           Warning the result will be unusable after this function is called 
+     */
+    native function finish( )
+    {
+	    RESData *res = self->odata;
+	    ferite_remove_from_result_list( res );
+		if( res->errormsg )
+			printf("------------------------------------------------------------------------------%p: %s\n", res->errormsg, res->errormsg);
+    }
+
+
+    /**
+     * @function nextRecord
+     * @declaration  native function nextRecord( )
+     * @brief    Fetch next row in a result set as an array.
+     * @return   A array populated with the rows data
+     */
+    native function nextRecord( )
+    {
+		FeriteVariable *row = ferite_dbi_get_next_row( script, self->odata );
+	    FE_RETURN_VAR( row );
+    }
+
+    /**
+     * @function allRecords
+     * @declaration native function allRecords( )
+     * @brief    Fetch all rows in a result set as an array of arrays.
+     * @return   An array
+     */
+    native function allRecords( )
+    {
+	    RESData *res = self->odata;
+	    FeriteVariable *value, *array, *row;
+	    unsigned long  i,cols;
+	    array = ferite_create_uarray_variable( script, "dbi_all_records", FE_ARRAY_DEFAULT_SIZE, FE_STATIC);
+	    if( res->result ) {
+		while( dbi_result_next_row( res->result ) ) {
+		    row = ferite_create_uarray_variable( script, "dbi_row", FE_ARRAY_DEFAULT_SIZE, FE_STATIC);
+		    cols = dbi_result_get_numfields( res->result );
+		    for( i = 1; i <= cols; i++ )
+			if( value = (FeriteVariable *) ferite_dbi_get_entry( script, res->result, i ) )
+			    ferite_uarray_add( script, VAUA( row ), value, value->vname, FE_ARRAY_ADD_AT_END );
+		    ferite_uarray_add( script, VAUA( array ), row, NULL, FE_ARRAY_ADD_AT_END );
+		}
+	    }
+		FE_RETURN_VAR( array );
+    }
+
+    /**
+     * @function nextObject
+     * @declaration native function nextObject( )
+     * @brief    Fetch next rows in a result set as an object of resultObject.
+     * @return   result object
+     */
+    native function nextObject( )
+    {
+	    RESData *res = self->odata;
+	    FeriteVariable *obj, *value;
+	    unsigned long i,cols;
+	    FeriteClass *cls;
+	    
+	    if((cls = ferite_find_class( script, script->mainns, "DbiObject" )) != NULL) {
+		if( res->result && dbi_result_next_row( res->result ) ) {
+		    obj = ferite_build_object( script, cls );
+		    cols = dbi_result_get_numfields( res->result );
+		    for( i = 1; i <= cols; i++ )
+			if( value = (FeriteVariable *) ferite_dbi_get_entry( script, res->result, i ) )
+			    ferite_hash_add( script, VAO(obj)->variables->variables, value->vname, value );
+		    FE_RETURN_VAR( obj );
+		}
+	    }
+	    FE_RETURN_NULL_OBJECT;
+     }
+
+    /**
+     * @function allObject
+     * @declaration native function allObjects( )
+     * @brief    Fetch all rows in a result set as an array of objects.
+     * @return   An array of dbiObject's
+     */
+    native function allObjects( )
+    {
+	    RESData *res = self->odata;
+	    FeriteVariable *obj, *value, *array;
+	    unsigned long i,cols;
+	    FeriteClass *cls;
+	    
+	    array = ferite_create_uarray_variable( script, "dbi_all_objects",  FE_ARRAY_DEFAULT_SIZE, FE_STATIC);
+	    if( res->result && (cls = ferite_find_class( script, script->mainns, "DbiObject" )) != NULL) {
+		while( dbi_result_next_row( res->result ) ) {
+		    obj = ferite_build_object( script, cls );
+		    cols = dbi_result_get_numfields( res->result );
+		    for( i = 1; i <= cols; i++ )
+			if( value = (FeriteVariable *) ferite_dbi_get_entry( script, res->result, i ) )
+			    ferite_hash_add( script, VAO(obj)->variables->variables, value->vname, value );
+		    ferite_uarray_add( script, VAUA( array ), obj,  NULL, FE_ARRAY_ADD_AT_END );
+		}
+	    }
+	    FE_RETURN_VAR( array );
+     }
+
+    /**
+     * @function rows
+     * @declaration native function rows( )
+     * @brief    Number of rows affected (inserted/updated/selected) in a resultset.
+     * @return   The number of rows
+     */
+    native function rows( )
+    {
+	    RESData *res = self->odata;
+	    unsigned long  count;
+	    if( res->result ) {
+		if((count = dbi_result_get_numrows( res->result )) 
+			|| (count = dbi_result_get_numrows_affected( res->result ))); 
+		FE_RETURN_LONG( count );
+	    } 
+	    FE_RETURN_LONG( 0 ); 
+    }
+
+    /**
+     * @function columns
+     * @declaration native function columns( )
+     * @brief    Number of columns in the resultset.
+     * @return   The number of columns
+     */
+    native function columns( )
+    {
+	    RESData *res = self->odata;
+	    unsigned long  count;
+	    if( res->result ) {
+		if((count = dbi_result_get_numfields( res->result )))
+		FE_RETURN_LONG( count );
+	    } 
+	    FE_RETURN_LONG( 0 ); 
+    }
+
+    /**
+     * @function columnIsNull
+     * @declaration native function columnIsNull( number column )
+     * @brief    is the column null or not.
+     * @return   boolean true if the column hold a null value fasle otherwise.
+     */
+    native function columnIsNull( number column )
+    {
+	    RESData *res = self->odata;
+	    if( res->result ) {
+		if( dbi_result_field_is_null_idx( res->result, (unsigned int) column ))
+		FE_RETURN_TRUE;
+	    } 
+	    FE_RETURN_FALSE; 
+    }
+
+    /**
+     * @function columnLength
+     * @declaration native function columnLength( number column )
+     * @brief    the length of the column. 
+     * @return   number of bytes. 
+     */
+    native function columnLength( number column )
+    {
+	    RESData *res = self->odata;
+	    unsigned long  count;
+	    if( res->result ) {
+		if(( count = dbi_result_get_field_size_idx(res->result, (int) column)))
+		FE_RETURN_LONG( count );
+	    } 
+	    FE_RETURN_LONG( 0 ); 
+    }
+
+    /**
+     * @function columnName
+     * @declaration native function columnName( number column )
+     * @brief    the length of the column. 
+     * @return   number of bytes. 
+     */
+    native function columnName( number column )
+    {
+	    RESData *res = self->odata;
+	    const char *name = NULL;
+	    FeriteString *str = NULL;
+
+	    if( res->result ) {
+		if(( name = dbi_result_get_field_name(res->result, (unsigned int) column)) != NULL)
+			str = ferite_str_new( script, (char *)name, 0,  FE_CHARSET_DEFAULT);
+			FE_RETURN_STR( str, 1 );	
+	    } 
+	    FE_RETURN_STR( str, 0); 
+    }
+
+
+    /**
+     * @function setRecordFirstRecord
+     * @declaration native function setRecordFirstRecord( )
+     * @brief    Rewind the resultset to the first record.
+     * @return   number ret true on success and false on failure.
+     */
+    native function setRecordFirstRecord( )
+    {
+	    RESData *res = self->odata;
+	    if(res->result && dbi_result_first_row(res->result))
+		FE_RETURN_TRUE;
+	    FE_RETURN_FALSE;
+    }
+
+    /**
+     * @function setRecordLastRecord
+     * @declaration native function setRecordLastRecord( )
+     * @brief    Fast forward the resultset to the last record.
+     * @return   number ret true on success and false on failure.
+     */
+    native function setRecordLastRecord( )
+    {
+	    RESData *res = self->odata;
+	    if(res->result && dbi_result_last_row(res->result))
+		FE_RETURN_TRUE;
+	    FE_RETURN_FALSE;
+    }
+    
+    /**
+     * @function setRecordPreviousRecord
+     * @declaration native function setRecordPreviousRecord( )
+     * @brief    Rewind the resultset one  record.
+     * @return   number ret true on success and false on failure.
+     */
+    native function setRecordPreviousRecord( )
+    {
+	    RESData *res = self->odata;
+	    if(res->result && dbi_result_prev_row( res->result ))
+		FE_RETURN_TRUE;
+	    FE_RETURN_FALSE;
+    }
+    
+    /**
+     * @function setRecordThisRecord
+     * @declaration native function setRecordThisRecord( )
+     * @brief    Move to this specific row in the result set.
+     * @return   number ret true on success and false on failure.
+     * @param    number row the row to navigate to.
+     */
+    native function setRecordThisRecord( number row )
+    {
+	    RESData *res = self->odata;
+	    if( res->result )
+		if( dbi_result_seek_row( res->result, ( row > 0 ) ? row : 1 ) )
+		    FE_RETURN_TRUE;
+	    FE_RETURN_FALSE;
+    }
+	
+} /* END class dbiResult */
+ /**
+  * @end
+  */

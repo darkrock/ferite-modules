@@ -1,0 +1,46 @@
+//From /usr/include/imap/mail.h
+
+
+namespace Mime 
+{
+    final number  TYPETEXT=0;               /* unformatted text */	
+    final number  TYPEMULTIPART=1;          /* multiple part */
+    final number  TYPEMESSAGE=2;            /* encapsulated message */
+    final number  TYPEAPPLICATION=3;        /* application */
+    final number  TYPEAUDIO = 4;              /* audio */
+    final number  TYPEIMAGE=5;              /* static image */
+    final number  TYPEVIDEO=6;              /* video */
+    final number  TYPEMODEL=7;              /* model */
+    final number  TYPEOTHER=8;              /* unknown */
+    final number  TYPEMAX=15;               /* maximum type code */
+    
+    function toString(number i ) {
+        switch(i) {
+            case 0: return "text";
+            case 3: return "application";
+            case 4: return "audio";
+            case 5: return "image";
+            case 6: return "video";
+            case 7: return "model";
+            default: return "";
+        }
+    }
+}
+
+
+
+
+
+
+namespace Encoding 
+{
+
+    final number  ENC7BIT = 0;                /* 7 bit SMTP semantic data */
+    final number  ENC8BIT = 1;                /* 8 bit SMTP semantic data */
+    final number  ENCBINARY = 2;              /* 8 bit binary data */
+    final number  ENCBASE64 = 3;              /* base-64 encoded data */
+    final number  ENCQUOTEDPRINTABLE = 4;     /* human-readable 8-as-7 bit data */
+    final number  ENCOTHER = 5;               /* unknown */
+    final number  ENCMAX = 10;                /* maximum encoding code */
+    
+}

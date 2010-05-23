@@ -1,0 +1,507 @@
+/*
+ * Ferite bindings to the MHash library.
+ * Copyright (C) 2002 Alex Holden <alex@alexholden.net>
+ */
+
+uses "MHash.lib";
+
+module-header {
+	#include <mhash.h>
+	#include <stdio.h>
+	#include <errno.h>
+
+	mutils_word8 *mhash_get_keygen_name_static(hashid type);
+}
+
+module-init {
+	int i;
+	char *name = NULL;
+	FeriteVariable *fv;
+	FeriteNamespace *MHashns;
+
+	/* Create the MHash namespace. We need to do this here, and then
+	 * specify "modifies" on the real namespace definition further down,
+	 * because we want to put some variables in the namespace now but
+	 * the init function is called before Ferite creates it. */
+	MHashns = ferite_register_namespace(script, "MHash", script->mainns);
+
+	/* Create a symbolic name for each of the MHash hash types: */
+	for(i = mhash_count(); i >= 0; i--) {
+		/* Skip any that are NULL (ie. they've been removed): */
+		if(!(name = (char *)mhash_get_hash_name_static(i))) continue;
+		fv = ferite_create_number_long_variable(script, name, i,
+								FE_STATIC);
+		ferite_register_ns_variable(script, MHashns, name, fv);
+	}
+
+	/* Create a symbolic name for each of the key generator types: */
+	for(i = mhash_keygen_count(); i >= 0; i--) {
+		/* Skip any that are NULL (ie. they've been removed): */
+		if(!(name = (char *)mhash_get_keygen_name_static(i))) continue;
+		fv = ferite_create_number_long_variable(script, name, i,
+								FE_STATIC);
+		ferite_register_ns_variable(script, MHashns, name, fv);
+	}
+}
+
+/**
+ * @namespace MHash
+ * @brief The namespace for the MHash module
+ * @description Contains various functions, a Hash class, and a set of
+ *		constants which are used to refer to the different kinds of
+ *		Hash algorithm and key generation algorithm supported by the
+ *		MHash library. At the time of writing, the available hash
+ *		algorithms are: MHash.CRC32, MHash.MD5, MHash.SHA1,
+ *		MHash.HAVAL256, MHash.RIPEMD160, MHash.TIGER, MHash.GOST,
+ *		MHash.CRC32B, MHash.HAVAL224, MHash.HAVAL192, MHash.HAVAL160,
+ *		MHash.HAVAL128, MHash.TIGER128, MHash.TIGER160, MHash.MD4, and
+ *		MHash.SHA256. At the time of writing, the available key
+ *		generation algorithms are: MHash.MCRYPT, MHash.ASIS, MHash.HEX,
+ *		MHash.PKDES, MHash.S2K_SIMPLE, MHash.S2K_SALTED, and
+ *		MHash.ISALTED. See the mhash manual page for more details.
+ */
+namespace modifies MHash {
+
+	/**
+	 * @function getBlockSize
+	 * @declaration function getBlockSize(number type)
+	 * @brief Returns the block size of the specified hash algorithm
+	 * @param number type The type of hash you are interested in
+	 * @return The block size in bytes or 0 on failure
+	 */
+	native function getBlockSize(number type)
+	{
+		FE_RETURN_LONG(mhash_get_block_size((hashid)type));
+	}
+
+	/**
+	 * @function hashString
+	 * @declaration function hashString(string s, number type)
+	 * @brief Performs a hash of a string
+	 * @param string s The string to get the hash of
+	 * @param number type The hash algorithm to use
+	 * @return A string containing the hash
+	 * @description This function provides an easy way to get the hash of
+	 *              a string, without the complexity of creating a Hash
+	 *              object, feeding data into it, then ending it. It
+	 *              returns a string containing the hash of the input
+	 *              string performed using the specified hash algorithm.
+	 *              On failure, it returns an empty string (a successful
+	 *              hash will never be empty).
+	 */
+	native function hashString(string s, number type)
+	{
+		MHASH m;
+		unsigned char *h;
+		FeriteVariable *fv;
+		int blocksize = mhash_get_block_size((hashid)type);
+
+		m = mhash_init((hashid)type);
+		if(m == MHASH_FAILED || !(h = fmalloc(blocksize))) {
+			fv = ferite_create_string_variable_from_ptr(script, "",
+					"", 0, FE_CHARSET_DEFAULT, FE_STATIC);
+			FE_RETURN_VAR(fv);
+		}
+
+		mhash(m, s->data, s->length);
+		mhash_deinit(m, h);
+
+		fv = ferite_create_string_variable_from_ptr(script,
+						"MHash::hash_string", h,
+				blocksize, FE_CHARSET_DEFAULT, FE_STATIC);
+
+		ffree(h);
+		FE_RETURN_VAR(fv);
+	}	
+
+	/**
+	 * @function hmacString
+	 * @declaration function hmacString(string s, string key, number type)
+	 * @brief Performs a HMAC hash of a string
+	 * @param string s The string to get the HMAC keyed hash of
+	 * @param string key The key to use
+	 * @param number type The hash algorithm to use
+	 * @description This function provides an easy way to generate a HMAC
+	 *              keyed hash from a string using the specified key and
+	 *		hash algorithm. It returns the resulting hash as a
+	 *		string. On failure, it returns an empty string.
+	 */
+	native function hmacString(string s, string key, number type)
+	{
+		MHASH m;
+		unsigned char *h;
+		FeriteVariable *fv;
+		int blocksize = mhash_get_block_size((hashid)type);
+
+		m = mhash_hmac_init((hashid)type, key->data, key->length,
+				mhash_get_hash_pblock((hashid)type));
+		if(m == MHASH_FAILED || !(h = fmalloc(blocksize))) {
+			fv = ferite_create_string_variable_from_ptr(script, "",
+					"", 0, FE_CHARSET_DEFAULT, FE_STATIC);
+			FE_RETURN_VAR(fv);
+		}
+
+		mhash(m, s->data, s->length);
+		mhash_hmac_deinit(m, h);
+
+		fv = ferite_create_string_variable_from_ptr(script,
+						"MHash::hmac_string", h,
+				blocksize, FE_CHARSET_DEFAULT, FE_STATIC);
+
+		ffree(h);
+		FE_RETURN_VAR(fv);
+	}
+
+
+	/**
+	 * @class Hash
+	 * @description The Hash class allows you to perform a hash on
+	 *		arbitrary amounts of data using any of the many hash
+	 *		algorithms built into the MHash library. It also
+	 *		supports HMAC keyed hashing mode. To use it, pass
+	 *		the hash algorithm you want to use (eg. MHash.MD5) and
+	 *		optionally the HMAC key string to the constructor.
+	 *		Next call the add_data() method at least once to feed
+	 *		data into the hash engine. Finally, call the
+	 *		get_hash() method to finish the hash calculation and
+	 *		return the hash key. After get_hash() has been called
+	 *		you cannot use the object again unless you call the
+	 *		constructor method to reinitialise it. If the key
+	 *              parameter to the constructor is included, HMAC
+	 *              keyed hash mode is used. If the key parameter is missed
+	 *              off, an ordinary hash is performed.
+	 */
+	class Hash {
+
+		number _keyed;
+		number _algo;
+
+		/**
+		 * @function Hash
+		 * @declaration function Hash(number type, string key)
+		 * @brief The constructor for a HMAC keyed Hash object
+		 * @param number type The hash algorithm to use
+		 * @param string key The key to use
+		 */
+		native function constructor(number type, string key)
+		{
+			FeriteVariable *fv;
+
+			if(self->odata) mhash_deinit(self->odata, NULL);
+
+			if(!(self->odata = mhash_hmac_init((hashid)type,
+						key->data, key->length,
+					mhash_get_hash_pblock((hashid)type)))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			fv = ferite_object_get_var(script, self, "_keyed");
+			VAI(fv) = 1;
+			fv = ferite_object_get_var(script, self, "_algo");
+			VAI(fv) = (long)type;
+		}
+
+		/**
+		 * @function Hash
+		 * @declaration function Hash(number type)
+		 * @brief The constructor for an ordinary Hash object
+		 * @param number type The hash algorithm to use
+		 * @param string key The key to use
+		 */
+		native function constructor(number type)
+		{
+			FeriteVariable *fv;
+
+			if(self->odata) mhash_deinit(self->odata, NULL);
+
+			if(!(self->odata = mhash_init((hashid)type))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			fv = ferite_object_get_var(script, self, "_keyed");
+			VAI(fv) = 0;
+			fv = ferite_object_get_var(script, self, "_algo");
+			VAI(fv) = (long)type;
+		}
+
+		/**
+		 * @function addData
+		 * @declaration function addData(string d)
+		 * @brief Feeds some data into the hash engine
+		 * @param string d The data to feed into the hash engine
+		 */
+		native function addData(string d)
+		{
+			if(self->odata) mhash(self->odata, d->data, d->length);
+		}
+
+		/**
+		 * @function getHash
+		 * @declaration function getHash()
+		 * @brief Finalises the hash operation and returns the result
+		 * @return The hash
+		 * @description This function processes any remaining buffered
+		 *              data and generates a hash digest, which it
+		 *              returns as a string. On error, an empty
+		 *              string is returned. You can only call this
+		 *              function once.
+		 */
+		native function getHash()
+		{
+			unsigned char *h;
+			FeriteVariable *fv;
+			int type, blocksize;
+
+			if(!self->odata) {
+				ferite_set_error(script, ENOENT, "Hash data "
+						"has already been retrieved");
+				fv = ferite_create_string_variable_from_ptr(
+							script, "", "", 0,
+						FE_CHARSET_DEFAULT, FE_STATIC);
+				FE_RETURN_VAR(fv);
+			}
+
+			fv = ferite_object_get_var(script, self, "_algo");
+			type = VAI(fv);
+
+			blocksize = mhash_get_block_size(type);
+			if(!(h = fmalloc(blocksize))) FE_RETURN_NULL_OBJECT;
+
+			fv = ferite_object_get_var(script, self, "_keyed");
+			if(VAI(fv)) mhash_hmac_deinit(self->odata, h);
+			else mhash_deinit(self->odata, h);
+
+			self->odata = NULL;
+
+			fv = ferite_create_string_variable_from_ptr(script,
+						"MHash::Hash::get_hash", h,
+						blocksize, FE_CHARSET_DEFAULT,
+								FE_STATIC);
+
+			ffree(h);
+			FE_RETURN_VAR(fv);
+		}
+
+		native function destructor()
+		{
+			if(self->odata) {
+				mhash_deinit(self->odata, NULL);
+				self->odata = NULL;
+			}
+		}
+	}
+
+	/**
+	 * @class KeyGen
+	 * @description This class is used to access the mhash key generation
+	 *		facility. The constructor should be called specifying
+	 *		the key generation algorithm to use (eg. MHash.PKDES).
+	 *		You should then call some or all of the
+	 *		set_hash_algorithms(), set_count(), and set_salt()
+	 *		methods (see also hash_algorithms(), uses_count(), and
+	 *		uses_salt()). Finally, for each key you want to
+	 *		generate, call the generate_key() method with the
+	 *		password to generate the key from. It is possible to
+	 *		change the key generation algorithm of an existing
+	 *		KeyGen object by calling the constructor directly.
+	 */
+	class KeyGen
+	{
+		number _keygen_algo;
+		number _hash_algo_0;
+		number _hash_algo_1;
+		number _count;
+		string _salt;
+
+		/**
+		 * @function KeyGen
+		 * @declaration function KeyGen(number type)
+		 * @brief The constructor for the KeyGen class
+		 * @param number type The key generation algorithm
+		 */
+		function constructor(number type)
+		{
+			._keygen_algo = type;
+		}
+
+		/**
+		 * @function hashAlgorithms
+		 * @declaration function hashAlgorithms()
+		 * @brief Returns how many hash algorithms are needed
+		 * @return The number of hash algorithms that are needed
+		 * @description This function returns the number of hash
+		 *		algorithms which are required by the current
+		 *		key generation algorithm. Different key
+		 *		generators make use of 0, 1, or 2 different
+		 *		hash algorithms. The hash algorithms to use
+		 *		should be set using the setHashAlgorithms()
+		 *		function.
+		 */
+		native function hashAlgorithms()
+		{
+			FeriteVariable *fv = ferite_object_get_var(script, self,
+								"_keygen_algo");
+			FE_RETURN_LONG(
+				mhash_keygen_uses_hash_algorithm(VAI(fv)));
+		}
+
+		/**
+		 * @function setHashAlgorithms
+		 * @declaration function setHashAlgorithms(number h1, number h2)
+		 * @brief Sets the hash algorithms the key generator should use
+		 * @param number h1 The first hash algorithm
+		 * @param number h2 The second hash algorithm
+		 * @description This function sets the hash algorithm(s) which
+		 *		the key generator should use. Note that some
+		 *		key generators don't use any hash algorithms
+		 *		and some only use one. You can find out how
+		 *		many the current key generation algorithm uses
+		 *		by calling the hash_algorithms() method. If
+		 *		the key generator only uses one hash algorithm,
+		 *		the value of the second parameter is ignored.
+		 */
+		function setHashAlgorithms(number h1, number h2)
+		{
+			._hash_algo_0 = h1;
+			._hash_algo_1 = h2;
+		}
+
+		/**
+		 * @function usesCount
+		 * @declaration function usesCount()
+		 * @return true if setCount() needs to be called
+		 * @description This function returns true if the currently
+		 *		selected key generation algorithm requires you
+		 *		to specify the count value using setCount().
+		 */
+		native function usesCount()
+		{
+			FeriteVariable *fv = ferite_object_get_var(script, self,
+								"_keygen_algo");
+			if(mhash_keygen_uses_count(VAI(fv))) {
+				FE_RETURN_TRUE;
+			} else {
+				FE_RETURN_FALSE;
+			}
+		}
+
+		/**
+		 * @function setCount
+		 * @declaration function setCount(number count)
+		 * @param number count the number of bytes to process
+		 * @description This function sets the number of bytes the
+		 *		key generation algorithm should process before
+		 *		stopping. Not all key generation algorithms
+		 *		require you to specify this value- use the
+		 *		uses_count() method to find out if the current
+		 *		one does.
+		 */
+		function setCount(number count)
+		{
+			._count = count;
+		}
+
+		/**
+		 * @function usesSalt
+		 * @declaration function usesSalt()
+		 * @return true if setSalt() needs to be called
+		 * @description This function returns true if the currently
+		 *		selected key generation algorithm requires you
+		 *		to specify the salt string using set_salt().
+		 */
+		native function usesSalt()
+		{
+			FeriteVariable *fv = ferite_object_get_var(script, self,
+								"_keygen_algo");
+			if(mhash_keygen_uses_salt(VAI(fv))) {
+				FE_RETURN_TRUE;
+			} else {
+				FE_RETURN_FALSE;
+			}
+		}
+
+		/**
+		 * @function setSalt
+		 * @declaration function setSalt(string salt)
+		 * @param string salt The salt string
+		 * @description This function sets the salt string the key
+		 *		generation algorithm should use. Not all key
+		 *		generation algorithms require you to specify
+		 *		a salt- use the uses_salt() method to find out
+		 *		if the current one does.
+		 */
+		function setSalt(string salt)
+		{
+			._salt = salt;
+		}
+
+		/**
+		 * @function generateKey
+		 * @declaration function generateKey(string pass, number len)
+		 * @brief Generates a key of the specified length
+		 * @param string pass The password to generate a key from
+		 * @param number len The length of the key to generate
+		 * @return The key as a string len bytes in length
+		 * @description This function generates a key len bytes long
+		 *		using the current key generation algorithm
+		 *		and the specified password. You may need to
+		 *		set the salt, hash algorithms, and/or the
+		 *		byte count first (see uses_salt(),
+		 *		hash_algorithms(), and uses_count()). If an
+		 *		error occurs, an empty string is returned.
+		 */
+		native function generateKey(string pass, number len)
+		{
+			int algo;
+			KEYGEN kg;
+			FeriteVariable *fv;
+			unsigned char *key;
+
+			if(!(key = fmalloc((int)len))) {
+				fv = ferite_create_string_variable_from_ptr(
+							script, "", "", 0,
+						FE_CHARSET_DEFAULT, FE_STATIC);
+				FE_RETURN_VAR(fv);
+			}
+
+			fv = ferite_object_get_var(script, self,
+							"_keygen_algo");
+			algo = VAI(fv);
+			fv = ferite_object_get_var(script, self,
+							"_hash_algo_0");
+			kg.hash_algorithm[0] = VAI(fv);
+			fv = ferite_object_get_var(script, self,
+							"_hash_algo_1");
+			kg.hash_algorithm[1] = VAI(fv);
+			fv = ferite_object_get_var(script, self,
+							"_count");
+			kg.count = VAI(fv);
+			fv = ferite_object_get_var(script, self,
+							"_salt");
+			kg.salt = VAS(fv)->data;
+			kg.salt_size = VAS(fv)->length;
+
+			if(mhash_keygen_ext(algo, kg, key, (int)len,
+					pass->data, pass->length) == -1) {
+				ffree(key);
+				fv = ferite_create_string_variable_from_ptr(
+							script, "", "", 0,
+						FE_CHARSET_DEFAULT, FE_STATIC);
+				FE_RETURN_VAR(fv);
+			}
+			
+			fv = ferite_create_string_variable_from_ptr(script,
+					"MHash::KeyGen::generate_key", key,
+						(int)len, FE_CHARSET_DEFAULT,
+								FE_STATIC);
+			ffree(key);
+			FE_RETURN_VAR(fv);
+		}
+	}
+        /**
+         * @end 
+         */
+}
+/**
+ * @end
+ */

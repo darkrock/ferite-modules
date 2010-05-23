@@ -1,0 +1,206 @@
+uses "ogl";
+uses "GLUT";
+uses "sys";
+uses "console";
+
+global {
+    number rtri = 0.0;
+    number rquad = 0.0;
+    number window = 0;
+}
+
+function InitGL(number Width, number Height)	        // We call this right after our OpenGL window is created.
+{
+    GL.ClearColor(0.0, 0.0, 0.0, 0.0);		// This Will Clear The Background Color To Black
+    GL.ClearDepth(1.0);				// Enables Clearing Of The Depth Buffer
+    GL.DepthFunc(GL.LESS);				// The Type Of Depth Test To Do
+    GL.Enable(GL.DEPTH_TEST);			// Enables Depth Testing
+    GL.ShadeModel(GL.SMOOTH);			// Enables Smooth Color Shading
+    
+    GL.MatrixMode(GL.PROJECTION);
+    GL.LoadIdentity();				// Reset The Projection Matrix
+    
+    GLU.Perspective(45.0,Width/(0.0 + Height),0.1,100.0);
+    
+    GL.MatrixMode(GL.MODELVIEW);
+}
+
+/* The function called when our window is resized (which shouldn't happen, because we're fullscreen) */
+function ReSizeGLScene(number  Width, number Height)
+{
+    if (Height==0)				// Prevent A Divide By Zero If The Window Is Too Small
+        Height=1;
+    
+    GL.Viewport(0, 0, Width, Height);		// Reset The Current Viewport And Perspective Transformation
+    
+    GL.MatrixMode(GL.PROJECTION);
+    GL.LoadIdentity();
+    
+    GLU.Perspective(45.0,Width/(0.0 + Height),0.1,100.0);
+    GL.MatrixMode(GL.MODELVIEW);
+}
+
+function DrawGLScene() {
+    
+    GL.Clear(GL.DEPTH_BUFFER_BIT | GL.COLOR_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
+    GL.LoadIdentity();				// Reset The View
+    
+    GL.Translated(-1.5,0.0,-6.0);		// Move Left 1.5 Units And Into The Screen 6.0
+    
+    GL.Rotated(rtri,0.0,1.0,0.0);		// Rotate The Pyramid On The Y axis 
+    
+    // draw a pyramid (in smooth coloring mode)
+    GL.Begin(GL.POLYGON);				// start drawing a pyramid
+    
+    // front face of pyramid
+    GL.Color3f(1.0,0.0,0.0);			// Set The Color To Red
+    GL.Vertex3f(0.0, 1.0, 0.0);		        // Top of trianGL.e (front)
+    GL.Color3f(0.0,1.0,0.0);			// Set The Color To Green
+    GL.Vertex3f(-1.0,-1.0, 1.0);		// left of trianGL.e (front)
+    GL.Color3f(0.0,0.0,1.0);			// Set The Color To Blue
+    GL.Vertex3f(1.0,-1.0, 1.0);		        // right of trainGL.e (front)	
+    
+    // right face of pyramid
+    GL.Color3f(1.0,0.0,0.0);			// Red
+    GL.Vertex3f( 0.0, 1.0, 0.0);		// Top Of TrianGL.e (Right)
+    GL.Color3f(0.0,0.0,1.0);			// Blue
+    GL.Vertex3f( 1.0,-1.0, 1.0);		// Left Of TrianGL.e (Right)
+    GL.Color3f(0.0,1.0,0.0);			// Green
+    GL.Vertex3f( 1.0,-1.0, -1.0);		// Right Of TrianGL.e (Right)
+    
+    // back face of pyramid
+    GL.Color3f(1.0,0.0,0.0);			// Red
+    GL.Vertex3f( 0.0, 1.0, 0.0);		// Top Of TrianGL.e (Back)
+    GL.Color3f(0.0,1.0,0.0);			// Green
+    GL.Vertex3f( 1.0,-1.0, -1.0);		// Left Of TrianGL.e (Back)
+    GL.Color3f(0.0,0.0,1.0);			// Blue
+    GL.Vertex3f(-1.0,-1.0, -1.0);		// Right Of TrianGL.e (Back)
+    
+    // left face of pyramid.
+    GL.Color3f(1.0,0.0,0.0);			// Red
+    GL.Vertex3f( 0.0, 1.0, 0.0);		// Top Of TrianGL.e (Left)
+    GL.Color3f(0.0,0.0,1.0);			// Blue
+    GL.Vertex3f(-1.0,-1.0,-1.0);		// Left Of TrianGL.e (Left)
+    GL.Color3f(0.0,1.0,0.0);			// Green
+    GL.Vertex3f(-1.0,-1.0, 1.0);		// Right Of TrianGL.e (Left)
+    
+    GL.End();					// Done Drawing The Pyramid
+
+    GL.LoadIdentity();				// make sure we're no longer rotated.
+    GL.Translated(1.5,0.0,-7.0);		// Move Right 3 Units, and back into the screen 7
+    
+    GL.Rotated(rquad,1.0,1.0,1.0);		// Rotate The Cube On X, Y, and Z
+    
+    // draw a cube (6 quadrilaterals)
+    GL.Begin(GL.QUADS);				// start drawing the cube.
+    
+    // top of cube
+    GL.Color3f(0.0,1.0,0.0);			// Set The Color To Blue
+    GL.Vertex3f( 1.0, 1.0,-1.0);		// Top Right Of The Quad (Top)
+    GL.Vertex3f(-1.0, 1.0,-1.0);		// Top Left Of The Quad (Top)
+    GL.Vertex3f(-1.0, 1.0, 1.0);		// Bottom Left Of The Quad (Top)
+    GL.Vertex3f( 1.0, 1.0, 1.0);		// Bottom Right Of The Quad (Top)
+    
+    // bottom of cube
+    GL.Color3f(1.0,0.5,0.0);			// Set The Color To Orange
+    GL.Vertex3f( 1.0,-1.0, 1.0);		// Top Right Of The Quad (Bottom)
+    GL.Vertex3f(-1.0,-1.0, 1.0);		// Top Left Of The Quad (Bottom)
+    GL.Vertex3f(-1.0,-1.0,-1.0);		// Bottom Left Of The Quad (Bottom)
+    GL.Vertex3f( 1.0,-1.0,-1.0);		// Bottom Right Of The Quad (Bottom)
+    
+    // front of cube
+    GL.Color3f(1.0,0.0,0.0);			// Set The Color To Red
+    GL.Vertex3f( 1.0, 1.0, 1.0);		// Top Right Of The Quad (Front)
+    GL.Vertex3f(-1.0, 1.0, 1.0);		// Top Left Of The Quad (Front)
+    GL.Vertex3f(-1.0,-1.0, 1.0);		// Bottom Left Of The Quad (Front)
+    GL.Vertex3f( 1.0,-1.0, 1.0);		// Bottom Right Of The Quad (Front)
+    
+    // back of cube.
+    GL.Color3f(1.0,1.0,0.0);			// Set The Color To Yellow
+    GL.Vertex3f( 1.0,-1.0,-1.0);		// Top Right Of The Quad (Back)
+    GL.Vertex3f(-1.0,-1.0,-1.0);		// Top Left Of The Quad (Back)
+    GL.Vertex3f(-1.0, 1.0,-1.0);		// Bottom Left Of The Quad (Back)
+    GL.Vertex3f( 1.0, 1.0,-1.0);		// Bottom Right Of The Quad (Back)
+    
+    // left of cube
+    GL.Color3f(0.0,0.0,1.0);			// Blue
+    GL.Vertex3f(-1.0, 1.0, 1.0);		// Top Right Of The Quad (Left)
+    GL.Vertex3f(-1.0, 1.0,-1.0);		// Top Left Of The Quad (Left)
+    GL.Vertex3f(-1.0,-1.0,-1.0);		// Bottom Left Of The Quad (Left)
+    GL.Vertex3f(-1.0,-1.0, 1.0);		// Bottom Right Of The Quad (Left)
+    
+    // Right of cube
+    GL.Color3f(1.0,0.0,1.0);			// Set The Color To Violet
+    GL.Vertex3f( 1.0, 1.0,-1.0);	        // Top Right Of The Quad (Right)
+    GL.Color4f(1.0,0.5,0.25,0.5);
+    GL.Vertex3f( 1.0, 1.0, 1.0);		// Top Left Of The Quad (Right)
+    GL.Color4f(0.5,0.75,0.25,0.25);
+    GL.Vertex3f( 1.0,-1.0, 1.0);		// Bottom Left Of The Quad (Right)
+    GL.Color4f(0.1,0.5,0.1,0.5);
+    GL.Vertex3f( 1.0,-1.0,-1.0);		// Bottom Right Of The Quad (Right)
+    GL.End();					// Done Drawing The Cube
+    
+    rtri+=0.5;					// Increase The Rotation Variable For The Pyramid
+    rquad-=0.5;					// Decrease The Rotation Variable For The Cube
+                                                        // we're done with the polygo        
+    GLUT.SwapBuffers();
+}
+
+/* The function called whenever a key is pressed. */
+function keyPressed( number key, number x, number y) 
+{
+    /* If escape is pressed, kill everything. */
+    if (key == 27) 
+    { 
+        GLUT.DestroyWindow(window);
+        Sys.exit(0);
+    }
+}
+
+
+GLUT.Init(argv);  
+
+/* Select type of Display mode:   
+Double buffer 
+RGBA color
+Alpha components supported 
+Depth buffer */  
+GLUT.InitDisplayMode(GLUT.RGBA | GLUT.DOUBLE | GLUT.ALPHA | GLUT.DEPTH);  
+
+/* get a 640 x 480 window */
+GLUT.InitWindowSize(640, 480);  
+
+/* the window starts at the upper left corner of the screen */
+GLUT.InitWindowPosition(0, 0);  
+
+/* Open a window */  
+window = GLUT.CreateWindow("ctr's ferite OpenGL shell");  
+
+/* Register the function to do all our OpenGL drawing. */
+GLUT.DisplayFunc( closure { 
+    DrawGLScene(); 
+} );
+
+/* Go fullscreen.  This is the soonest we could possibly go fullscreen. */
+//GLUT.FullScreen();
+
+/* Even if there are no events, redraw our gl scene. */
+GLUT.IdleFunc( closure { 
+    DrawGLScene(); 
+} );
+
+/* Register the function called when our window is resized. */
+GLUT.ReshapeFunc( closure( width, height ) { 
+    ReSizeGLScene( width, height );
+} );
+
+/* Register the function called when the keyboard is pressed. */
+GLUT.KeyboardFunc( closure( key, x, y ) {
+    keyPressed( key, x, y );
+} );
+
+/* Initialize our window. */
+InitGL(640, 480);
+
+/* Start Event Processing Engine */  
+GLUT.MainLoop();  

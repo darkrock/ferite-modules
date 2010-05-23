@@ -1,0 +1,28 @@
+uses "console","template";
+
+class foo
+{
+    array a;
+    array b;
+    string c;
+    string d;
+
+    constructor( )
+    {
+    	array a, b;
+		a["name"] = "Chris Ross";
+		a["title"] = "Developer";
+		b["name"] = "Jaron Frenk";
+		b["title"] = "Monkey";
+		
+		self.a = [a,b];
+		self.b = ["Print", "Out", "Each", "Element", "Using", "[]"];
+		self.c = "";
+		self.d = "Top Level Element";	
+    }
+}
+
+object o = new foo();
+object tmpl = new Template( o );
+tmpl.parseFile("file.tp");
+Console.println( tmpl.run() );

@@ -1,0 +1,24 @@
+#!/usr/bin/env ferite
+
+uses "curses", "sys";
+
+number ch;
+object scr;
+
+scr = Curses.init();
+Curses.start_color();
+Curses.cbreak(true);
+Curses.echo(false);
+Curses.nl(false);
+scr.intrflush(false);
+scr.keypad(true);
+scr.scrollok(true);
+Curses.init_pair(1, Curses.COLOR_WHITE, Curses.COLOR_BLUE);
+scr.bkgd(Curses.color_pair(1));
+scr.attrset(Curses.color_pair(1) | Curses.A_BOLD);
+do {
+	ch = scr.getch();
+	scr.addstr("Key pressed: " + Curses.keyname(ch) + "\n");
+	scr.refresh();
+} while(ch != Curses.KEY_BREAK);
+scr.close();

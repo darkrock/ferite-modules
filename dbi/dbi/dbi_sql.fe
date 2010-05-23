@@ -1,0 +1,264 @@
+/*
+ * Copyright (C) 2002-2007 Chris Ross, Cention AB
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+namespace SQL {
+	class SQLJoin {
+		string joinKeyword;
+		array  terms;
+		object splitOperator;
+		
+		constructor( string k, array t ) {
+			.joinKeyword = k;
+			.terms = t;
+			.splitOperator = new Regexp('^@(.*?) (.*)$');
+		}
+		function toString() {
+			array real_terms;
+			.terms.eachWithIndex() using ( term, index ) {
+				string real_term = "$term";
+				if( .terms.getName(index) ) {
+					string left = .terms.getName(index);
+					string pivot = "=";
+					string right = "${SQL.feriteToSQLVariable(term)}";
+					if( term isa array )
+						pivot = "IN";
+					if( term isa string and term[0] == '@' ) {
+						object m = .splitOperator.match(term);
+						pivot = m.capture(0);
+						right = m.capture(1);
+					}
+					if( SQL.isAttributeName(left) ) 
+						left = SQL.a(left);
+					real_term = "$left $pivot $right";
+				}
+				real_terms[] = real_term;
+			};
+			return '(' + real_terms.join(" ${.joinKeyword} ") + ')';
+		}
+	}
+	class SQLBuilder {
+		string sql;
+		array  lastAction;
+		array  parts;
+
+		function createSection( string name ) {
+			if( not .parts.keyExists(name) )
+				.parts[name] = [];
+		}
+		function select()
+			return .select('*');
+		function select( string attribute )
+			return .select([attribute]);
+		function select( array attribute )
+			return .select( '', attribute );
+		function select( string tablePrefix, array attribute ) {
+			.createSection('SELECT');
+			if( .lastAction.last() == "FROM" and not tablePrefix ) {
+				array from = .parts['FROM'].last();
+				tablePrefix = from[0];
+				if( from[1] )
+					tablePrefix = from[1];
+			}
+			tablePrefix = SQL.a(tablePrefix);
+			attribute.eachWithIndex() using ( attr, index ) {
+				string real_attribute = '';
+				string as_name = attribute.getName(index);
+				if( tablePrefix )
+					real_attribute = tablePrefix + '.';
+				if( as_name ) {
+					real_attribute += SQL.a(as_name);
+					real_attribute += " AS ";
+				} 
+				real_attribute += SQL.a(attr);
+				.parts['SELECT'][] = real_attribute;
+			};
+			.lastAction[] = "SELECT";
+			return self;
+		}
+		function from( string table ) 
+			return .from( table, '' );
+		function from( string table, string alias ) {
+			.createSection('FROM');
+			.parts['FROM'][] = [ table, alias ];
+			.lastAction[] = "FROM";
+			return self;
+		}
+		function where( string singleClause )
+			return .where( SQL.AND([ singleClause ]) );
+		function where( array multipleClauses )
+			return .where( SQL.AND(multipleClauses) );
+		function where( object clauses ) {
+			.createSection('WHERE');
+			.parts['WHERE'][] = clauses;
+			.lastAction[] = "WHERE";
+			return self;
+		}
+		function orderAsc( string attribute )
+			return .orderBy( attribute, 'ASC' );
+		function orderDsc( string attribute )
+			return .orderBy( attribute, 'DESC' );
+		function orderBy( string attribute ) 
+			return .orderBy( attribute, 'ASC' );
+		function orderBy( string attribute, string order ) {
+			.createSection('ORDER BY');
+			.parts['ORDER BY'][] = [ attribute, order ];
+			.lastAction[] = "ORDER BY";
+			return self;
+		}
+		function limit( number limit ) {
+			.createSection('LIMIT');
+			.parts['LIMIT'] = [ limit ];
+			.lastAction[] = "LIMIT";
+			return self;
+		}
+		function offset( number offset ) {
+			.createSection('OFFSET');
+			.parts['OFFSET'] = [ offset ];
+			.lastAction[] = "OFFSET";
+			return self;
+		}
+		function toString() {
+			string SQLOutput;
+			if( .parts.keyExists('SELECT') )
+				SQLOutput += "SELECT " + .parts['SELECT'].join(', ');
+			else
+				SQLOutput += "SELECT *";
+			if( .parts.keyExists('FROM') ) {
+				SQLOutput += " FROM ";
+				SQLOutput += .parts['FROM'].join(', ') using ( item ) {
+					if( item[1] ) {
+						return SQL.a(item[0]) + " AS " + SQL.a(item[1]);
+					}
+					return SQL.a(item[0]);
+				};
+			}
+			if( .parts.keyExists('WHERE') ) {
+				SQLOutput += " WHERE ";
+				SQLOutput += .parts['WHERE'].join(' AND ') using ( clauses ) {
+					return "(${clauses})";
+				};
+			}
+			if( .parts.keyExists('ORDER BY') ) {
+				SQLOutput += " ORDER BY ";
+				SQLOutput += .parts['ORDER BY'].join(', ') using ( item ) {
+					return "${SQL.a(item[0])} ${item[1]}";
+				};
+			}
+			if( .parts.keyExists('LIMIT') )
+				SQLOutput += " LIMIT " + .parts['LIMIT'][0];
+			if( .parts.keyExists('OFFSET') )
+				SQLOutput += " OFFSET " + .parts['OFFSET'][0];
+			return SQLOutput + ';';
+		}
+		function toSQL {
+			string sql = .toString();
+			return sql;
+		}
+	}
+	function feriteToSQLVariable( void variable ) {
+		if( variable isa string )
+			return "'${SQL.quote(variable)}'";
+		if( variable isa array )
+			return "(" + variable.join(',') using (item) { return SQL.feriteToSQLVariable(item); } + ")";
+		if( variable isa number )
+			return variable;
+		if( variable isa object )
+			return "'${SQL.quote(variable.toString())}'";
+		return "''";
+	}
+	object attributeNameR;
+	function isAttributeName( string name ) {
+		if( not .attributeNameR )
+			.attributeNameR = new Regexp('^[A-Za-z_1-9]+$');
+		return (.attributeNameR.match(name) ? true : false);
+	}
+	function quote( string q ) {
+		object r = new Regexp('[\'"\\]');
+		return r.replaceAll(q) using ( match ) {
+			return "\\" + match.match();
+		};
+	}
+	function a( string l, string r ) 
+		return "${.a(l)}.${.a(r)}";
+	function a( string a ) {
+		if( a.toLower() != a )
+			return "\"$a\"";
+		return a;
+	}
+	function method_missing( ... ) {
+		string functionCall = '';
+		number i = 0;
+		array fncArgs = arguments();
+
+		functionCall += fncArgs[Array.size(fncArgs)-1] + '(';
+		for( i = 0; i < Array.size(fncArgs)-1; i++ ) {
+			void value = fncArgs[i];
+			if( value isa string )
+				functionCall += "'${.quote(value)}'";
+			else
+				functionCall += value;
+			if( i < (Array.size(fncArgs) - 2) )
+				functionCall += ", ";
+		}
+		functionCall += ')';
+		return functionCall;
+	}
+	function select
+		return .select('*');
+	function select( string attribute ) 
+		return .select( '', attribute );
+	function select( string alias, string attribute ) {
+		object s = new SQL.SQLBuilder();
+		s = s.select( alias, [ attribute ] );
+		return s;
+	}
+	function from( string table ) 
+		return .from( table, '' );
+	function from( string table, string alias ) {
+		object s = new SQL.SQLBuilder();
+		s = s.from( table, alias );
+		return s;
+	}
+	function AND( array join )
+		return new SQL.SQLJoin( 'AND', join );
+	function OR( array join )
+		return new SQL.SQLJoin( 'OR', join );
+	function EQ( string left, string right )
+		return "$left=$right";
+	function lessThan( void value )
+		return "@< ${SQL.feriteToSQLVariable(value)}";
+	function greaterThan( void value )
+		return "@> ${SQL.feriteToSQLVariable(value)}";
+	function notEqual( void value )
+		return "@<> ${SQL.feriteToSQLVariable(value)}";
+	function notIn( array value )
+		return "@NOT IN ${SQL.feriteToSQLVariable(value)}";
+}
+function tidy( string s )
+	return "replace(${SQL.a(s)},' ','')";

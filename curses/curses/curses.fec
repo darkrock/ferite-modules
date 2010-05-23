@@ -1,0 +1,3001 @@
+/*
+ * Ferite bindings to the Curses library.
+ * Copyright (C) 2002 Alex Holden <alex@alexholden.net>
+ * Note: only tested so far with NCurses.
+ */
+
+uses "curses.lib";
+
+module-header {
+#include <curses.h>
+#include <errno.h>
+#define THISWIN ((WINDOW *)self->odata)
+#define ONTF (((int)on) ? TRUE : FALSE)
+}
+
+module-init {
+	int i;
+	char *name = NULL;
+	FeriteVariable *fv;
+	FeriteNamespace *Cursesns;
+
+	/* If you add a constant to these arrays, make sure it is in the same
+	 * place in both tables and that you put it before the last entry in the
+	 * arrays. */
+	int constant_values[] = { COLOR_BLACK, COLOR_RED, COLOR_GREEN,
+		COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA, COLOR_CYAN,
+		COLOR_WHITE, A_NORMAL, A_STANDOUT, A_UNDERLINE, A_REVERSE,
+		A_BLINK, A_DIM, A_BOLD, A_PROTECT, A_INVIS, A_ALTCHARSET,
+		A_CHARTEXT, A_ATTRIBUTES, A_COLOR, ACS_BLOCK, ACS_BOARD,
+		ACS_BTEE, ACS_BULLET, ACS_CKBOARD, ACS_DARROW, ACS_DEGREE,
+		ACS_DIAMOND, ACS_HLINE, ACS_LANTERN, ACS_LARROW, ACS_LLCORNER,
+		ACS_LRCORNER, ACS_LTEE, ACS_PLMINUS, ACS_PLUS, ACS_RARROW,
+		ACS_BTEE, ACS_S1, ACS_S9, ACS_TTEE, ACS_UARROW, ACS_ULCORNER,
+		ACS_URCORNER, ACS_VLINE, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
+		KEY_HOME, KEY_END, KEY_NPAGE, KEY_PPAGE, KEY_F(1), KEY_F(2),
+		KEY_F(3), KEY_F(4), KEY_F(5), KEY_F(6), KEY_F(7), KEY_F(8),
+		KEY_F(9), KEY_F(10), KEY_F(11), KEY_F(12), KEY_IC, KEY_A1,
+		KEY_A3, KEY_B2, KEY_C1, KEY_C3, KEY_BACKSPACE, KEY_DC,
+		KEY_ENTER, KEY_COMMAND, KEY_OPTIONS, KEY_RESIZE, KEY_UNDO,
+		KEY_PRINT, KEY_BREAK, 0 };
+	char *constant_names[] = { "COLOR_BLACK", "COLOR_RED",
+		"COLOR_GREEN", "COLOR_YELLOW", "COLOR_BLUE", "COLOR_MAGENTA",
+		"COLOR_CYAN", "COLOR_WHITE", "A_NORMAL", "A_STANDOUT",
+		"A_UNDERLINE", "A_REVERSE", "A_BLINK", "A_DIM", "A_BOLD",
+		"A_PROTECT", "A_INVIS", "A_ALTCHARSET", "A_CHARTEXT",
+		"A_ATTRIBUTES", "A_COLOR", "ACS_BLOCK", "ACS_BOARD",
+		"ACS_BTEE", "ACS_BULLET", "ACS_CKBOARD", "ACS_DARROW",
+		"ACS_DEGREE", "ACS_DIAMOND", "ACS_HLINE", "ACS_LANTERN",
+		"ACS_LARROW", "ACS_LLCORNER", "ACS_LRCORNER", "ACS_LTEE",
+		"ACS_PLMINUS", "ACS_PLUS", "ACS_RARROW", "ACS_BTEE", "ACS_S1",
+		"ACS_S9", "ACS_TTEE", "ACS_UARROW", "ACS_ULCORNER",
+		"ACS_URCORNER", "ACS_VLINE", "KEY_UP", "KEY_DOWN", "KEY_LEFT",
+		"KEY_RIGHT", "KEY_HOME", "KEY_END", "KEY_NPAGE", "KEY_PPAGE",
+		"KEY_F1", "KEY_F2", "KEY_F3", "KEY_F4", "KEY_F5", "KEY_F6",
+		"KEY_F7", "KEY_F8", "KEY_F9", "KEY_F10", "KEY_F11", "KEY_F12",
+		"KEY_IC", "KEY_A1", "KEY_A3", "KEY_B2", "KEY_C1", "KEY_C3",
+		"KEY_BACKSPACE", "KEY_DC", "KEY_ENTER", "KEY_COMMAND",
+		"KEY_OPTIONS", "KEY_RESIZE", "KEY_UNDO", "KEY_PRINT",
+		"KEY_BREAK", "" };
+
+	/* Create the Curses namespace. We need to do this here, and then
+	 * specify "modifies" on the real namespace definition further down,
+	 * because we want to put some variables in the namespace now but
+	 * the init function is called before Ferite creates it. */
+	Cursesns = ferite_register_namespace(script, "Curses", script->mainns);
+
+	/* Create the constants: */
+	for(i = 0; *constant_names[i]; i++) {
+		fv = ferite_create_number_long_variable(script,
+			constant_names[i], constant_values[i], FE_STATIC);
+		MARK_VARIABLE_AS_FINALSET(fv);
+		ferite_register_ns_variable(script, Cursesns, constant_names[i], fv);
+	}
+}
+
+/**
+ * @namespace Curses
+ * @brief The namespace for the Curses module
+ */
+
+/** @variable COLOR_BLACK
+ * @type number */
+
+/** @variable COLOR_RED
+ * @type number */
+
+/** @variable COLOR_GREEN
+ * @type number */
+
+/** @variable COLOR_YELLOW
+ * @type number */
+
+/** @variable COLOR_BLUE
+ * @type number */
+
+/** @variable COLOR_MAGENTA
+ * @type number */
+
+/** @variable COLOR_CYAN
+ * @type number */
+
+/** @variable COLOR_WHITE
+ * @type number */
+
+/** @variable A_NORMAL
+ * @type number */
+
+/** @variable A_STANDOUT
+ * @type number */
+
+/** @variable A_UNDERLINE
+ * @type number */
+
+/** @variable A_REVERSE
+ * @type number */
+
+/** @variable A_BLINK
+ * @type number */
+
+/** @variable A_DIM
+ * @type number */
+
+/** @variable A_BOLD
+ * @type number */
+
+/** @variable A_PROTECT
+ * @type number */
+
+/** @variable A_INVIS
+ * @type number */
+
+/** @variable A_ALTCHARSET
+ * @type number */
+
+/** @variable A_CHARTEXT
+ * @type number */
+
+/** @variable A_ATTRIBUTES
+ * @type number */
+
+/** @variable A_COLOR
+ * @type number */
+
+/** @variable ACS_BLOCK
+ * @type number */
+
+/** @variable ACS_BOARD
+ * @type number */
+
+/** @variable ACS_BTEE
+ * @type number */
+
+/** @variable ACS_BULLET
+ * @type number */
+
+/** @variable ACS_CKBOARD
+ * @type number */
+
+/** @variable ACS_DARROW
+ * @type number */
+
+/** @variable ACS_DEGREE
+ * @type number */
+
+/** @variable ACS_DIAMOND
+ * @type number */
+
+/** @variable ACS_HLINE
+ * @type number */
+
+/** @variable ACS_LANTERN
+ * @type number */
+
+/** @variable ACS_LARROW
+ * @type number */
+
+/** @variable ACS_LLCORNER
+ * @type number */
+
+/** @variable ACS_LRCORNER
+ * @type number */
+
+/** @variable ACS_LTEE
+ * @type number */
+
+/** @variable ACS_PLMINUS
+ * @type number */
+
+/** @variable ACS_PLUS
+ * @type number */
+
+/** @variable ACS_RARROW
+ * @type number */
+
+/** @variable ACS_BTEE
+ * @type number */
+
+/** @variable ACS_S1
+ * @type number */
+
+/** @variable ACS_S9
+ * @type number */
+
+/** @variable ACS_TTEE
+ * @type number */
+
+/** @variable ACS_UARROW
+ * @type number */
+
+/** @variable ACS_ULCORNER
+ * @type number */
+
+/** @variable ACS_URCORNER
+ * @type number */
+
+/** @variable ACS_VLINE
+ * @type number */
+
+/** @variable KEY_UP
+ * @type number */
+
+/** @variable KEY_DOWN
+ * @type number */
+
+/** @variable KEY_LEFT
+ * @type number */
+
+/** @variable KEY_RIGHT
+ * @type number */
+
+/** @variable KEY_HOME
+ * @type number */
+
+/** @variable KEY_END
+ * @type number */
+
+/** @variable KEY_NPAGE
+ * @type number */
+
+/** @variable KEY_PPAGE
+ * @type number */
+
+/** @variable KEY_F1
+ * @type number */
+
+/** @variable KEY_F2
+ * @type number */
+
+/** @variable KEY_F3
+ * @type number */
+
+/** @variable KEY_F4
+ * @type number */
+
+/** @variable KEY_F5
+ * @type number */
+
+/** @variable KEY_F6
+ * @type number */
+
+/** @variable KEY_F7
+ * @type number */
+
+/** @variable KEY_F8
+ * @type number */
+
+/** @variable KEY_F9
+ * @type number */
+
+/** @variable KEY_F10
+ * @type number */
+
+/** @variable KEY_F11
+ * @type number */
+
+/** @variable KEY_F12
+ * @type number */
+
+/** @variable KEY_IC
+ * @type number */
+
+/** @variable KEY_A1
+ * @type number */
+
+/** @variable KEY_A3
+ * @type number */
+
+/** @variable KEY_B2
+ * @type number */
+
+/** @variable KEY_C1
+ * @type number */
+
+/** @variable KEY_C3
+ * @type number */
+
+/** @variable KEY_BACKSPACE
+ * @type number */
+
+/** @variable KEY_DC
+ * @type number */
+
+/** @variable KEY_ENTER
+ * @type number */
+
+/** @variable KEY_COMMAND
+ * @type number */
+
+/** @variable KEY_OPTIONS
+ * @type number */
+
+/** @variable KEY_RESIZE
+ * @type number */
+
+/** @variable KEY_UNDO
+ * @type number */
+
+/** @variable KEY_PRINT
+ * @type number */
+
+/** @variable KEY_BREAK
+ * @type number */
+
+namespace modifies Curses {
+
+	/**
+	 * @variable LINES
+	 * @type number
+	 * @brief Set by Curses.init() to the number of lines in the screen.
+	 */
+	number LINES = -1;
+
+	/**
+	 * @variable COLS
+	 * @type number
+	 * @brief Set by Curses.init() to the number of columns in the screen.
+	 */
+	number COLS = -1;
+
+	/**
+	 * @variable COLORS
+	 * @type number
+	 * @brief Set by start_color() to the maximum number of colours
+	 */
+	number COLORS = -1;
+
+	/**
+	 * @variable COLOR_PAIRS
+	 * @type number
+	 * @brief Set by start_color() to the maximum number of colour pairs
+	 */
+	number COLOR_PAIRS = -1;
+
+	/**
+	 * @function init
+	 * @declaration function init()
+	 * @brief Initialises the screen and creates the root window object
+	 * @return The root window object
+	 * @description This is usually the first function to be called upon
+	 *		starting a Curses application. It corresponds to the
+	 *		library function initscr(). An instance of the Window
+	 *		class is returned which corresponds to the entire
+	 *		output screen (ie. the root window). On error, the
+	 *		function may return a null object, or the Curses
+	 *		library may exit the program with an error message
+	 *		(this behaviour is implementation dependant).
+	 */
+	native function init()
+	{
+		WINDOW *win;
+		FeriteClass *cls;
+		FeriteNamespaceBucket *nsb;
+		FeriteVariable *obj, **args, *fv;
+
+		if(!(cls = ferite_find_class(script, script->mainns,
+						"Curses.Window"))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		if(!(win = initscr())) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Curses.LINES", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		VAI(fv) = LINES;
+
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Curses.COLS", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		VAI(fv) = COLS;
+
+		args = ferite_create_parameter_list(script, 3);
+		obj = ferite_new_object(script, cls, args);
+		ferite_delete_parameter_list(script, args);
+
+		VAO(obj)->odata = win;
+
+		FE_RETURN_VAR(obj);
+	}
+
+	/**
+	 * @function newwin
+	 * @declaration function newwin(number x, number y, number w, number h)
+	 * @brief Creates a new top-level window
+	 * @param number x The absolute X coordinate to create the window at
+	 * @param number y The absolute Y coordinate to create the window at
+	 * @param number w The width of the new window
+	 * @param number h The height of the new window
+	 * @return The new window object or a null object on failure
+	 * @description This function creates a new top level window object at
+	 *		the specified location with the specified dimensions.
+	 *		Note that Curses does not support overlapping windows.
+	 *		You should either use the root window (from
+	 *		Curses.init()) for everything, or create a set of non
+	 *		overlapping windows with Curses.newwin() which fill
+	 *		the whole screen area and use those for output. Returns
+	 *		a Window object on success or a null object on failure.
+	 */
+	native function newwin(number x, number y, number w, number h)
+	{
+		WINDOW *win;
+		FeriteClass *cls;
+		FeriteVariable *obj, **args;
+
+		if(!(cls = ferite_find_class(script, script->mainns,
+						"Curses.Window"))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		if(!(win = newwin((int)h, (int)w, (int)y, (int)x))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		args = ferite_create_parameter_list(script,3);
+		obj = ferite_new_object(script, cls, args);
+		ferite_delete_parameter_list(script, args);
+
+		VAO(obj)->odata = win;
+
+		FE_RETURN_VAR(obj);
+	}
+
+	/**
+	 * @function newpad
+	 * @declaration function newpad(number w, number h)
+	 * @brief Creates a new pad
+	 * @param number w The width of the pad
+	 * @param number h The height of the pad
+	 * @return The new Pad object or a null object on failure
+	 * @description This function creates a new Pad object at the specified
+	 *		location with the specified dimensions. A Pad object
+	 *		is basically an off screen buffer similar to a
+	 *		Pixmap. Most of the things you can do with a window
+	 *		you can also do with a Pad, but it is never
+	 *		automatically copied to the screen- you must call the
+	 *		refresh() function specifying the pad area and the
+	 *		destination screen location to copy it to. Pads can
+	 *		be bigger than the screen area, which enables you to
+	 *		implement a big text area and only show part of it on
+	 *		the screen or in a window at a time.
+	 */
+	native function newpad(number w, number h)
+	{
+		WINDOW *win;
+		FeriteClass *cls;
+		FeriteVariable *obj, **args;
+
+		if(!(cls = ferite_find_class(script, script->mainns,
+						"Curses.Pad"))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		if(!(win = newpad((int)h, (int)w))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		args = ferite_create_parameter_list(script, 3);
+		obj = ferite_new_object(script, cls, args);
+		ferite_delete_parameter_list(script, args);
+
+		VAO(obj)->odata = win;
+
+		FE_RETURN_VAR(obj);
+	}
+
+	/**
+	 * @function start_color
+	 * @declaration function start_color()
+	 * @brief Call this after init() if you want to use colours
+	 * @return True on success or false on failure
+	 * @description This function should be called right after init() if
+	 *		you want to make use of colours in your application.
+	 *		It sets up 8 basic colours which have symbolic names
+	 *		in the Curses namespace: COLOR_BLACK, COLOR_RED,
+	 *		COLOR_GREEN, COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA,
+	 *		COLOR_CYAN, and COLOR_WHITE. It also sets COLOR_PAIRS
+	 *		to the maximum number of colour pairs supported by the
+	 *		terminal and COLORS to the maximum number of colours
+	 *		supported by the terminal.
+	 */
+	native function start_color()
+	{
+		FeriteVariable *fv;
+		FeriteNamespaceBucket *nsb;
+
+		if(start_color() == ERR) {
+			FE_RETURN_FALSE;
+		}
+
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Curses.COLORS", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		VAI(fv) = COLORS;
+
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Curses.COLOR_PAIRS", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		VAI(fv) = COLOR_PAIRS;
+
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function init_color
+	 * @declaration function init_color(number colour, number red, number green, number blue)
+	 * @brief Attempts to set the specified colour
+	 * @param number colour The number of the colour to set
+	 * @param number red The amount of red between 0 and 1000
+	 * @param number green The amount of green between 0 and 1000
+	 * @param number blue The amount of blue between 0 and 1000
+	 * @return True on success or false on failure
+	 * @description This function attempts to set the specified colour
+	 *		number to the specified colour values. You must call
+	 *		start_color() before attempting to use this function.
+	 *		Note that this is not possible on some terminal types.
+	 *		The colour number must be between 0 and (Curses.COLORS
+	 *		- 1). The colour values must each be between 0 and
+	 *		1000. Returns false on failure. It is not necessary to
+	 *		call this function in order to use one of the eight
+	 *		default	colours (Curses.COLOR_BLACK etc.). You should
+	 *		be careful not to change the colour values of any of
+	 *		the default colours which you are using.
+	 */
+	native function init_color(number colour, number red, number green, number blue)
+	{
+		if(init_color((short)colour, (int)red, (int)green, (int)blue) ==
+								ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function init_pair
+	 * @declaration function init_pair(number pair, number fore, number back)
+	 * @brief Sets the colours to use in the specified colour pair
+	 * @param number pair The colour pair to set the colours of
+	 * @param number fore The colour number to use for the foreground
+	 * @param number back The colour number to use for the background
+	 * @return True on success or false on failure
+	 * @description This function attempts to set the foreground and
+	 *		background colours of the specified colour pair. The
+	 *		number of the colour pair should be between 0 and
+	 *		(Curses.COLORS - 1). You must call start_color() before
+	 *		attempting to use this function. The colour numbers
+	 *		can be either one of the eight standard colours
+	 *		(Curses.COLOR_BLACK etc.) or a custom one which you
+	 *		created with init_color(). If the function succeeds,
+	 *		you can then use the colour pair number with any of
+	 *		the functions which accept a colour attribute. Note
+	 *		that most Curses implementations do not allow you to
+	 *		modify colour pair 0.
+	 */
+	native function init_pair(number pair, number fore, number back)
+	{
+		if(init_pair((short)pair, (short)fore, (short)back) == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function color_content
+	 * @declaration function color_content(number colour)
+	 * @brief Gets the colour values of the specified colour
+	 * @param number colour The number of the colour to retrieve
+	 * @return An array of three colour values or an empty array on failure
+	 * @description This function attempts to retrieve the colour values
+	 *		used by the specified colour number as an array of
+	 *		three colour values. The array members specify in
+	 *		order the red, green, and blue content of the colour.
+	 *		The values are between 0 and 1000. Returns an empty
+	 *		array on failure.
+	 */
+	native function color_content(number colour)
+	{
+		short r, g, b;
+		FeriteVariable *arr, *fv;
+
+		arr = ferite_create_uarray_variable(script,
+				"Curses::color_content", 3, FE_STATIC);
+
+		if(color_content((short)colour, &r, &g, &b) != ERR) {
+			fv = ferite_create_number_long_variable(script,
+						"", r, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "red",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", g, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "green",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", b, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "blue",
+							FE_ARRAY_ADD_AT_END);
+		}
+
+		FE_RETURN_VAR(arr);
+	}
+
+	/**
+	 * @function pair_content
+	 * @declaration function pair_content(number pair)
+	 * @brief Gets the colour numbers in the specified colour pair
+	 * @param number pair The number of the colour pair
+	 * @return An array of two colour numbers, foreground and background
+	 * @description This function attempts to retrieve the colour numbers
+	 *		stored in the specified colour pair. Returns an array
+	 *		of two numbers, foreground and background, on success
+	 *		or an empty array on failure.
+	 */
+	native function pair_content(number pair)
+	{
+		short f, b;
+		FeriteVariable *arr, *fv;
+
+		arr = ferite_create_uarray_variable(script,
+				"Curses::pair_content", 2, FE_STATIC);
+
+		if(pair_content((short)pair, &f, &b) != ERR) {
+			fv = ferite_create_number_long_variable(script,
+						"", f, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "foreground",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", b, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "background",
+							FE_ARRAY_ADD_AT_END);
+		}
+
+		FE_RETURN_VAR(arr);
+	}
+
+	/**
+	 * @function pair_number
+	 * @declaration function pair_number(number attrs)
+	 * @brief Extracts a colour pair number from an attribute number
+	 * @param number attrs The attributes containing the colour pair number
+	 * @return The colour pair number
+	 */
+	native function pair_number(number attrs)
+	{
+		FE_RETURN_LONG(PAIR_NUMBER((int)attrs));
+	}
+
+	/**
+	 * @function color_pair
+	 * @declaration function color_pair(number pair)
+	 * @brief Generates an attribute number from a colour pair number
+	 * @param number attrs The colour pair number
+	 * @return An attribute number which can be ORed with other attributes
+	 */
+	native function color_pair(number pair)
+	{
+		FE_RETURN_LONG(COLOR_PAIR((short)pair));
+	}
+
+	/**
+	 * @function cbreak
+	 * @declaration function cbreak(number on)
+	 * @brief Turns line buffering of input off or on
+	 * @param number on True turns cbreak mode on, false turns it off
+	 * @return True on success or false on failure
+	 * @description This function sets the input mode to unbuffered if the
+	 *		on parameter is true, and sets it back to ordinary line
+	 *		buffered with input editing if on is false.
+	 */
+	native function cbreak(number on)
+	{
+		int ret;
+
+		if((int)on) ret = cbreak();
+		else ret = nocbreak();
+		if(ret == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function halfdelay
+	 * @declaration function halfdelay(number tenths)
+	 * @brief Switches to halfdelay input mode
+	 * @param number tenths The time in tenths of a second to wait for input
+	 * @return True on success or false on failure
+	 * @description This function is basically the same as cbreak mode
+	 *		except that in cbreak mode getch() will wait forever
+	 *		for input whereas in halfdelay mode it will only wait
+	 *		for up to the specified number of tenths of a second
+	 *		before returning if no key has been pressed. tenths
+	 *		must be a positive integer between 1 and 255. Returns
+	 *		false if the value for tenths was invalid. To turn off
+	 *		halfdelay mode, use Curses.cbreak(false).
+	 */
+	native function halfdelay(number tenths)
+	{
+		if((int)tenths < 1 || (int)tenths > 255) {
+			FE_RETURN_FALSE;
+		}
+		if(halfdelay((int)tenths) == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function echo
+	 * @declaration function echo(number on)
+	 * @brief Turns echoing of input characters on or off
+	 * @param number on True turns echo on, false turns it off
+	 * @return True on success or false on failure
+	 */
+	native function echo(number on)
+	{
+		int ret;
+
+		if((int)on) ret = echo();
+		else ret = noecho();
+		if(ret == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function raw
+	 * @declaration function raw(number on)
+	 * @brief Turns raw mode on or off
+	 * @param number on True turns raw mode on, false turns it off
+	 * @return True on success or false on failure
+	 * @description This function puts the terminal into or out of raw
+	 *		mode. Raw mode is similar to cbreak mode, except that
+	 *		interrupt, quit, suspend, etc. are all passed through
+	 *		to getch() instead of being interpreted and causing
+	 *		signals to be thrown.
+	 */
+	native function raw(number on)
+	{
+		int ret;
+
+		if((int)on) ret = raw();
+		else ret = noraw();
+		if(ret == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function nl
+	 * @declaration function nl(number on)
+	 * @brief Controls whether newline translation is performed
+	 * @param number on True turns nl translation on, false turns it off
+	 * @return True on success or false on failure
+	 * @description This function is used to switch newline translation on
+	 *		or off. It is on by default. If it is turned off, the
+	 *		display device will not translate the return key into a
+	 *		newline on input and will not translate a newline into
+	 *		a carriage return/newline sequence on output. This is
+	 *		usually what you want in a typical Curses program
+	 *		because it results in more efficient cursor motion and
+	 *		the ability to detect when the return key is pressed.
+	 */
+	native function nl(number on)
+	{
+		int ret;
+
+		if((int)on) ret = nl();
+		else ret = nonl();
+		if(ret == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function doupdate
+	 * @declaration function doupdate()
+	 * @brief Performs a screen update
+	 * @return True on success or false on failure
+	 * @description This function is used together with Window.noutrefresh()
+	 *		to speed up the refreshing of multiple windows. Normally
+	 *		you refresh a window by calling the refresh() method
+	 *		on it, but if you have multiple windows you want to
+	 *		refresh it is quicker to call noutrefresh() on each
+	 *		window and then call Curses.doupdate() to do the actual
+	 *		update to the screen in one go. You do not need to call
+	 *		this function if you are using the Window.refresh()
+	 *		method to refresh windows.
+	 */
+	native function doupdate()
+	{
+		if(doupdate() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function ungetch
+	 * @declaration function ungetch(number ch)
+	 * @brief Inserts a character into the input buffer
+	 * @param number ch The character to insert into the input buffer
+	 * @return True on success or false on failure
+	 * @description This function is used to insert a character into the
+	 *		input buffer such that the next call to getch() will
+	 *		retrieve it. It can be specified as either a number or
+	 *		a single byte string.
+	 */
+	native function ungetch(number ch)
+	{
+		if(ungetch((int)ch) == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+	native function ungetch(string ch)
+	{
+		if(ch->length == 0 || ungetch((int)ch->data[0])) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function beep
+	 * @declaration function beep()
+	 * @brief Causes the terminal to beep if possible, or flash if not
+	 * @return True on success or false on failure.
+	 * @description This function tries to make the terminal beep. If that
+	 *		fails it tries to make it flash. If that fails, it
+	 *		returns false.
+	 */
+	native function beep()
+	{
+		if(beep() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function flash
+	 * @declaration function flash()
+	 * @brief Causes the terminal to flash if possible, or beep if not
+	 * @return True on success or false on failure.
+	 * @description This function tries to make the terminal flash. If that
+	 *		fails it tries to make it beep. If that fails, it
+	 *		returns false.
+	 */
+	native function flash()
+	{
+		if(flash() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function savetty
+	 * @declaration function savetty()
+	 * @brief Saves the current terminal state
+	 * @return True on success or false on failure
+	 * @description This function saves the current terminal state in a
+	 *		buffer, which can later be restored using the
+	 *		Curses.restoretty() function.
+	 */
+	native function savetty()
+	{
+		if(savetty() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function restoretty
+	 * @declaration function restoretty()
+	 * @brief Restores the saved terminal state
+	 * @return True on success or false on failure
+	 * @description This function restores the terminal state to what it
+	 *		was the last time the Curses.savetty() function was
+	 *		called. Do not call it without calling savetty() first.
+	 */
+	native function restoretty()
+	{
+		if(resetty() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function curs_set
+	 * @declaration function curs_set(number visibility)
+	 * @brief Sets the cursor visibility
+	 * @param number visibility How visible the cursor should be
+	 * @return The old visibility value, or -1 on error
+	 * @description This function sets the cursor visibility to invisible
+	 *		(0), normal (1), or extra visible (2). If the change
+	 *		succeeds, the old visibility value is returned. If it
+	 *		fails, -1 is returned.
+	 */
+	native function curs_set(number visibility)
+	{
+		FE_RETURN_LONG(curs_set((int)visibility));
+	}
+
+	/**
+	 * @function flushinp
+	 * @declaration function flushinp()
+	 * @brief Flushes the input buffer
+	 * @return True on success or false on failure
+	 * @description This function removes any input characters which are
+	 *		in the input buffer but have not yet been read by
+	 *		getch().
+	 */
+	native function flushinp()
+	{
+		if(flushinp() == ERR) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function baudrate
+	 * @declaration function baudrate()
+	 * @brief Gets the baud rate of the terminal
+	 * @return A number specifying the baud rate of the terminal
+	 * @description This function returns the output speed of the terminal
+	 *		in bits per second. Note that if it is not a serial
+	 *		terminal, the value probably won't be meaningful. A
+	 *		typical value might by 9600.
+	 */
+	native function baudrate()
+	{
+		FE_RETURN_LONG(baudrate());
+	}
+
+	/**
+	 * @function erasechar
+	 * @declaration function erasechar()
+	 * @brief Gets the users current erase character
+	 * @return The erase character as a number
+	 */
+	native function erasechar()
+	{
+		FE_RETURN_LONG(erasechar());
+	}
+
+	/**
+	 * @function killchar
+	 * @declaration function killchar()
+	 * @brief Gets the users current kill character
+	 * @return The kill character as a number
+	 */
+	native function killchar()
+	{
+		FE_RETURN_LONG(killchar());
+	}
+
+	/**
+	 * @function termattrs
+	 * @declaration function termattrs()
+	 * @brief Gets the supported terminal attributes
+	 * @return A bit mask of the supported attributes
+	 * @description This function returns a bit mask of the attribute
+	 *		flags which are supported by the terminal.
+	 */
+	native function termattrs()
+	{
+		FE_RETURN_LONG(termattrs());
+	}
+
+	/**
+	 * @function keyname
+	 * @declaration function keyname(number key)
+	 * @brief Gets the name of a key
+	 * @param number key The number of the key
+	 * @return A string containing the name, or an empty string on failure
+	 */
+	native function keyname(number key)
+	{
+		FeriteVariable *fv;
+		char *name = keyname((int)key);
+
+		if(!name) name = "";
+		fv = ferite_create_string_variable_from_ptr(script,
+						"Curses::keyname", name, 0,
+						FE_CHARSET_DEFAULT, FE_STATIC);
+		FE_RETURN_VAR(fv);
+	}
+
+	/**
+	 * @function has_ic
+	 * @declaration function has_ic()
+	 * @brief Determines if the terminal supports insert/delete character
+	 * @return True if it does, false if it doesn't
+	 * @description This function determines if the terminal has hardware
+	 *		support for the insert/delete character feature. It
+	 *		is related to the idc flag which you can set with
+	 *		Window.idcok() method.
+	 */
+	native function has_ic()
+	{
+		if(has_ic() == TRUE) {
+			FE_RETURN_TRUE;
+		}
+		FE_RETURN_FALSE;
+	}
+
+	/**
+	 * @function has_il
+	 * @declaration function has_il()
+	 * @brief Determines if the terminal supports insert/delete line
+	 * @return True if it does, false if it doesn't
+	 * @description This function determines if the terminal has hardware
+	 *		support for the insert/delete line feature. It is
+	 *		related to the idl flag which you can set with
+	 *		Window.idlok() method.
+	 */
+	native function has_il()
+	{
+		if(has_il() == TRUE) {
+			FE_RETURN_TRUE;
+		}
+		FE_RETURN_FALSE;
+	}
+
+	/**
+	 * @class Window
+         * @brief Most of the things Curses can do, it does to a window.
+	 * @description Most of the things Curses can do, it does to a window.
+	 *		On startup, you obtain the root window by calling the
+	 *		Curses.init() function. You can later create child
+	 *		windows from the root window, and the same methods
+	 *		will work on those objects too. Remember to call the
+	 *		close() method on the root window before exiting the
+	 *		program or the screen will probably be left in a
+	 *		messed up state.
+	 */
+	class Window
+	{
+		/**
+		 * @function subwin
+		 * @declaration function subwin(number x, number y, number w, number h)
+		 * @brief Creates a subwindow
+		 * @param number x The X screen location to place the subwindow at
+		 * @param number y The Y screen location to place the subwindow at
+		 * @param number w The width of the subwindow
+		 * @param number h The height of the subwindow
+		 * @return A new Window object or a null object on failure
+		 * @description This function creates a subwindow object within
+		 *		this window of the specified size at the
+		 *		specified screen location. It is usually
+		 *		necessary to call touchwin() or touchline() on
+		 *		the parent window before you can call refresh()
+		 *		on the subwindow. The memory area is shared by
+		 *		parent window and the subpad so changes made to
+		 *		one affects both.
+		 */
+		native function subwin(number x, number y, number w, number h)
+		{
+			WINDOW *win;
+			FeriteClass *cls;
+			FeriteVariable *obj, **args;
+
+			if(!(cls = ferite_find_class(script, script->mainns,
+							"Curses.Window"))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			if(!(win = subwin(THISWIN, (int)h, (int)w, (int)y,
+								(int)x))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			args = ferite_create_parameter_list(script,3);
+			obj = ferite_new_object(script, cls, args);
+			ferite_delete_parameter_list(script, args);
+
+			VAO(obj)->odata = win;
+
+			FE_RETURN_VAR(obj);
+		}
+
+		/**
+		 * @function derwin
+		 * @declaration function derwin(number x, number y, number w, number h)
+		 * @brief Creates a subwindow
+		 * @param number x The X window location to place the subwindow at
+		 * @param number y The Y window location to place the subwindow at
+		 * @param number w The width of the subwindow
+		 * @param number h The height of the subwindow
+		 * @return A new Window object or a null object on failure
+		 * @description This function is basically exactly the same as
+		 *		Window.subwin() except that the coordinates
+		 *		are specified relative to this window rather
+		 *		than to the absolute screen location.
+		 */
+		native function derwin(number x, number y, number w, number h)
+		{
+			WINDOW *win;
+			FeriteClass *cls;
+			FeriteVariable *obj, **args;
+
+			if(!(cls = ferite_find_class(script, script->mainns,
+							"Curses.Window"))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			if(!(win = derwin(THISWIN, (int)h, (int)w, (int)y,
+								(int)x))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			args = ferite_create_parameter_list(script, 3);
+			obj = ferite_new_object(script, cls, args);
+			ferite_delete_parameter_list(script, args);
+
+			VAO(obj)->odata = win;
+
+			FE_RETURN_VAR(obj);
+		}
+
+		/**
+		 * @function mvderwin
+		 * @declaration function mvderwin(number x, number y)
+		 * @brief Moves a subwindow
+		 * @param number x The X window location to move the subwindow to
+		 * @param number y The Y window location to move the subwindow to
+		 * @return True on success or false on failure
+		 * @description This function moves a subwindow within its
+		 *		parent window without changing the screen
+		 *		relative parameters. It is only legal to call
+		 *		this method on a subwindow.
+		 */
+		native function mvderwin(number x, number y)
+		{
+			if(mvderwin(THISWIN, (int)y, (int)x) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function syncup
+		 * @declaration function syncup()
+		 * @brief Synchronises the parent windows
+		 * @return Void because syncup() can't fail
+		 * @description This method is only legal to call on subwindows.
+		 *		It touches all locations which have changed
+		 *		in the subwindow in all its parent windows.
+		 *		If the sync flag was set to true with the
+		 *		syncok() method, it is never necessary to call
+		 *		this function.
+		 */
+		native function syncup()
+		{
+			/* wsyncup doesn't return a value */
+			wsyncup(THISWIN);
+		}
+
+		/**
+		 * @function syncdown
+		 * @declaration function syncdown()
+		 * @brief Synchronises the subwindow windows with its parents
+		 * @return Void because syncdown() can't fail
+		 * @description This method is only legal to call on subwindows.
+		 *		It touches all locations in the subwindow
+		 *		which have changed in its parent windows. It
+		 *		is rarely necessary to call this function
+		 *		because it is called automatically when the
+		 *		refresh() method is called.
+		 */
+		native function syncdown()
+		{
+			/* wsyncdown doesn't return a value */
+			wsyncdown(THISWIN);
+		}
+
+		/**
+		 * @function syncok
+		 * @declaration function syncok(number on)
+		 * @brief Sets or unsets the sync flag for this subwindow
+		 * @param number on Sets the sync flag if true, unsets if false
+		 * @return True on success or false on failure
+		 * @description This function is used to set or unset the sync 
+		 *		flag for this subwindow. It is illegal to call
+		 *		this function on a window which is not a
+		 *		subwindow. If the idl flag is set (it is unset
+		 *		by default), Curses will automatically mark
+		 *		locations in parent windows as changed whenever
+		 *		anything changes in the subwindow.
+		 */
+		native function syncok(number on)
+		{
+			if(syncok(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function cursyncup
+		 * @declaration function cursyncup()
+		 * @brief Synchronises the cursor position with all parents
+		 * @return Void because cursyncup() can't fail
+		 * @description This function is used to synchronise the cursor
+		 *		position with parent windows when you move it
+		 *		in a subwindow.
+		 */
+		native function cursyncup()
+		{
+			/* cursyncup doesn't return a value */
+			wcursyncup(THISWIN);
+		}
+
+		/**
+		 * @function addch
+		 * !native function addch(number ch, number x, number y)
+		 * @brief Prints a character to the window at (x, y).
+		 * @param number ch The character to add to the window
+		 * @param number x The X location to move the cursor to first
+		 * @param number y The Y location to move the cursor to first
+		 * @return True on success or false on failure
+		 * @description This function moves the cursor to the specified
+		 *		location and then prints the specified
+		 *		character to the window. It does not actually
+		 *		flush the output to the screen- you should
+		 *		call the refresh() method when you are ready
+		 *		to synchronise the window buffer to the
+		 *		terminal. The character is specified as a
+		 *		number because it is possible to OR it with a
+		 *		set of attributes which will override the
+		 *		default output attributes for this window (see
+		 *		the attrset() method a definition of the
+		 *		available attributes). You can convert a
+		 *		character from a string to a number which can
+		 *		be ORed with a set of attributes using the
+		 *		String.charToNum() function, or you can output
+		 *		a string (which may only be one character long)
+		 *		using the current output attributes by calling
+		 *		the addstr() method instead. The following
+		 *		line drawing characters are available as
+		 *		numbers in the Curses namespace (see the
+		 *		curs_addch man page for definitions):
+		 *		ACS_BLOCK, ACS_BOARD, ACS_BTEE, ACS_BULLET,
+		 *		ACS_CKBOARD, ACS_DARROW, ACS_DEGREE,
+		 *		ACS_DIAMOND, ACS_HLINE, ACS_LANTERN,
+		 *		ACS_LARROW, ACS_LLCORNER, ACS_LRCORNER,
+		 *		ACS_LTEE, ACS_PLMINUS, ACS_PLUS, ACS_RARROW,
+		 *		ACS_BTEE, ACS_S1, ACS_S9, ACS_TTEE, ACS_UARROW,
+		 *		ACS_ULCORNER, ACS_URCORNER, ACS_VLINE. If the
+		 *		terminal doesn't support a particular graphics
+		 *		character, a default ascii character will be
+		 *		substituted for it. The X and Y coordinates
+		 *		are relative to (0, 0) which is the top left
+		 *		hand corner of the screen. If the coordinates
+		 *		are omitted, the character is drawn at the
+		 *		current cursor position. If the character is a
+		 *		backspace, the cursor is moved one space to the
+		 *		left (if the cursor is already at the left
+		 *		edge of the window it doesn't move). If the
+		 *		character is a tab, the cursor moves to the
+		 *		next tab stop (which are every 8 columns). If
+		 *		the character is a newline, the line is cleared
+		 *		to the end of the line and the cursor is
+		 *		placed at the left side of the next line. If
+		 *		the cursor is already at the bottom of the
+		 *		window, it may or may not scroll up depending
+		 *		on the setting of the scroll flag. If the
+		 *		character is any other control character, it is
+		 *		drawn in ^X notation.
+		 */
+		native function addch(number ch, number x, number y)
+		{
+			if(mvwaddch(THISWIN, (int)y, (int)x, (chtype)ch) ==
+								ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function addch(number ch)
+		{
+			if(waddch(THISWIN, (chtype)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function echochar
+		 * !native function echochar(number ch)
+		 * @brief Prints a character to the terminal
+		 * @param number ch The character to output
+		 * @return True on success or false on failure
+		 * @description This function is just like addch() without
+		 *		the X and Y coordinates, except that it also
+		 *		flushes the output to the terminal.
+		 */
+		native function echochar(number ch)
+		{
+			if(wechochar(THISWIN, (chtype)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function addstr
+		 * !native function addstr(string str, number x, number y)
+		 * @brief Prints a string to the window at (x, y)
+		 * @param string str The string to print
+		 * @param number x The X coordinate to print the string at
+		 * @param number y The Y coordinate to print the string at
+		 * @return True on success or false on failure
+		 * @description This function is similar to addch() except that
+		 *		it outputs a string instead of a single
+		 *		character, and it is not possible to override
+		 *		the current output attributes by ORing an
+		 *		attribute number with the string. If the x and
+		 *		y parameters are omitted, the string will be
+		 *		printed at the current cursor position.
+		 */
+		native function addstr(string str, number x, number y)
+		{
+			if(mvwaddstr(THISWIN, (int)y, (int)x, str->data)
+								== ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function addstr(string str)
+		{
+			if(waddstr(THISWIN, str->data) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function delch
+		 * !native function delch(number x, number y)
+		 * @brief Moves the cursor and deletes the character at that point
+		 * @param number x The X coordinate to move the cursor to
+		 * @param number y The Y coordinate to move the cursor to
+		 * @return True on success or false on failure
+		 * @description This function moves the cursor to the specified
+		 *		position and deletes the character at that
+		 *		point, shifting the characters to the right of
+		 *		it left by one place. The rightmost column
+		 *		on the line is filled with a blank. The
+		 *		cursor position does not move when the character
+		 *		is deleted. If the coordinates are omitted, the
+		 *		current cursor position is used instead of
+		 *		moving it.
+		 */
+		native function delch(number x, number y)
+		{
+			if(mvwdelch(THISWIN, (int)y, (int)x) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function delch()
+		{
+			if(wdelch(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function insch
+		 * @declaration function insch(number ch, number x, number y)
+		 * @brief Inserts a character at the specified position
+		 * @param number ch The character to insert
+		 * @param number x The X coordinate to move the cursor to first
+		 * @param number y The Y coordinate to move the cursor to first
+		 * @return True on success or false on failure
+		 * @description This function is very similar to addch, except
+		 *		instead of just overwriting the character at
+		 *		the cursor position, it moves the character
+		 *		under the cursor and all the rest of the line
+		 *		to the right of the cursor, right by one place
+		 *		first. Whatever is in the rightmost column will
+		 *		be discarded. If the X and Y coordinates are
+		 *		omitted, the current cursor position will be
+		 *		used instead.
+		 */
+		native function insch(number ch, number x, number y)
+		{
+			if(mvwinsch(THISWIN, (int)y, (int)x, (int)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function insch(number ch)
+		{
+			if(winsch(THISWIN, (int)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function insstr
+		 * !native function insstr(string str, number x, number y)
+		 * @brief Inserts a string into the window at (x, y)
+		 * @param string str The string to insert
+		 * @param number x The X coordinate to insert the string at
+		 * @param number y The Y coordinate to insert the string at
+		 * @return True on success or false on failure
+		 * @description This function is like addstr() except that
+		 *		the string is inserted before the cursor
+		 *		position, shifting the remaining characters
+		 *		to the left. If you omit the X and Y
+		 *		coordinates the string is inserted at the
+		 *		current cursor position instead of moving it
+		 *		first. 
+		 */
+		native function insstr(string str, number x, number y)
+		{
+			if(mvwinsstr(THISWIN, (int)y, (int)x, str->data)
+								== ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function insstr(string str)
+		{
+			if(winsstr(THISWIN, str->data) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function deleteln
+		 * !native function deleteln(number lines)
+		 * @brief Deletes the specified number of lines from the window
+		 * @param number The number of lines to delete
+		 * @return True on success or false on failure
+		 * @description This function deletes the specified number of
+		 *		lines starting from the line the cursor is on
+		 *		and moves all subsequent lines up. The bottom
+		 *		line is cleared. The cursor position is not
+		 *		affected. If the number of lines is omitted,
+		 *		one line is deleted.
+		 */
+		native function deleteln(number lines)
+		{
+			int l = 0 - (int)lines;
+
+			if(l < 0 || winsdelln(THISWIN, l) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function deleteln()
+		{
+			if(wdeleteln(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function insertln
+		 * !native function insertln(number lines)
+		 * @brief Inserts the specified number of lines in the window
+		 * @param number The number of lines to insert
+		 * @return True on success or false on failure
+		 * @description This function inserts the specified number of
+		 *		lines starting from the line the cursor is on
+		 *		and moves all subsequent lines down. The new
+		 *		line is cleared. The cursor position is not
+		 *		affected. If the number of lines is omitted,
+		 *		one line is inserted.
+		 */
+		native function insertln(number lines)
+		{
+			if(lines < 0 || winsdelln(THISWIN, (int)lines) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function insertln()
+		{
+			if(winsertln(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function insdelln
+		 * @declaration function insdelln(number lines)
+		 * @brief Inserts or deletes the specified number of lines
+		 * @param number lines The number of lines to insert or delete
+		 * @return True on success or false on failure
+		 * @description This function inserts or deletes some number of
+		 *		lines from the current cursor position in the
+		 *		window. If the number of lines is positive,
+		 *		that number of lines is inserted. If the number
+		 *		of lines is negative, that number of lines is
+		 *		deleted. When a line is deleted, the lines
+		 *		below it are moved up by one and the bottom
+		 *		line is blanked. When a line is inserted, the
+		 *		current line and everything below it is moved
+		 *		down by one and the new line is blanked.
+		 */
+		native function insdelln(number lines)
+		{
+			if(winsdelln(THISWIN, (int)lines) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function inch
+		 * !native function inch(number x, number y)
+		 * @brief Gets the character from the specified coordinates
+		 * @param number x The X coordinate to move the cursor to
+		 * @param number y The Y coordinate to move the cursor to
+		 * @return The character from the window as a number
+		 * @description This function moves the cursor to the specified
+		 *		coordinates and returns the character at that
+		 *		position as a number. The number includes the
+		 *		attribute information. To extract only the
+		 *		character part, which you can then feed through
+		 *		String.numToChar() to get a one byte string,
+		 *		AND the number with Curses.A_CHARTEXT. To
+		 *		obtain the attributes value without the
+		 *		character, AND the number with
+		 *		Curses.A_ATTRIBUTES. To obtain the colour
+		 *		attribute only, AND the number with
+		 *		Curses.A_COLOR. If the coordinates are
+		 *		omitted, the current cursor location is used.
+		 */
+		native function inch(number x, number y)
+		{
+			FE_RETURN_LONG(mvwinch(THISWIN, (int)y, (int)x));
+		}
+		native function inch()
+		{
+			FE_RETURN_LONG(winch(THISWIN));
+		}
+
+		/**
+		 * @function instr
+		 * !native function instr(number limit, number x, number y)
+		 * @brief Reads a string of up to limit chars from the screen
+		 * @param number limit The maximum number of chars to read
+		 * @param number x The X coordinate to start from
+		 * @param number y The Y coordinate to start from
+		 * @return The string from the window
+		 * @description This function moves the cursor to the specified
+		 *		coordinates and reads characters from the
+		 *		window until it either reaches a nul (0)
+		 *		character or limit characters have been read.
+		 *		If the X and Y coordinates are omitted, the
+		 *		string is read from the current cursor position.
+		 *		On error, an empty string is returned.
+		 */
+		native function instr(number limit, number x, number y)
+		{
+			int ret;
+			char *str;
+			FeriteVariable *fv;
+
+			if(!(str = fmalloc((int)limit))) {
+				FE_RETURN_VOID;
+			}
+
+			if(ret = mvwinnstr(THISWIN, (int)y, (int)x, str, limit)
+								== ERR) {
+				ret = 0;
+				str[0] = 0;
+			}				
+
+			fv = ferite_create_string_variable_from_ptr(script,
+						"Curses::instr", str, ret,
+						FE_CHARSET_DEFAULT, FE_STATIC);
+
+			ffree(str);
+			FE_RETURN_VAR(fv);
+		}
+
+		/**
+		 * @function getch
+		 * @declaration function getch(number x, number y)
+		 * @brief Reads a single character from the keyboard
+		 * @return The read character as a number, or -1 on failure
+		 * @description This function reads a single character from
+		 *		the keyboard. It returns a number instead of
+		 *		a single byte string because it can also return
+		 *		various values which are higher than 255 and
+		 *		indicating special keys on the keyboard. There
+		 *		are symbolic values for the most common of
+		 *		these, but Curses defines quite a lot more. If
+		 *		you need a special value other than the ones
+		 *		available already, it is easy to add them by
+		 *		modifying two arrays near the top of curses.fec
+		 *		and rebuilding the module. These are the special
+		 *		keys currently available in the Curses
+		 *		namespace: KEY_UP, KEY_DOWN, KEY_LEFT,
+		 *		KEY_RIGHT, KEY_HOME, KEY_END, KEY_NPAGE,
+		 *		KEY_PPAGE, KEY_F1, KEY_F2, KEY_F3, KEY_F4,
+		 *		KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9,
+		 *		KEY_F10, KEY_F11, KEY_F12, KEY_IC, KEY_A1,
+		 *		KEY_A3, KEY_B2, KEY_C1, KEY_C3, KEY_BACKSPACE,
+		 *		KEY_DC, KEY_ENTER, KEY_COMMAND, KEY_OPTIONS,
+		 *		KEY_RESIZE, KEY_UNDO, KEY_PRINT, KEY_BREAK.
+		 *		Note that getch() only returns special values
+		 *		for the special keys if keypad mode is on.
+		 *		If one of the nonblocking modes is being used
+		 *		and the call times out, -1 is returned. If the
+		 *		x and y parameters are specified, the cursor
+		 *		is moved to that position before waiting for
+		 *		input. If they are omitted, the cursor is not
+		 *		moved. If the number returned from getch is not
+		 *		-1 but less than 256, you can convert it into
+		 *		a single byte string by calling the
+		 *		String.numToChar() function.
+		 */
+		native function getch(number x, number y)
+		{
+			int ret;
+
+			do {
+				ret = mvwgetch(THISWIN, (int)y, (int)x);
+			} while(ret == ERR && errno == EINTR);
+
+			if(ret == ERR) {
+				FE_RETURN_LONG(-1);
+			}
+			FE_RETURN_LONG(ret);
+		}
+		native function getch()
+		{
+			int ret;
+
+			do {
+				ret = wgetch(THISWIN);
+			} while(ret == ERR && errno == EINTR);
+
+			if(ret == ERR) {
+				FE_RETURN_LONG(-1);
+			}
+			FE_RETURN_LONG(ret);
+		}
+
+		/**
+		 * @function getstr
+		 * @declaration function getstr(number x, number y, number limit)
+		 * @brief Reads a string of up to limit characters
+		 * @param number x The X coordinate to move the cursor to first
+		 * @param number y The Y coordinate to move the cursor to first
+		 * @param number limit The maximum number of characters to read
+		 * @return The read string, or an empty string on failure
+		 * @description This function reads characters from the
+		 *		keyboard into a string. KEY_LEFT and
+		 *		KEY_BACKSPACE are interpreted as deleting
+		 *		the last entered character, but any other
+		 *		special keys cause the terminal to beep and
+		 *		are not inserted into the string. The terminal
+		 *		will also beep every time the user tries to
+		 *		enter more than limit characters. The input
+		 *		is only echoed to the screen if echo is turned
+		 *		on using the Curses.echo() function. The input
+		 *		terminates when the user enters a newline by
+		 *		pressing the return key, but the newline itself
+		 *		is not included in the returned string. If the
+		 *		X and Y coordinates are omitted, the cursor
+		 *		is not moved before reading the string.
+		 */
+		native function getstr(number x, number y, number limit)
+		{
+			char *str;
+			FeriteVariable *fv;
+
+			if((int)limit <= 0 || !(str = fmalloc((int)limit))) {
+				fv = ferite_create_string_variable_from_ptr(
+					script, "Curses::Window::getstr", "",
+					0, FE_CHARSET_DEFAULT, FE_STATIC);
+				FE_RETURN_VAR(fv);
+			}
+
+			if(mvwgetnstr(THISWIN, (int)y, (int)x, str, (int)limit)
+								== ERR) {
+				str[0] = 0;
+			}
+
+			fv = ferite_create_string_variable_from_ptr(script,
+					"Curses::Window::getstr", str, 0,
+					FE_CHARSET_DEFAULT, FE_STATIC);
+			ffree(str);
+
+			FE_RETURN_VAR(fv);
+		}
+		native function getstr(number limit)
+		{
+			char *str;
+			FeriteVariable *fv;
+
+			if((int)limit <= 0 || !(str = fmalloc((int)limit))) {
+				fv = ferite_create_string_variable_from_ptr(
+					script, "Curses::Window::getstr", "",
+					0, FE_CHARSET_DEFAULT, FE_STATIC);
+				FE_RETURN_VAR(fv);
+			}
+
+			if(wgetnstr(THISWIN, str, (int)limit) == ERR) {
+				str[0] = 0;
+			}
+
+			fv = ferite_create_string_variable_from_ptr(script,
+					"Curses::Window::getstr", str, 0,
+					FE_CHARSET_DEFAULT, FE_STATIC);
+			ffree(str);
+
+			FE_RETURN_VAR(fv);
+		}
+
+		/**
+		 * @function mvwin
+		 * !native function mvwin(number x, number y)
+		 * @brief Moves the window to the specified coordinates
+		 * @param number x The X coordinate to move the window to
+		 * @param number y The Y coordinate to move the window to
+		 * @return True on success or false on failure
+		 * @description This function moves the window such that its
+		 *		upper left hand corner is at the specified
+		 *		coordinates relative to the top left hand
+		 *		corner of the terminal (which is (0, 0)). If
+		 *		the move would cause the window to be partially
+		 *		or fully off the edge of the terminal, the
+		 *		call will fail.
+		 */
+		native function mvwin(number x, number y)
+		{
+			if(mvwin(THISWIN, (int)y, (int)x) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function dupwin
+		 * !native function dupwin()
+		 * @brief Creates a new window which is a duplicate of this one
+		 * @return The new window object.
+		 * @description This function creates a new window object which
+		 *		is an exact duplicate of this one. You should
+		 *		then call mvwin() on the new window to move
+		 *		it so that it doesn't overlap with the old one.
+		 */
+		native function dupwin()
+		{
+			WINDOW *win;
+			FeriteClass *cls;
+			FeriteVariable *obj, **args;
+
+			if(!(cls = ferite_find_class(script, script->mainns,
+							"Curses.Window"))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			if(!(win = dupwin(THISWIN))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			args = ferite_create_parameter_list(script,3);
+			obj = ferite_new_object(script, cls, args);
+			ferite_delete_parameter_list(script, args);
+
+			VAO(obj)->odata = win;
+
+			FE_RETURN_VAR(obj);
+		}
+
+		/**
+		 * @function intrflush
+		 * @declaration function intrflush(number on)
+		 * @brief Enables or disables the interrupt flush option
+		 * @param number on True turns it on, false turns it off
+		 * @return True on success or false on failure
+		 * @description This function turns the interrupt flush option
+		 *		on or off for the current window. When it is
+		 *		on, interrupt sequences (eg. control-c) cause
+		 *		the output buffer to be flushed (cleared).
+		 *		This means that the application will respond
+		 *		quicker to the user, but the output window
+		 *		could become corrupted and need redrawing.
+		 */
+		native function intrflush(number on)
+		{
+			if(intrflush(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function keypad(number on)
+		 * @declaration function keypad(number on)
+		 * @brief Enables or disables the numeric keypad
+		 * @param number on True turns it on, false turns it off
+		 * @return True on success or false on failure
+		 * @description This function enables or disables the numeric
+		 *		keypad. If enabled, the keys will generate
+		 *		key values such as KEY_LEFT and KEY_RIGHT when
+		 *		the keys on the keypad are pressed. If
+		 *		disabled, the raw escape sequences are passed
+		 *		through.
+		 */
+		native function keypad(number on)
+		{
+			if(keypad(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function nodelay
+		 * @declaration function nodelay(number on)
+		 * @brief Enables or disables non-blocking getch()
+		 * @param number on True turns it on, false turns it off
+		 * @return True on success or false on failure
+		 * @description If this option is turned on, getch() operates
+		 *		in a non-blocking manner() for the current
+		 *		window.
+		 */
+		native function nodelay(number on)
+		{
+			if(nodelay(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function timeout
+		 * @declaration function timeout(number ms)
+		 * @brief Sets the timeout for getch()
+		 * @param number ms The number of ms getch() should block for
+		 * @return True on success or false on failure
+		 * @description This function allows you to set getch() to
+		 *		block for a specified number of milliseconds
+		 *		for the specified window before returning if
+		 *		no key has been pressed. If the timeout value is
+		 *		negative, getch() will wait forever. If the
+		 *		timeout value is 0, getch() will never wait if
+		 *		there is no key ready in the input buffer. If
+		 *		the timeout value is positive, getch() will
+		 *		wait for up to the specified number of ms for
+		 *		input.
+		 */
+		native function timeout(number ms)
+		{
+			/* wtimeout doesn't return a value so we can't check
+			 * for failure. */
+			wtimeout(THISWIN, (int)ms);
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function meta
+		 * @declaration function meta(number on)
+		 * @brief Sets the terminal input mode to 7 or 8 bit mode
+		 * @param number on 8 bit mode if true, 7 bit mode if false
+		 * @return True on success or false on failure
+		 * @description This function overrides the default input mode
+		 *		of the terminal to force 7 or 8 bit mode. If
+		 *		meta mode is on, 8 bit characters are returned.
+		 *		If meta mode is off, 7 bit characters are
+		 *		returned.
+		 */
+		native function meta(number on)
+		{
+			if(meta(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function move
+		 * @declaration function move(number x, number y)
+		 * @brief Moves the cursor to the specified position
+		 * @param number x The X coordinate to move the cursor to
+		 * @param number y The Y coordinate to move the cursor to
+		 * @return True on success or false on failure
+		 * @description This function moves the cursor to the specified
+		 *		coordinates relative to the top left corner
+		 *		of the screen, which is (0, 0). Note that the
+		 *		actual cursor on the screen is not moved until
+		 *		the next time refresh() is called.
+		 */
+		native function move(number x, number y)
+		{
+			if(wmove(THISWIN, (int)y, (int)x) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function refresh
+		 * @declaration function refresh()
+		 * @brief Copies this window to the screen
+		 * @return True on success or false on failure
+		 * @description This function copies the current window object
+		 *		to the screen. Call it on the root window
+		 *		object to refresh the whole screen at once.
+		 */
+		native function refresh()
+		{
+			if(wrefresh(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function noutrefresh
+		 * @declaration function noutrefresh()
+		 * @brief Performs a refresh without updating the screen
+		 * @return True on success or false on failure
+		 * @description This function is used together with
+		 *		Curses.doupdate() to speed up the refreshing of
+		 *		multiple windows. Normally you refresh a window
+		 *		by calling the refresh() method	on it, but if
+		 *		you have multiple windows you want to refresh
+		 *		it is quicker to call noutrefresh() on each
+		 *		window and then call Curses.doupdate() to do
+		 *		the actual update to the screen in one go.
+		 */
+		native function noutrefresh()
+		{
+			if(wnoutrefresh(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function redraw
+		 * @declaration function redraw(number begin, nlines)
+		 * @brief Marks the specified lines as modified
+		 * @parameter number begin The number of the first modified line
+		 * @parameter number nlines The number of modified lines
+		 * @return True on success or false on failure
+		 * @description This function tells Curses that the specified
+		 *		lines of the current window have been corrupted
+		 *		and should be redrawn to the screen the next
+		 *		time refresh() is called (normally only
+		 *		characters which have been modified by Curses
+		 *		are drawn to the screen). Note that redraw()
+		 *		doesn't actually redraw the lines to the screen,
+		 *		but merely marks them as needing to be redrawn.
+		 *		If you simply want to mark the whole window as
+		 *		needing to be redrawn, you may omit the begin
+		 *		and nlines parameters.
+		 */
+		native function redraw(number begin, number nlines)
+		{
+			if(wredrawln(THISWIN, (int)begin, (int)nlines)
+								== ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function redraw()
+		{
+			if(redrawwin(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function erase
+		 * @declaration function erase()
+		 * @brief Erases the buffer for this window
+		 * @return True on success or false on failure
+		 * @description This function erases the screen buffer for this
+		 *		window but does not mark it as changed. Hence
+		 *		the actual screen is not cleared even if
+		 *		refresh() is called afterwards.
+		 */
+		native function erase()
+		{
+			if(werase(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function clear
+		 * @declaration function clear()
+		 * @brief Clears the buffer for this window
+		 * @return True on success or false on failure
+		 * @description This function both clears the screen buffer for
+		 *		this window and marks it as such, which means
+		 *		that it will be drawn to the screen the next
+		 *		time refresh() is called on this window.
+		 */
+		native function clear()
+		{
+			if(wclear(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function clrtobot
+		 * @declaration function clrtobot()
+		 * @brief Clears the buffer from the cursor to the bottom
+		 * @return True on success or false on failure
+		 * @description This function clears the screen buffer for
+		 *		this window from the cursor to the bottom of
+		 *		the window. refresh() will need to be called
+		 *		to copy the result to the screen.
+		 */
+		 native function clrtobot()
+		 {
+			if(wclrtobot(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		 }
+
+		/**
+		 * @function clrtoeol
+		 * @declaration function clrtoeol()
+		 * @brief Clears the buffer from to the end of the line
+		 * @return True on success or false on failure
+		 * @description This function clears the screen buffer for
+		 *		this window from the cursor to the end of the
+		 *		line. refresh() will need to be called to copy
+		 *		the result to the screen.
+		 */
+		 native function clrtoeol()
+		 {
+			if(wclrtoeol(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		 }
+
+		/**
+		 * @function clearok
+		 * @declaration function clearok(number on)
+		 * @brief Sets or unsets the clear flag for this window
+		 * @param number on Sets the clear flag if true, unsets if false
+		 * @return True on success or false on failure
+		 * @description This function is used to set or unset the clear
+		 *		flag for this window. If the clear flag is set,
+		 *		the next call to refresh() will cause the
+		 *		whole window to be copied to the screen
+		 *		regardless of how much of it has actually
+		 *		changed. This is similar to redraw() with no
+		 *		arguments except implemented in a slightly
+		 *		more efficient way. This flag is unset
+		 *		automatically by the next refresh() call.
+		 */
+		native function clearok(number on)
+		{
+			if(clearok(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function idlok
+		 * @declaration function idlok(number on)
+		 * @brief Sets or unsets the idl flag for this window
+		 * @param number on Sets the idl flag if true, unsets if false
+		 * @return True on success or false on failure
+		 * @description This function is used to set or unset the idl
+		 *		flag for this window. If the idl flag is set
+		 *		(it is unset by default), Curses will try to
+		 *		use hardware insert/delete line support.
+		 */
+		native function idlok(number on)
+		{
+			if(idlok(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function idcok
+		 * @declaration function idcok(number on)
+		 * @brief Sets or unsets the idc flag for this window
+		 * @param number on Sets the idc flag if true, unsets if false
+		 * @return True (idcok() can't fail)
+		 * @description This function is used to set or unset the idc
+		 *		flag for this window. If the idc flag is unset
+		 *		(it is set by default), Curses will not try to
+		 *		use hardware insert/delete character support.
+		 */
+		native function idcok(number on)
+		{
+			/* We can't check for error because idcok() doesn't
+			 * return anything. */
+			idcok(THISWIN, ONTF);
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function immedok
+		 * @declaration function immedok(number on)
+		 * @brief Sets or unsets the immed flag for this window
+		 * @param number on Sets the immed flag if true, unsets if false
+		 * @return True (immedok() can't fail)
+		 * @description This function is used to set or unset the immed
+		 *		flag for this window. If the immed flag is set
+		 *		(it is unset by default), Curses will
+		 *		immediately write any changes to this window
+		 *		to the screen by automatically calling
+		 *		refresh() after every change. Note that this
+		 *		can be very inefficient compared to calling
+		 *		refresh() manually after a set of changes to
+		 *		the screen have been made.
+		 */
+		native function immedok(number on)
+		{
+			/* We can't check for error because immedok() doesn't
+			 * return anything. */
+			immedok(THISWIN, ONTF);
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function leaveok
+		 * @declaration function leaveok(number on)
+		 * @brief Sets or unsets the leave flag for this window
+		 * @param number on Sets the leave flag if true, unsets if false
+		 * @return True on success or false on failure
+		 * @description This function is used to set or unset the leave
+		 *		flag for this window. If the leave flag is set
+		 *		(it is unset by default), Curses will leave
+		 *		the cursor wherever it happens to be after a
+		 *		refresh() operation has completed, instead of
+		 *		returning it to the previous location. This can
+		 *		speed things up somewhat if you do not actually
+		 *		care where the cursor is. This flag also
+		 *		attempts to make the cursor invisible.
+		 */
+		native function leaveok(number on)
+		{
+			if(leaveok(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function scrollok
+		 * @declaration function scrollok(number on)
+		 * @brief Sets or unsets the scroll flag for this window
+		 * @param number on Sets the scroll flag if true, unsets if false
+		 * @return True on success or false on failure
+		 * @description This function is used to set or unset the scroll
+		 *		flag for this window. If the scroll flag is set
+		 *		(it is unset by default), Curses will scroll
+		 *		the window up when the cursor runs off the
+		 *		bottom of the window area. If it is unset,
+		 *		the cursor will stay on the bottom line of the
+		 *		window. Note that the terminal hardware
+		 *		scrolling support (if any) will only be used
+		 *		if the idl flag has been set to true with
+		 *		idlok().
+		 */
+		native function scrollok(number on)
+		{
+			if(scrollok(THISWIN, ONTF) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function setscrreg
+		 * @declaration function setscrreg(number top, number bot)
+		 * @brief Sets up a scrolling region in this window
+		 * @param number top The number of the top line in the region
+		 * @param number bot The number of the bottom line in the region
+		 * @return True on success or false on failure
+		 * @description This function sets a software scrolling region
+		 *		in the window. If the scroll flag has been set
+		 *		with the scrollok() function and the cursor
+		 *		rolls off the bottom of the region, the region
+		 *		will be scrolled up by one line. Additionally
+		 *		if the idl flag was set with idlok() Curses
+		 *		will attempt to use a hardware scroll region
+		 *		if your terminal supports it. Note that the
+		 *		lines are numbered from top to bottom starting
+		 *		from 0.
+		 */
+		native function setscrreg(number top, number bot)
+		{
+			if(wsetscrreg(THISWIN, (int)top, (int)bot) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function scroll
+		 * @declaration function scroll(number lines)
+		 * @brief Scrolls the window up by the specified number of lines
+		 * @param number lines The number of lines to scroll up by
+		 * @return True on success or false on failure
+		 * @description This function scrolls the windows up by the
+		 *		specified number of lines. It only works if
+		 *		the scroll flag has been set to true with the
+		 *		scrollok() function, and the number of lines
+		 *		must be a positive integer. If you only want
+		 *		to scroll up by one line, you can miss off the
+		 *		lines parameter. If this is the root window,
+		 *		Curses may or may not choose to perform a
+		 *		hardware scroll	operation on the output
+		 *		terminal at the same time as scrolling the text
+		 *		in the output buffer.
+		 */
+		native function scroll(number lines)
+		{
+			if(wscrl(THISWIN, (int)lines) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function scroll()
+		{
+			if(scroll(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function attrset
+		 * @declaration function attrset(number attrs)
+		 * @brief Sets the output attributes for this window
+		 * @param number attrs A bit array of the attributes
+		 * @return True on success or false on failure
+		 * @description This function sets the attributes for output to
+		 *		this window. Any subsequent characters printed
+		 *		to the window will have the specified
+		 *		attributes. The attributes are a bit array of
+		 *		(optionally) a colour pair attribute obtained
+		 *		by calling the Curses.color_pair() function
+		 *		with a pair number and any of the following
+		 *		values from the Curses namespace: A_STANDOUT,
+		 *		A_UNDERLINE, A_REVERSE, A_BLINK, A_DIM, A_BOLD,
+		 *		A_PROTECT, A_INVIS, A_ALTCHARSET. The special
+		 *		value A_NORMAL is used to reset the attributes
+		 *		to the default values.
+		 */
+		native function attrset(number attrs)
+		{
+			if(wattrset(THISWIN, (int)attrs) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function attron
+		 * @declaration function attron(number attrs)
+		 * @brief Turns the specified attributes on for this window
+		 * @param number attrs A bit array of the attributes to turn on
+		 * @return True on success or false on failure
+		 * @description This function turns on the specified attributes
+		 *		for output to this window. Any other attributes
+		 *		it has are left alone.
+		 */
+		native function attron(number attrs)
+		{
+			if(wattron(THISWIN, (int)attrs) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function attroff
+		 * @declaration function attroff(number attrs)
+		 * @brief Turns the specified attributes off for this window
+		 * @param number attrs A bit array of the attributes to turn off
+		 * @return True on success or false on failure
+		 * @description This function turns off the specified
+		 *		attributes for output to this window. Any other
+		 *		attributes it has are left alone.
+		 */
+		native function attroff(number attrs)
+		{
+			if(wattroff(THISWIN, (int)attrs) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function color_set
+		 * !native function color_set(number pair)
+		 * @brief Sets the colour pair for output to this window
+		 * @param number pair The number of the colour pair to use
+		 * @return True on success or false on failure
+		 * @description This function sets the number of the colour
+		 *		pair which should be used for output to this
+		 *		window. You need to have called start_color()
+		 *		and set up a colour pair with init_pair()
+		 *		before you can use it.
+		 */
+		native function color_set(number pair)
+		{
+			if(wcolor_set(THISWIN, (short)pair, NULL) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function bkgdset
+		 * !native function bkgdset(number ch)
+		 * @brief Sets the default background attributes of the window
+		 * @param number ch The background attributes
+		 * @return Nothing because bkgdset cannnot fail
+		 * @description This function sets the default background
+		 *		attributes of the window. A character can be
+		 *		included in the attribute number and it will
+		 *		be used as the default character used when
+		 *		erasing the window (normally you don't include
+		 *		one though, and then NUL is used as the
+		 *		background character).
+		 */
+		native function bkgdset(number ch)
+		{
+			/* wbkgdset doesn't return a value. */
+			wbkgdset(THISWIN, (chtype)ch);
+		}
+
+		/**
+		 * @function bkgd
+		 * !native function bkgd(number ch)
+		 * @brief Sets the background of all characters in the window
+		 * @param number ch The background attributes
+		 * @return True on success or false on failure
+		 * @description This function sets the background property of
+		 *		the window (like bkgdset() does) and then
+		 *		applies the new background attributes to all
+		 *		of the characters in the window. If the old
+		 *		and new background characters are different,
+		 *		all instances of the old background character
+		 *		will be changed to the new background character.
+		 */
+		native function bkgd(number ch)
+		{
+			if(wbkgd(THISWIN, (chtype)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function getbkgd
+		 * !native function getbkgd()
+		 * @brief Gets the current background attribute of the window
+		 * @return The background attribute
+		 * @description This function retrieves the current default
+		 *		background attribute value and returns it
+		 *		as a number.
+		 */
+		native function getbkgd()
+		{
+			FE_RETURN_LONG(getbkgd(THISWIN));
+		}
+
+		/**
+		 * @function border
+		 * @declaration function border(number ls, number rs, number ts, number bs, number tl, number tr, number bl, number br)
+		 * @brief Draws a border inside the window
+		 * @param number ls The character to use for the left hand side
+		 * @param number rs The character to use for the right hand side
+		 * @param number ts The character to use for the top side
+		 * @param number bs The character to use for the bottom side
+		 * @param number tl The character to use for the top left corner
+		 * @param number tr The character to use for the top right corner
+		 * @param number bl The character to use for the bottom left corner
+		 * @param number br The character to use for the bottom right corner
+		 * @return True on success or false on failure
+		 * @description This function draws a border inside the
+		 *		boundaries of the window using the specified
+		 *		characters. The parameters are numbers which
+		 *		can be ORed with attributes as specified for
+		 *		addch(). If any of the parameters are 0,
+		 *		default values are used for them instead.
+		 */
+		native function border(number ls, number rs, number ts, number bs, number tl, number tr, number bl, number br)
+		{
+			if(wborder(THISWIN, (chtype)ls, (chtype)rs, (chtype)ts,
+					(chtype)bs, (chtype)tl, (chtype)tr,
+					(chtype)bl, (chtype)br) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function box
+		 * @declaration function box(number ver, number hor)
+		 * @brief Draws a border inside the window
+		 * @param number ver The character to use for vertical lines
+		 * @param number hor The character to use for horizontal lines
+		 * @return True on success or false on failure
+		 * @description This function is a simpler version of border()
+		 *		which uses default values for the corners and
+		 *		doesn't allow you to specify the characters to
+		 *		use for the two horizontal and vertical parts
+		 *		seperately.
+		 */
+		native function box(number ver, number hor)
+		{
+			if(box(THISWIN, (chtype)ver, (chtype)hor) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function hline
+		 * @declaration function hline(number ch, number len, number x, number y)
+		 * @brief Draws a horizontal line in the window
+		 * @param number ch The character to use when drawing the line
+		 * @param number len The length of the line
+		 * @param number x The X coordinate to move the cursor to first
+		 * @param number y The Y coordinate to move the cursor to first
+		 * @return True on success or false on failure
+		 * @description This function draws a horizontal line from left
+		 *		to right using the specified character (which
+		 *		is a number and	can be ORed with character
+		 *		attribute values) of the specified length at
+		 *		the specified position. If the x and y
+		 *		coordinates are	omitted, the current cursor
+		 *		position is used.
+		 */
+		native function hline(number ch, number len, number x, number y)
+		{
+			if(mvwhline(THISWIN, (int)y, (int)x, (chtype)ch,
+							(int)len) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function hline(number ch, number len)
+		{
+			if(whline(THISWIN, (chtype)ch, (int)len) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function vline
+		 * @declaration function vline(number ch, number len, number x, number y)
+		 * @brief Draws a vertical line in the window
+		 * @param number ch The character to use when drawing the line
+		 * @param number len The length of the line
+		 * @param number x The X coordinate to move the cursor to first
+		 * @param number y The Y coordinate to move the cursor to first
+		 * @return True on success or false on failure
+		 * @description This function draws a vertical line from top to
+		 *		bottom using the specified character (which is
+		 *		a number and can be ORed with character
+		 *		attribute values) of the specified length at
+		 *		the specified position. If the x and y
+		 *		coordinates are omitted, the current cursor
+		 *		position is used.
+		 */
+		native function vline(number ch, number len, number x, number y)
+		{
+			if(mvwvline(THISWIN, (int)y, (int)x, (chtype)ch,
+							(int)len) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+		native function vline(number ch, number len)
+		{
+			if(wvline(THISWIN, (chtype)ch, (int)len) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function touchwin
+		 * @declaration function touchwin()
+		 * @brief Marks the whole window as having been modified
+		 * @return True on success or false on failure
+		 * @description This function marks the whole window as having
+		 *		been modified since the last refresh() call.
+		 */
+		native function touchwin()
+		{
+			if(touchwin(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function untouchwin
+		 * @declaration function untouchwin()
+		 * @brief Marks the whole window as not having been modified
+		 * @return True on success or false on failure
+		 * @description This function marks the whole window as not
+		 *		having been modified since the last refresh()
+		 *		call.
+		 */
+		native function untouchwin()
+		{
+			if(untouchwin(THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function touchline
+		 * @declaration function touchline(number start, number count)
+		 * @brief Marks the specified lines as modified
+		 * @param number start The first line to mark as modified
+		 * @param number count The number of lines to mark as modified
+		 * @description This function marks the lines from start down
+		 *		through the specified number of lines as having
+		 *		been modified since the last refresh() call.
+		 */
+		native function touchline(number start, number count)
+		{
+			if(wtouchln(THISWIN, (int)start, (int)count, 1) == ERR){
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function untouchline
+		 * @declaration function untouchline(number start, number count)
+		 * @brief Marks the specified lines as unmodified
+		 * @param number start The first line to mark as unmodified
+		 * @param number count The number of lines to mark as unmodified
+		 * @description This function marks the lines from start down
+		 *		through the specified number of lines as not
+		 *		having been modified since the last refresh()
+		 *		call.
+		 */
+		native function untouchline(number start, number count)
+		{
+			if(wtouchln(THISWIN, (int)start, (int)count, 0) == ERR){
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function is_wintouched
+		 * @declaration function is_wintouched()
+		 * @brief Finds out if the window has been modified
+		 * @return True if the window has been modified or false if not
+		 * @description This function discovers if the window has been
+		 *		modified since the last refresh() call, and if
+		 *		so, returns true.
+		 */
+		native function is_wintouched()
+		{
+			if(is_wintouched(THISWIN) == TRUE) {
+				FE_RETURN_TRUE;
+			}
+			FE_RETURN_FALSE;
+		}
+
+		/**
+		 * @function is_linetouched
+		 * @declaration function is_linetouched(number line)
+		 * @brief Finds out if the specified line has been modified
+		 * @param number line The number of the line
+		 * @return True if the line has been modified or false if not
+		 * @description This function discovers if the specified line
+		 *		has been modified since the last refresh()
+		 *		call, and if so, returns true. If the line
+		 *		number is not valid for this window, it also
+		 *		returns false.
+		 */
+		native function is_linetouched(number line)
+		{
+			if(is_linetouched(THISWIN, (int)line) == TRUE) {
+				FE_RETURN_TRUE;
+			}
+			FE_RETURN_FALSE;
+		}
+
+		/**
+		 * @function getxy
+		 * @declaration function getxy()
+		 * @brief Returns the current coordinates of the cursor
+		 * @return An array containing two values, x and y
+		 * @description This function returns the current coordinates
+		 *		of the cursor as an array of two values, x and
+		 *		y.
+		 */
+		native function getxy()
+		{
+			int x, y;
+			FeriteVariable *arr, *fv;
+
+			arr = ferite_create_uarray_variable(script,
+					"Curses::Window::getxy", 2, FE_STATIC);
+
+			getyx(THISWIN, y, x);
+			fv = ferite_create_number_long_variable(script,
+						"", x, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "x",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", y, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "y",
+							FE_ARRAY_ADD_AT_END);
+
+			FE_RETURN_VAR(arr);
+		}
+
+		/**
+		 * @function getparxy
+		 * @declaration function getparxy()
+		 * @brief Returns the coordinates of the parent window
+		 * @return An array containing two values, x and y
+		 * @description This function returns the coordinates of the
+		 *		parent of this window as an array of two
+		 *		values, x and y. Note that this function is
+		 *		only valid if this window is a subwindow. The
+		 *		value -1 will be returned for x and y if it
+		 *		is not.
+		 */
+		native function getparxy()
+		{
+			int x, y;
+			FeriteVariable *arr, *fv;
+
+			arr = ferite_create_uarray_variable(script,
+				"Curses::Window::getparxy", 2, FE_STATIC);
+
+			getparyx(THISWIN, y, x);
+			fv = ferite_create_number_long_variable(script,
+						"", x, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "x",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", y, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "y",
+							FE_ARRAY_ADD_AT_END);
+
+			FE_RETURN_VAR(arr);
+		}
+
+		/**
+		 * @function getbegxy
+		 * @declaration function getbegxy()
+		 * @brief Returns the coordinates of the window
+		 * @return An array containing two values, x and y
+		 * @description This function returns the current coordinates
+		 *		of the top left hand corner of the window as an
+		 *		array of two values, x and y.
+		 */
+		native function getbegxy()
+		{
+			int x, y;
+			FeriteVariable *arr, *fv;
+
+			arr = ferite_create_uarray_variable(script,
+				"Curses::Window::getbegxy", 2, FE_STATIC);
+
+			getbegyx(THISWIN, y, x);
+			fv = ferite_create_number_long_variable(script,
+						"", x, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "x",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", y, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "y",
+							FE_ARRAY_ADD_AT_END);
+
+			FE_RETURN_VAR(arr);
+		}
+
+		/**
+		 * @function getmaxxy
+		 * @declaration function getmaxxy()
+		 * @brief Returns the maximum coordinates of the window
+		 * @return An array containing two values, x and y
+		 * @description This function returns the current coordinates
+		 *		of the bottom right hand corner of the window
+		 *		as an array of two values, x and y.
+		 */
+		native function getmaxxy()
+		{
+			int x, y;
+			FeriteVariable *arr, *fv;
+
+			arr = ferite_create_uarray_variable(script,
+				"Curses::Window::getmaxxy", 2, FE_STATIC);
+
+			getmaxyx(THISWIN, y, x);
+			fv = ferite_create_number_long_variable(script,
+						"", x, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "x",
+							FE_ARRAY_ADD_AT_END);
+			fv = ferite_create_number_long_variable(script,
+						"", y, FE_STATIC);
+			ferite_uarray_add(script, VAUA(arr), fv, "y",
+							FE_ARRAY_ADD_AT_END);
+
+			FE_RETURN_VAR(arr);
+		}
+
+		/**
+		 * @function overlay
+		 * @declaration function overlay(object src)
+		 * @brief Overlays the specified window onto this one
+		 * @param object src The window to copy from
+		 * @return True on success or false on failure
+		 * @description This function copies the specified window over
+		 *		this one. Blanks in the source window are not
+		 *		copied over, unlike Window.overwrite(). The
+		 *		source object must be a window, but the two
+		 *		windows need not be the same size- where one
+		 *		window is smaller than the other, the smaller
+		 *		dimension is used.
+		 */
+		native function overlay(object src)
+		{
+			if(!src || strcmp(src->name, "Curses.Window") ||
+							!src->odata) {
+				FE_RETURN_FALSE;
+			}
+			if(overlay(((WINDOW *)src->odata), THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function overwrite
+		 * @declaration function overwrite(object src)
+		 * @brief Overwrites the specified window onto this one
+		 * @param object src The window to copy from
+		 * @return True on success or false on failure
+		 * @description This function copies the specified window over
+		 *		this one. Blanks in the source window are
+		 *		copied over, unlike Window.overlay(). The
+		 *		source object must be a window, but the two
+		 *		windows need not be the same size- where one
+		 *		window is smaller than the other, the smaller
+		 *		dimension is used.
+		 */
+		native function overwrite(object src)
+		{
+			if(!src || strcmp(src->name, "Curses.Window") ||
+							!src->odata) {
+				FE_RETURN_FALSE;
+			}
+			if(overwrite(((WINDOW *)src->odata), THISWIN) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function copywin
+		 * @declaration function copywin(object src, number sx, number sy, number dx, number dy, number w, number h, number overlay)
+		 * @brief Copies the specified area from another window
+		 * @param object src The window to copy from
+		 * @param number sx The source X coordinate to copy from
+		 * @param number sy The source Y coordinate to copy from
+		 * @param number dx The destination X coordinate to copy to
+		 * @param number dy The destination Y coordinate to copy to
+		 * @param number w The width of the area to copy
+		 * @param number h The height of the area to copy
+		 * @param number overlay If true, overlays instead of overwrites
+		 * @return True on success or false on failure
+		 * @description This function copies the specified area from
+		 *		the window object src to the current window.
+		 *		If overlay is true, blanks in the source window
+		 *		are not copied over.
+		 */
+		native function copywin(object src, number sx, number sy, number dx, number dy, number w, number h, number overlay)
+		{
+			if(!src || strcmp(src->name, "Curses.Window") ||
+							!src->odata) {
+				FE_RETURN_FALSE;
+			}
+			if(copywin(((WINDOW *)src->odata), THISWIN, (int)sy,
+					(int)sx, (int)dy, (int)dx, (int)h +
+					(int)dy - 1, (int)w + (int)dx - 1,
+					((int)overlay) ? TRUE : FALSE) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function close
+		 * @declaration function close()
+		 * @return True on success or false on failure
+		 * @description Closes the window associated with this object.
+		 *		You should always call this method on the
+		 *		root window before exiting or the terminal is
+		 *		likely to be left in a messed up state.
+		 */
+		native function close()
+		{
+			int ret = ERR;
+
+			if(!isendwin()) ret = endwin();
+			if(ret == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		native function destructor()
+		{
+			delwin(THISWIN);
+		}
+	}
+	/** @end */
+
+	/**
+	 * @class Pad
+	 * @brief The Pad class, which extends the Window class
+	 */
+	class Pad extends Window
+	{
+		/**
+		 * @function subpad
+		 * @declaration function subpad(number x, number y, number w, number h)
+		 * @brief Creates a subpad
+		 * @param number x The X pad location to place the subpad at
+		 * @param number y The Y pad location to place the subpad at
+		 * @param number w The width of the subpad
+		 * @param number h The height of the subpad
+		 * @return A new Pad object or a null object on failure
+		 * @description This function creates a subpad object within
+		 *		this pad of the specified size at the specified
+		 *		location within the pad. It is usually
+		 *		necessary to call touchwin() or touchline() on
+		 *		the parent Pad before you can call refresh()
+		 *		on the subpad. The memory area is shared by
+		 *		parent pad and the subpad so changes made to
+		 *		one affects both.
+		 */
+		native function subpad(number x, number y, number w, number h)
+		{
+			WINDOW *win;
+			FeriteClass *cls;
+			FeriteVariable *obj, **args;
+
+			if(!(cls = ferite_find_class(script, script->mainns,
+							"Curses.Pad"))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			if(!(win = subpad(THISWIN, (int)h, (int)w, (int)y,
+								(int)x))) {
+				FE_RETURN_NULL_OBJECT;
+			}
+
+			args = ferite_create_parameter_list(script,3);
+			obj = ferite_new_object(script, cls, args);
+			ferite_delete_parameter_list(script, args);
+
+			VAO(obj)->odata = win;
+
+			FE_RETURN_VAR(obj);
+		}
+
+		/**
+		 * @function refresh
+		 * @declaration function refresh(number scrx, number scry, number px, number py, number w, number h)
+		 * @brief Copies the Pad to the screen
+		 * @param number scrx The X coordinate on the screen to copy to
+		 * @param number scry The Y coordinate on the screen to copy to
+		 * @param number px The Pad X coordinate to copy from
+		 * @param number py The Pad Y coordinate to copy from
+		 * @param number w The width of the area to copy
+		 * @param number h The height of the area to copy
+		 * @return True on success or false on failure
+		 * @description This function is analagous to Window.refresh()
+		 *		in that it copies the Pad to the screen, except
+		 *		that it requires you to specify the area to
+		 *		copy and the screen location to copy it to.
+		 */
+		native function refresh(number scrx, number scry, number px, number py, number w, number h)
+		{
+			if(prefresh(THISWIN, (int)py, (int)px, (int)scry,
+					(int)scrx, (int)h + (int)scry - 1,
+					(int)w + (int)scrx - 1) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function noutrefresh
+		 * @declaration function noutrefresh(number scrx, number scry, number px, number py, number w, number h)
+		 * @brief Copies the Pad to the screen
+		 * @param number scrx The X coordinate on the screen to copy to
+		 * @param number scry The Y coordinate on the screen to copy to
+		 * @param number px The Pad X coordinate to copy from
+		 * @param number py The Pad Y coordinate to copy from
+		 * @param number w The width of the area to copy
+		 * @param number h The height of the area to copy
+		 * @return True on success or false on failure
+		 * @description This function is the same as Pad.refresh()
+		 *		except that it does not actually copy the
+		 *		data to the screen. You must call
+		 *		Curses.doupdate() at some point later to do the
+		 *		copy to the screen. This is useful if you are
+		 *		copying several areas to the screen and want
+		 *		to do the whole copy in one operation.
+		 */
+		native function noutrefresh(number scrx, number scry, number px, number py, number w, number h)
+		{
+			if(pnoutrefresh(THISWIN, (int)py, (int)px, (int)scry,
+					(int)scrx, (int)h + (int)scry - 1,
+					(int)w + (int)scrx - 1) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+
+		/**
+		 * @function echochar
+		 * @declaration function echochar(number ch)
+		 * @brief Copies a character to the screen via the pad
+		 * @param number ch The character to copy to the screen
+		 * @return True on success or false on failure
+		 * @description This function is basically the same as
+		 *		Window.echochar() except that it copies the
+		 *		character to the screen via this Pad, reusing
+		 *		the coordinates of the last call to the
+		 *		Pad.refresh() method. You should not call this
+		 *		function if you have not yet called the
+		 *		refresh() method on this Pad.
+		 */
+		native function echochar(number ch)
+		{
+			if(pechochar(THISWIN, (chtype)ch) == ERR) {
+				FE_RETURN_FALSE;
+			}
+			FE_RETURN_TRUE;
+		}
+	}
+        /** @end */
+}
+/** @end */

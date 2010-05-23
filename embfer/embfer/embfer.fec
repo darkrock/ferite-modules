@@ -1,0 +1,187 @@
+
+uses "embfer.lib";
+uses "console";
+
+module-header {
+
+#include "embfer.h"
+#include "utils.h"
+    
+}
+
+/**
+ * @class Embfer
+ * @brief An interface to the embedded ferite interpreter.
+ * @description Using Embfer it is possible to take a textual document with embedded tags and generate a ferite
+ script that will generate the output with the tags evaluated. You can either save the output to
+ disk or use the eval() operator in ferite to execute it.<nl/>
+ <nl/>
+ &lt;? <i>code</i> ?&gt; - execute the code within the block as it stands.<nl/>
+ &lt;?= <i>expression</i> ?&gt; - generate code to output the expression.<nl/>
+ &lt;?# <i>comment</i> ?&gt; - in place comment which will be removed when the generated script is run.<nl/>
+ <nl/>
+ This is an example embfer document: <nl/><code>
+ &lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"&gt;<nl/>
+ &lt;html&gt;<nl/>
+ <tab/>&lt;head>&lt;title&gt;embfer test&lt;/title&gt;&lt;/head&gt;<nl/>
+ <tab/>&lt;body&gt;<nl/>
+ <tab/><tab/>&lt;h1&gt;embfer test&lt;/h1&gt;<nl/>
+ <tab/><tab/>&lt;? Console.println( "hello world" ); ?&gt;&lt;br /&gt;<nl/>
+ <tab/><tab/>Current time: &lt;?= Sys.getBuildDate() ?&gt;&lt;br /&gt;<nl/>
+ <tab/><tab/>&lt;?# this is a comment line. ?&gt;<nl/>
+ <tab/><tab/>&lt;?= Embfer.import( "foo.fsp" ) ?&gt;<nl/>
+ <tab/>&lt;/body&gt;<nl/>
+ &lt;/html&gt;<nl/>
+ </code><nl/>
+ Running this through embfer will generate a ferite script that, when run, will output something
+ lile this:<nl/><nl/><code>
+ &lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"&gt;<nl/>
+ &lt;html&gt;<nl/>
+ <tab/>&lt;head&gt;&lt;title&gt;embfer test&lt;/title&gt;&lt;/head&gt;<nl/>
+ <tab/>&lt;body&gt;<nl/>
+ <tab/><tab/>&lt;h1&gt;embfer test&lt;/h1&gt;<nl/>
+ <tab/><tab/>hello world&lt;br /&gt;<nl/>
+ <tab/><tab/>Current time: Dec 12 2004 15:23:34&lt;br /&gt;<nl/>
+ <tab/><tab/><nl/>
+ <tab/><tab/>FOO<nl/>
+ <tab/>&lt;/body&gt;<nl/>
+ &lt;/html&gt;<nl/>
+ </code><nl/>
+  The example will bellow should show you how to process an embfer file. 
+ * @example <code>
+ <keyword>uses</keyword> "embfer", "regexp";<nl/>
+ <nl/>
+ <keyword>global</keyword> {<nl/>
+ <tab/><type>array</type> tagvalues;<nl/>
+ }<nl/>
+ <nl/>
+ <type>object</type> compiler = <keyword>new</keyword> Embfer();<nl/>
+ <keyword>monitor</keyword> {<nl/>
+ <tab/><nl/>
+ <tab/>Embfer.registerTagHandler( "get" ) <keyword>using</keyword> ( tag, contents ) {<nl/>
+ <tab/><tab/><keyword>return</keyword> "Console.println(\"${tagvalues[String.trim(contents,' ')]}\");";<nl/>
+ <tab/>};<nl/>
+ <tab/><nl/>
+ <tab/>Embfer.registerTagHandler( "set" ) <keyword>using</keyword> ( tag, contents ) {<nl/>
+ <tab/><tab/><type>object</type> match = Regexp.match( '[ \t]*([A-Za-z-_]+)=\"([^"]+)\"', contents );<nl/>
+ <tab/><tab/><keyword>if</keyword>( match != <type>null</type> )<nl/>
+ <tab/><tab/><tab/>tagvalues[match.capture(0)] = match.capture(1);<nl/>
+ <tab/>};<nl/>
+ <nl/>
+ <tab/>compiler.setOutputFunction( "Console.println" );<nl/>
+ <tab/><keyword>eval</keyword>( compiler.fromFile(<keyword>argv</span>[0]) );<nl/>
+ <nl/>
+ } <keyword>fix</keyword> {<nl/>
+ <tab/>Console.println( "&lt;b&gt;Error:&lt;/b&gt; ${err.str}" );<nl/>
+ }</code><nl/>
+*/
+class Embfer {
+
+    static string defaultFunction = "Console.println";
+
+    /**
+     * @function import
+     * @static
+     * @declaration static function import( string filename )
+     * @brief Import the named file inplace of the code
+     * @param string filename The filename to import.
+     * @return The imported file having been processed by embfer.
+     */
+    static function import( string filename ) {
+        object o = new Embfer();
+        o.setOutputFunction( Embfer.defaultFunction );
+        return o.fromFile( filename );
+    }
+
+    native static function constructor() {
+        int i = 0;
+        
+        embfer_init();
+        emb_closure_count = 0;
+        for( i = 0; i < EMB_MAX_CLOSURES; i++ )
+            emb_closurehold[i] = NULL;
+    }
+    native static function destructor() {
+        int i = 0;
+        embfer_deinit();
+        for( i = 0; i < emb_closure_count; i++ )
+        {
+			FDECREF(emb_closurehold[i]->object);
+            ffree(emb_closurehold[i]->tag);
+        }
+    }
+	
+    /**
+     * @function setOutputFunction
+     * @declaration function setOutputFunction( string function )
+     * @brief The name of the function embfer should use as the output from the compiling.
+     * @param string function The name of the function, e.g. Console.println.
+     */
+    native function setOutputFunction( string func ) {
+        embfer_set_output_fnc( func->data );
+    }
+    
+    /**
+     * @function fromFile
+     * @declaration function fromFile( string filename )
+     * @brief Set the source of embfer to be the named disk file.
+     * @param string file The name of the file.
+     */
+    native function fromFile( string filename ) {
+        FeriteString *str = embfer_convert_from_file( filename->data );
+        FE_RETURN_STR( str, FE_TRUE );
+    }
+    
+    /**
+     * @function fromString
+     * @declaration function fromString( string code )
+     * @brief Set the source of embfer to be the source provided in teh string.
+     * @param string code The code.
+     */
+    native function fromString( string code ) {
+       FeriteString *str = embfer_convert_from_string( code->data );
+       FE_RETURN_STR( str, FE_TRUE );
+    }    
+    
+    /**
+     * @function registerTagHandler
+     * @declaration static function registerTagHandler( string str )
+     * @brief Use this function to register a custom closure to handle a tag.
+     * @description To make life easy, it is sometimes wanted to have custom tags. Embfer provides a nice
+     way of registering tags. You need to call this function providing a closure with using.
+     * @param string str The name of the tag.
+     * @example <nl/><code>
+     Embfer.registerTagH<keyword>and</keyword>ler( "upper<keyword>case</span>" ) <keyword>using</span> ( tag, contents ) {<nl/>
+     <tab/><keyword>return</keyword> String.toUpper(String.trim(contents,' '));<nl/>
+     };</code>
+     <nl/>
+     To use the defined tag:<nl/><nl/>
+     <code>&lt;?upper<keyword>case</keyword> hi there ?&gt;</code><nl/>
+     */
+     static native function registerTagHandler( string str ) {
+		if( emb_closure_count < (EMB_MAX_CLOSURES - 1) ) {
+	        EmbferClosureCallback *cb = fmalloc( sizeof( EmbferClosureCallback ) );
+	        cb->object = current_recipient;
+	        cb->script = script;
+	        cb->tag = fstrdup( str->data );
+			FINCREF(current_recipient);
+        
+	        emb_closurehold[emb_closure_count++] = cb;
+	        embfer_register_tag_handler( cb->tag,  (EmbferCallback)__embferclass_tag_handler );
+		} else {
+			ferite_error( script, 0, "Unable to register more than %d tag handlers!", EMB_MAX_CLOSURES );
+		}
+    }
+	static native function hasTagHandler( string str ) {
+		int i = 0;
+		for( i = 0; i < emb_closure_count; i++ ) {
+			if( strcmp( emb_closurehold[i]->tag, str->data ) == 0 ) {
+				FE_RETURN_TRUE;
+			}
+		}
+		FE_RETURN_FALSE;
+	}
+}
+/**
+ * @end
+ */

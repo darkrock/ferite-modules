@@ -1,0 +1,38 @@
+#!/usr/bin/env ferite
+
+uses "curses", "sys";
+
+string s;
+object scr;
+
+scr = Curses.init();
+Curses.start_color();
+Curses.cbreak(true);
+Curses.echo(true);
+Curses.nl(false);
+scr.intrflush(false);
+scr.keypad(true);
+scr.scrollok(true);
+Curses.init_pair(1, Curses.COLOR_WHITE, Curses.COLOR_BLUE);
+Curses.init_pair(2, Curses.COLOR_YELLOW, Curses.COLOR_BLUE);
+Curses.init_pair(3, Curses.COLOR_GREEN, Curses.COLOR_BLUE);
+scr.bkgd(Curses.color_pair(1));
+while(1) {
+	scr.attrset(Curses.color_pair(1) | Curses.A_BOLD);
+	scr.addstr("Enter your name (max 16 letters), or \"exit\" to exit.", 2, 2);
+	scr.refresh();
+	scr.attrset(Curses.color_pair(2) | Curses.A_BOLD);
+	s = scr.getstr(2, 4, 16);
+	if(s == "exit") break;
+	scr.move(2, 2);
+	scr.clrtoeol();
+	scr.move(2, 4);
+	scr.clrtoeol();
+	scr.attrset(Curses.color_pair(3) | Curses.A_BOLD);
+	scr.addstr("Hello, " + s + "!", 2, 3);
+	scr.refresh();
+	Sys.sleep(2);
+	scr.move(2, 3);
+	scr.clrtoeol();
+}
+scr.close();

@@ -1,0 +1,13 @@
+uses "curl","console","string";
+object crl;
+string data;
+
+crl = new Curl.Curl();
+Console.println( "Curl Object: "+ crl );
+Console.println( "Set URL: "+ crl.setOption(Curl.CURLOPT_URL,"http://www.example.com") );
+Console.println( "Set Return Data: "+ crl.setOption(Curl.CURLOPT_RETURNTRANSFER, 1) );
+Console.println( "Exec: "+ crl.exec());
+data = crl.getContent();
+Console.println( "Content Length: "+ String.length(data) );
+Console.println( "Content: "+ data);
+

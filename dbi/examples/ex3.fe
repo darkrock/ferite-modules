@@ -1,0 +1,19 @@
+uses "console", "dbi", "sys";
+
+array arr;
+object res,dbh = Dbi.connect("mysql", "root", "", "localhost", "test");
+
+
+if (dbh == null) {
+    Console.println("Error:" + dbh.errstr());	 
+    Sys.exit();
+}
+
+
+res = dbh.query("INSERT INTO table(value) VALUES(?) ", 2);
+
+//Fetch currval and nextval from the sequence
+Console.println("CURRVAL = " + dbh.seqCurrVal("sequence"));
+Console.println("NEXTVAL = " + dbh.seqNextVal("sequence"));
+
+dbh.disconnect();

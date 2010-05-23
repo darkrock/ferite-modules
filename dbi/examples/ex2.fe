@@ -1,0 +1,24 @@
+uses "console", "dbi", "sys";
+
+array arr;
+object res,dbh = Dbi.connect("mysql", "root", "", "localhost", "test");
+
+
+if (dbh == null) {
+    Console.println("Error: " + "Can't connect to database");	 
+    Sys.exit(1);
+}
+
+//Query the database and print error on failure.
+res = dbh.query("SELECT * from table where id = ? ", 2);
+if(res == null){
+    Console.println("Error: " + dbh.errstr());	 
+    Sys.exit(1);
+}
+
+//Loop through all records and print them.
+while(arr = res.nextRecord()) {
+    Console.print("rec1: " +  arr["rec1"]);
+    Console.print(" rec2: " +  arr["rec2"]);	
+    Console.println(" rec3: " +  arr["rec3"]);	
+}

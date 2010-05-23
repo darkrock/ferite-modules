@@ -1,0 +1,11 @@
+uses "gettext";
+uses "console";
+
+
+Gettext.setlocale(Gettext.LC_MESSAGES, "sv_SE");
+Gettext.textdomain("test");
+
+Console.print(_("foo_in_english"));
+Console.print(Gettext.gettext("bar_in_english\n"));
+
+

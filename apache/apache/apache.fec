@@ -1,0 +1,709 @@
+
+/*
+ * Copyright (C) 2002 Christian M. Stamgren, Stephan Engström, Chris Ross
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *	list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *	this list of conditions and the following disclaimer in the documentation
+ *	and/or other materials provided with the distribution.
+ * o Neither the name of the mod_ferite software nor the names of its contributors may
+ *	be used to endorse or promote products derived from this software without
+ *	specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+uses "apache.lib";
+module-header
+{
+
+#include "utility.h"
+#include "apr.h"
+#include "apr_strings.h"
+#include "apr_lib.h"
+
+}
+
+/**
+ * @class Request
+ * @brief This class provides an interface to apache. 
+ * @description The easiest way to get an instance of this class is to used the static
+	method 'Request.current()'.
+ */ 
+class Request
+{
+	native function constructor()
+	{
+		struct apache_ctx *ctx;
+		self->odata = ctx = fcalloc( 1, sizeof(struct apache_ctx) );
+		request_rec *real_r = NULL; 
+		ctx->r = (request_rec *)ferite_script_fetch_data( script, "__mod_ferite_request_rec__");
+		real_r = (ctx->r->main ? ctx->r->main : ctx->r);
+		if( real_r == NULL )
+		{
+			ferite_error( script, 0, "mod_ferite::no request_rec found" );
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		if( ap_setup_client_block(real_r, REQUEST_CHUNKED_ERROR) == 0 )
+		{
+			ap_add_common_vars(real_r);
+//		add_cgi_vars(real_r);		
+		}
+		else
+		    ferite_error( script, 0, "::ap_setup_client_block()" );
+		ctx->query = apache_get_query_data( script, real_r );
+	}
+
+	native function destructor()
+	{
+		struct apache_ctx *ctx = self->odata;
+		if( ctx )
+		{
+			if( ctx->query )
+			 ferite_str_destroy( script, ctx->query );
+			ffree( ctx );
+		}
+	}
+	
+	/**
+	* @function location
+	* @param string location The url to redirect to
+	* @declaration  function location( string location )
+	* @brief Send a 302 to the browser
+	* @description When this function is run, the browser will send the user to the supplied url.
+	* @example <nl/><code>Request.current().location('http://www.ferite.org');</code><nl/>
+	*/
+	native function location( string location )
+	{
+		struct apache_ctx *ctx = self->odata;
+		ctx->r->status = HTTP_MOVED_TEMPORARILY;
+		apr_table_set( ctx->r->err_headers_out,"Location", location->data );
+		ctx->r->content_type = NULL;
+	}
+
+	/**
+	* @function print
+	* @declaration  function print( string s )
+	* @brief Print a string to the browser
+	* @param string s the string to write
+	* @description This function writes a string to the next filter in apache's chain for processing 
+	  and later be written to the browser.
+	* @return number of chars written. 
+	 * @example <nl/><code>		 
+	<type>object</type> r = Request.current();<nl/>
+	r.print('&lt;html&gt;&lt;body&gt;');<nl/>
+	r.print('&lt;/body&gt;&lt;/html&gt;');</code><nl/>
+	*/
+	native function print( string s )
+	{
+		struct apache_ctx *ctx = self->odata;
+		int len = ap_rwrite( s->data, s->length, ctx->r );
+		FE_RETURN_LONG(len);
+	}
+	native function flush() {
+		struct apache_ctx *ctx = self->odata;
+		int len = ap_rflush( ctx->r );
+		FE_RETURN_LONG(1);
+	}
+
+	/**
+	* @function hostname
+	* @declaration  function hostname()
+	* @brief Retrieve the hostname of the running server
+	* @return string containing the hostname of the server.
+	*/
+	native function hostname()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("hostname", (char *)ctx->r->hostname, 0, FE_CHARSET_DEFAULT ) );
+	}
+	native function serverHostname()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("hostname", (char *)ctx->r->server->server_hostname, 0, FE_CHARSET_DEFAULT ) );		
+	}
+	native function serverPort()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_LONG( ctx->r->server->port );		
+	}
+	
+	/**
+	* @function uri
+	* @declaration  function uri()
+	* @brief Retrieve the accual unparsed uri for the request
+	* @return string containing the uri.
+	*/
+	native function uri()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("uri", (char *)ctx->r->unparsed_uri, 0, FE_CHARSET_DEFAULT ) );
+	}
+  
+	/**
+	* @function parsedUri
+	* @declaration  function parsedUri()
+	* @brief Return the path portion of the uri
+	* @return string containing the uri
+	*/
+	native function parsedUri()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("parsed_uri", (char *)ctx->r->uri, 0, FE_CHARSET_DEFAULT) );
+	}
+
+	/**
+	* @function method
+	* @declaration  function method()
+	* @brief Retreive the method used for the request and later be written to the browser.
+	* @return a string containing the method used.
+	*/
+	native function method()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("method", (char *)ctx->r->method, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function inHeaders
+	* @param string key the header to return
+	* @declaration  function inHeaders( string key )
+	* @brief Retrieve a selected  HTTP-header
+	* @description  Use this function to fetch a selected HTTP-header from apache
+	* @return a string containing the value of the header.
+	*/
+	native function inHeaders( string key )
+	{
+		struct apache_ctx *ctx = self->odata;
+		const char *str = apr_table_get(ctx->r->headers_in, key->data);
+		FE_RETURN_VAR( fe_new_str("header", (char *)str, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function outHeaders
+	* @param string key the name of the header
+	* @param string value the value of the header
+	* @declaration  function outHeaders( string key, string value )
+	* @brief return set the specified value of an HTTP- header
+	* @description  Use this function to set a HTTP-header. This function uses r->err_header_out 
+	*  so the header will be set even if you do a location/internal-redirect later. 
+	* @return number true.
+	*/
+	native function outHeaders( string key, string value )
+	{
+		struct apache_ctx *ctx = self->odata;
+		apr_table_set( ctx->r->err_headers_out, key->data, value->data );
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	* @function contentType
+	* @param string ct the content-type
+	* @declaration  function contentType( string ct )
+	* @brief Set the content-type HTTP-header for this request
+	* @description Use this function to specify content-type of the request 
+	*  this function will override values supplied in httpd.conf. 
+	* @example "text/html"
+	*/
+	native function contentType( string ct )
+	{
+		struct apache_ctx *context = (struct apache_ctx *)self->odata;
+		request_rec *request = context->r;
+		char *content_type = apr_pstrdup( request->pool, (char*)ct->data );
+		
+		ap_set_content_type( request, content_type );
+	}
+
+
+	/**
+	* @function noCache
+	* @declaration  function noCache()
+	* @brief Set correct headers and tell the client to not stor this page in a cache.
+	* @description This function sets the correct headers so that proxies and browsers don't
+	*  store the page in a cache. Sometimes browsers and proxies don't care about this and cache 
+		anyway but there is nothing we can do about that. 
+	*/
+	native function noCache()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char modified[31];
+		apr_time_exp_t tms;
+		(void) apr_time_exp_gmt(&tms, ctx->r->request_time);
+		apr_snprintf(modified,31, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT",
+					apr_day_snames[tms.tm_wday],
+					tms.tm_mday, apr_month_snames[tms.tm_mon],
+					tms.tm_year + 1900,
+					tms.tm_hour, tms.tm_min, tms.tm_sec);
+		if( ctx->r->proto_num < 1001 )
+		 apr_table_setn( ctx->r->err_headers_out, "Pragma", "no-cache" );
+		else
+		{
+			apr_table_setn( ctx->r->err_headers_out, "Expires", "Tue, 11 Jul 1977 08:15:00 GMT" );
+			apr_table_set(  ctx->r->err_headers_out, "Last-Modified", modified );
+			apr_table_setn( ctx->r->err_headers_out, "Cache-Control",
+							"no-store, no-cache, must-revalidate" );
+		}
+	}
+	
+	native function disableDeflate()
+	{
+		struct apache_ctx *ctx = self->odata;
+		apr_table_setn( ctx->r->subprocess_env, "no-gzip", "1" );
+		apr_table_setn( ctx->r->subprocess_env, "dont-vary", "1" );
+	}
+
+	/**
+	* @function scriptname
+	* @declaration  function scriptname()
+	* @brief The name of the running script
+	* @description If you happen to have a set of pages all symlinked to the same script, this makes
+	  is easy to discover which file you originate from. 
+	* @return string that contains the scriptname without the path component.
+	*/
+	native function scriptname()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("scriptname",(char *)apr_filepath_name_get( ctx->r->filename ) , 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function filename
+	* @declaration  function filename()
+	* @brief The full filepath + filename
+	* @description This is the same as Request.scriptname() except that it returns the whole path.
+	* @return The complete path.
+	*/
+	native function filename()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("filename", ctx->r->filename, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function filepath
+	* @declaration  function filepath()
+	* @brief Full filepath of the script.
+	* @description This function provides access to the path of the script currently being executed.
+	* @return Path without the name of the script.
+	*/
+	native function filepath()
+	{
+		struct apache_ctx *ctx = NULL;
+		char *p = NULL;
+		ctx = self->odata;
+		p = (char *)apr_filepath_name_get( ctx->r->filename );
+		FE_RETURN_VAR( fe_new_str("filepath", ctx->r->filename, p - ctx->r->filename, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function pathInfo
+	* @declaration  function pathInfo()
+	* @brief If you have a request like http://example.com/index.fe/Hi, this function will return "/Hi"
+	* @return a string
+	*/
+	native function pathInfo()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("path", ctx->r->path_info, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function remoteIp
+	* @declaration  function remoteIp()
+	* @brief Fetch the remote hosts ip.
+	* @return A string with the ip.
+	*/
+	native function remoteIp()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("remote_ip", ctx->r->connection->remote_ip, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function remoteHost
+	* @declaration  function remoteHost()
+	* @brief The name of the remote host if possible
+	* @return A string containing the name of the remote host or an empty string if
+	*  the remote host name isn't avaliable
+	*/
+	native function remoteHost()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char *host = (char *)ap_get_remote_host(ctx->r->connection, ctx->r->per_dir_config, REMOTE_HOST, NULL);
+		FE_RETURN_VAR( fe_new_str("remote_host", host, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function referer
+	* @declaration  function referer()
+	* @brief The url in the referer header.
+	* @description If someone has navigated to your page via google, http://www.google.com will be in
+	the referrer string.
+	* @return A string 
+	*/
+	native function referer()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char *referer = (char *) apr_table_get(ctx->r->headers_in, "Referer");
+		FE_RETURN_VAR( fe_new_str("referer", referer, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function userAgent
+	* @declaration function userAgent()
+	* @brief The name of clients user agent
+	* @description Retreive the name of the clients user agent ( ie. Mozilla )
+	* @return A string with the name or an empty string of not avaliable
+	*/
+	native function userAgent()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char *referer = (char *) apr_table_get(ctx->r->headers_in, "User-agent");
+		FE_RETURN_VAR( fe_new_str("referer", referer, 0, FE_CHARSET_DEFAULT ) );
+	}
+	/**
+	* @function fullUri
+	* @declaration function fullUri
+	* @brief Returns the entire uri.
+	* @return A string with the uri or an empty string of not avaliable
+	*/
+	native function fullUri()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char *referer = (char *)ctx->r->hostname;
+		FE_RETURN_VAR( fe_new_str("referer", referer, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function logError
+	* @param string the error message
+	* @declaration  function logError( string error )
+	* @brief Log an error in apaches error log.
+	* @description This function is usefull for debugging scripts.
+	*/
+	native function logError( string error )
+	{
+		struct apache_ctx *ctx = self->odata;
+		ap_log_rerror(APLOG_MARK, APLOG_NOERRNO, 0, ctx->r, "mod_ferite: %s", error->data );
+	}
+
+	/**
+	* @function query
+	* @declaration  function query()
+	* @brief Fetch the query name and values 
+	* @description This function returns the query string nicely decode in an array where 
+	*  the name of each element within the array is the name of the form field. and the value is the value 
+		of the field. This function handles Multipart form and returns input type=file as an object of type 
+		MultiPart. All of the values will have been url decoded so you don't have to.
+	* @return A keyed array.
+	* @example <code>Foo=bar&Bar=foo &raquo; ['Foo' => 'bar', 'Bar' => 'foo']</code>
+	*/
+	native function query()
+	{
+	    FeriteVariable *query = parse_query_data( script, self->odata ); 
+	    FE_RETURN_VAR( query );
+	}
+
+	/**
+	* @function getParams
+	* @param string name The name of the parameter to fetch
+	* @declaration  function getParams( string name )
+	* @brief This function will fetch all parameters passed via the request that match a given name and return an array.
+	* @return An array.
+	*/
+	native function getParams( string name )
+	{
+		FeriteVariable *v, *params;
+		struct apache_ctx *ctx = self->odata;
+		int i;
+		char *p, *ptr, *pair, *key;
+
+		params = ferite_create_uarray_variable( script, "params", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+		p = ptr = fstrdup( ctx->query->data );
+		while( (pair = strsep(&p, "&")) )
+		{
+			for(i=0;pair[i];i++)
+			 if(pair[i] == '+')
+				pair[i] = ' ';
+			if( (key = strsep(&pair,"=")) && pair )
+			{
+				ap_unescape_url(key);
+				ap_unescape_url(pair);
+				if( strcmp( key, name->data ) == 0 )
+				{
+					v = fe_new_str( "query-value", pair, 0, FE_CHARSET_DEFAULT );
+					ferite_uarray_add( script, VAUA(params), v, NULL, FE_ARRAY_ADD_AT_END );
+				}
+			}
+		}
+		ffree( ptr );
+		FE_RETURN_VAR( params );
+	}
+
+	/**
+	* @function setCookie
+	* @param string cookie The cookie to get
+	* @declaration  function setCookie( string cookie )
+	* @brief Send a coookie to the client browser.
+	* @description It is important that you form the cookie correctly and escape the values.
+	<p>
+	A cookie takes the form:
+	<p>
+	<code>key=value; [expires=DATE;] [path=PATH;]</code>
+	<p> 
+	Where expires and path are optional. The main part is the key=value. 
+	It is important that the expires date is given in RFC-822 format. This format looks like 
+	"Sat, 14 Sep 2002 21:57:39 +0000" and is the format given by UNIX command date -R.
+	<p>
+	If you wanted to,  it is possible to combine this with the serialize module and String.base64encode 
+	to store user objects in cookies rather than clog up a database. Although this could be considered a \
+	secuirity risk.
+	*/
+	native function setCookie( string cookie )
+	{
+		struct apache_ctx *ctx = self->odata;
+		apr_table_addn(ctx->r->headers_out, "Set-Cookie", (char *)apr_pstrdup( ctx->r->pool, cookie->data ) );
+	}
+
+	/**
+	* @function queryString
+	* @declaration  function queryString()
+	* @brief Retrieve the unmodified query string
+	* @description The query string is the part of the uri that follows the &amp;
+	* @return A string
+	*/
+	native function queryString()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str( "query_string", ctx->query->data, ctx->query->length, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function cookies
+	* @declaration  function cookies()
+	* @brief Retreive the cookies returned by the client
+	* @description This returns a keyed array, with the name of each element being the name of the cookie.
+	* @return An array with the cookies decoded.
+	*/
+	native function cookies()
+	{
+		char *key, *pair,*cookiejar, *cj;
+		FeriteVariable *cookies,*v;
+		struct apache_ctx *ctx = self->odata;
+		cj = cookiejar = fstrdup((char *)apr_table_get(ctx->r->headers_in, "Cookie"));
+
+		cookies = ferite_create_uarray_variable( script, "cookies", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+		if( cj ) 
+		{
+			while( (pair = strsep(&cookiejar, ";")) )
+			{
+				if( (key = strsep(&pair,"=")) && pair )
+				{
+					while(isspace(*key))
+						key++;
+					ap_unescape_url(key);
+					ap_unescape_url(pair);
+					v = fe_new_str( "cookie-value", pair, 0, FE_CHARSET_DEFAULT );
+					ferite_uarray_add( script, VAUA(cookies), v, key, FE_ARRAY_ADD_AT_END );
+				}
+			}
+			ffree( cj );
+		}
+		FE_RETURN_VAR( cookies );
+	}
+
+	/**
+	* @function urlEncode
+	* @param string code The string to enoce
+	* @declaration function urlEncode( string code )
+	* @brief Url encode a string
+	* @description Encodes values not allowed in urls and cookies ' ' becomes + and others become % 
+		followed by its hexadecimal value ie. = bocomes %3D. This function, and its partner urlDecode()
+		are required when setting cookies or passing strings onto another page.
+	* @return The encoded string
+	*/
+	native function urlEncode( string code )
+	{
+		FeriteVariable *v;
+		char *to_encode;
+		to_encode = (char *)url_encode(code->data, code->length);
+		v = fe_new_str("urlencoded", to_encode, 0, FE_CHARSET_DEFAULT );
+		ffree( to_encode );
+		FE_RETURN_VAR( v );
+	}
+
+	/**
+	* @function urlDecode
+	* @param string code The string to decode
+	* @declaration  function urlDecode( string code )
+	* @brief Decode an url encoded string.
+	* @description Decodes values not allowed in urls and cookies + returns to ' ' and others come from % 
+		followed by its hexadecimal value ie. %3D becomes =. This function, and its partner urlEncode()
+		are required when setting cookies or passing strings onto another page.
+	* @return a decoded string
+	*/
+	native function urlDecode( string code )
+	{
+		FeriteVariable *v;
+		char *decoded = fstrdup( code->data );
+		register int x;
+
+		for( x=0 ; decoded[x] ; x++ )
+		 if( decoded[x] == '+' )
+			decoded[x] = ' ';
+		ap_unescape_url( decoded );
+
+		v = fe_new_str( "urldecoded", decoded, 0, FE_CHARSET_DEFAULT );
+		ffree( decoded );
+		FE_RETURN_VAR( v );
+	}
+
+	/**
+	* @function uniqueId
+	* @declaration  function uniqueId()
+	* @brief return a unique id
+	* @description This function will only work if your apache has mod_unique_id compiled.
+	*  ./configure --enable-unique-id
+	  <p>
+	  This allows you to easily generate unique ids using the tried and tested apache mod_unique_id.
+	  If called when mod_unique_id is not availiable, it will return an empty string.
+	* @return a string with a unique id
+	*/
+	native function uniqueId()
+	{
+		char *id = NULL;
+		FeriteVariable *v;
+		struct apache_ctx *ctx = self->odata;
+		if(ap_find_linked_module("mod_unique_id.c"))
+			id = (char *)apr_table_get(ctx->r->subprocess_env, "UNIQUE_ID"); /* mod_unique_id */
+		
+		FE_RETURN_VAR( fe_new_str("unique_id", id, 0, FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function documentRoot
+	* @declaration native function documentRoot()
+	* @brief returns the servers document root
+	* @return a string with the document root
+	* @description this is the servers htdocs catalog.
+	*/
+	native function documentRoot()
+	{
+		struct apache_ctx *ctx = self->odata;
+		FE_RETURN_VAR( fe_new_str("document_root", (char *)ap_document_root(ctx->r), 0,
+								 FE_CHARSET_DEFAULT ) );
+	}
+	/**
+	* @function redirectURL
+	* @declaration native function redirectURL()
+	* @brief returns the redirected url
+	* @description Returns the url that was internally redirected to the current url.
+	* @return The url 
+	*/
+	native function redirectURL()
+	{
+		struct apache_ctx *ctx = self->odata;
+		char *d = "";
+		if( ctx->r->prev && ctx->r->prev->uri )
+			d = ctx->r->prev->uri;
+		FE_RETURN_VAR( fe_new_str("redirectURL", d, 0, FE_CHARSET_DEFAULT ) );
+	}
+	/**
+	* @function serverRoot
+	* @declaration native function serverRoot()
+	* @brief returns the server root
+	* @description This is apache root catalog containing htdocs, configuration and friends.
+	* @return The path 
+	*/
+	native function serverRoot()
+	{
+		FE_RETURN_VAR( fe_new_str("sever_root", (char *)ap_server_root, strlen(ap_server_root),
+								 FE_CHARSET_DEFAULT ) );
+	}
+
+	/**
+	* @function current
+	* @static
+	* @declaration static function current()
+	* @brief Return an instance of the current http request.
+	* @return A Request object which can then be used to gleam valuable information.
+	*/
+	static function current() {
+		return new Request();
+	}
+}
+/**
+ * @end
+ */
+/**
+ * @class MutliPart
+ * @description class return when uploading files using mutlipart forms
+ */ 
+class MultiPart
+{
+	/**
+	 * @variable name
+	 * @type string
+	 * @brief name of the inputfield
+	 */
+	string name;
+	/**
+	* @variable filename
+	* @type string
+	* @brief name of the file
+	*/
+	string filename;
+	/**
+	* @variable data
+	* @type string
+	* @brief the file data
+	*/
+	string data;
+}
+/**
+ * @end
+ */
+
+class Metrics {
+	constructor() {
+		// code...
+	}
+	native function checkpoint( string value ) {
+		FeriteVariable *timeline = ferite_script_fetch_data( script, "TimeLine" );
+		double *lasttime = ferite_script_fetch_data( script, "LastTime" );
+		
+		char *buf = fcalloc( strlen(value->data) + 128, sizeof(char) );
+		struct timeval the_time;
+		double t = 0;
+
+		gettimeofday(&the_time, NULL);
+		t = (double)the_time.tv_sec + (((double)the_time.tv_usec)/1000000);
+
+		sprintf( buf, "%f,\"%s\" (d: %f)", t, value->data, (t - *lasttime) );
+		*lasttime = t;
+
+		ferite_uarray_push( script, VAUA(timeline), fe_new_str_static("Checkpoint", buf, strlen(buf), FE_CHARSET_DEFAULT) );
+		ffree( buf );
+	}
+	native function checkpoints() {
+		FeriteVariable *timeline = ferite_script_fetch_data( script, "TimeLine" );
+		return timeline;
+	}
+}

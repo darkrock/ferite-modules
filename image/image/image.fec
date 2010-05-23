@@ -1,0 +1,12 @@
+// Main loader for image module
+
+module-header
+{
+       #include "utility.h"
+}
+
+uses "ImageClass.fec";
+uses "Font.fec";
+uses "Polygon.fec";
+uses "Fontdir.fec";
+

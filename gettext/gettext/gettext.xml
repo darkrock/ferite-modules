@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<module>
+    <name>gettext</name>
+    <documentation-list>
+        <include>gettext.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

@@ -1,0 +1,24 @@
+uses "console", "array", "string", "aspell";
+uses "sys";
+
+object spell = new Aspell("en_US");
+array suggestions;
+string word,input;
+
+
+while( true ) {
+   Console.print("Word to spell check> ");
+   Console.stdout.flush();
+   input = Console.readln();
+   input = input[0..String.length(input)-2];
+   if( spell.check( input ) )
+       Console.println("yes, the word $input is correct");
+
+   else {
+       Console.println("The word $input is not a correct english word");
+       suggestions = spell.suggestions( input );
+
+       Console.println("Suggestions:");
+       Console.println( Array.join( suggestions, "," ) );
+   }
+}

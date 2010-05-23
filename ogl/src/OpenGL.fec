@@ -1,0 +1,3342 @@
+
+module-header {
+    
+#include "utility.h"
+#include "OpenGL_utility.h"
+    
+}
+
+namespace modifies GL {
+
+    native function ClearIndex( number index ) {
+        glClearIndex((GLfloat)NUM2DBL(params[0]));        
+    }
+    native function ClearColor( number r, number g, number b, number a ) {
+        GLclampf red = (GLclampf)NUM2DBL(params[0]);
+        GLclampf green = (GLclampf)NUM2DBL(params[1]);
+        GLclampf blue = (GLclampf)NUM2DBL(params[2]);
+        GLclampf alpha = (GLclampf)NUM2DBL(params[3]);
+        glClearColor( red, green, blue, alpha );
+    }
+    native function Clear( number bitfield ) {
+        GLbitfield mask = (GLbitfield)NUM2LNG(params[0]);
+        glClear( mask );
+    }
+    native function IndexMask( number bitfield ) {
+        GLbitfield mask = (GLbitfield)NUM2LNG(params[0]);
+        glIndexMask( mask );
+    }
+    native function ColorMask( number r, number g, number b, number a ) {
+        GLboolean red = (GLboolean)NUM2LNG(params[0]);
+        GLboolean green = (GLboolean)NUM2LNG(params[1]);
+        GLboolean blue = (GLboolean)NUM2LNG(params[2]);
+        GLboolean alpha = (GLboolean)NUM2LNG(params[3]);
+        glColorMask( red, green, blue, alpha );
+    }
+    native function AlphaFunc( number f, number r ) {
+        GLenum func = (GLenum)NUM2LNG(params[0]);
+        GLclampf ref = (GLclampf)NUM2DBL(params[1]);
+        glAlphaFunc( func, ref );
+    }
+    native function BlendFunc( number s, number d ) {
+        GLenum sfactor = (GLenum)NUM2LNG(params[0]);
+        GLenum dfactor = (GLenum)NUM2LNG(params[1]);
+        glBlendFunc( sfactor, dfactor );
+    }
+    native function LogicOp( number o ) {
+        GLenum opcode = (GLenum)NUM2LNG(params[0]);
+        glLogicOp( opcode );
+    }
+    native function CullFace( number o ) {
+        GLenum mode = (GLenum)NUM2LNG(params[0]);
+        glCullFace( mode );
+    }
+    native function FrontFace( number o ) {
+        GLenum mode = (GLenum)NUM2LNG(params[0]);
+        glFrontFace( mode );
+    }
+    native function PointSize( number o ) {
+        GLfloat size = (GLfloat)NUM2DBL(params[0]);
+        glPointSize( size );
+    }    
+    
+    native function LineWidth( number w ) {
+        GLfloat width;
+        width = (GLfloat)NUM2DBL(params[0]);
+        glLineWidth(width);        
+    }
+
+    native function LineStipple( number arg1, number arg2 ) {
+        GLint factor;
+        GLushort pattern;
+        factor = (GLint)NUM2LNG(params[0]);
+        pattern = (GLushort)(NUM2LNG(params[1]) & 0xFFFF);
+        glLineStipple(factor,pattern);
+    }
+
+    native function PolygonMode( number arg1, number arg2) {
+        GLenum face;
+        GLenum mode;
+        face = (GLenum)NUM2LNG(params[0]);
+        mode = (GLenum)NUM2LNG(params[1]);
+        glPolygonMode(face,mode);
+    }
+
+    native function PolygonOffset( number arg1, number arg2) {
+        GLfloat factor;
+        GLfloat units;
+        factor = (GLfloat)NUM2DBL(params[0]);
+        units = (GLfloat)NUM2DBL(params[1]);
+        glPolygonOffset(factor,units);        
+    }
+
+    native function PolygonStipple( void arg1 ) {
+        int i;
+        GLubyte mask[128];
+        memset(mask, 0x0, sizeof(GLubyte[128]));
+        
+        switch( params[0]->type ) {
+            case F_VAR_UARRAY:
+                for(i = 0; i < VAUA(params[0])->size && i < 128; i++)
+                    mask[i] = (GLubyte)NUM2LNG(VAUA(params[0])->array[i]);
+                break;
+            case F_VAR_STR:
+                if( VAS(params[0])->length < 128 ) {
+                    ferite_error( script, 0, "PolygonStipple: String length requires minimum of 128 characters\n" );
+                    FE_RETURN_VOID;
+                }
+                memcpy(mask, VAS(params[0])->data, 128);
+                break;
+            default:
+                ferite_error( script, 0, "PolygonStipple: Require an array or string not %s\n", ferite_variable_id_to_str(script, params[0]->type) );
+                FE_RETURN_VOID;
+        }
+        glPolygonStipple(mask);
+    }
+
+    native function GetPolygonStipple() {
+        GLubyte mask[128];
+        glGetPolygonStipple(mask);
+        /* FIXME: possible overflow */
+        FE_RETURN_CSTR((const char*)mask, FE_FALSE);
+    }
+
+    native function EdgeFlag( number arg1) {
+        GLboolean flag;
+        flag = (GLboolean)NUM2LNG(params[0]);
+        glEdgeFlag(flag);    
+    }
+
+    native function Scissor( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        width = (GLsizei)NUM2LNG(params[2]);
+        height = (GLsizei)NUM2LNG(params[3]);
+        glScissor(x,y,width,height);    
+    }
+
+    native function ClipPlane( number arg1, array arg2 ) {
+        GLenum plane;
+        GLdouble equation[4];
+        int i = 0;
+        
+        plane = (GLenum)NUM2LNG(params[0]);
+        for( i = 0; i < VAUA(params[1])->size; i++ ) {
+            equation[i] = (GLdouble)NUM2DBL(VAUA(params[1])->array[i]);
+        }        
+        glClipPlane(plane,equation);    
+    }
+
+    native function DrawBuffer( number arg1 ) {
+        GLenum mode;
+        mode = (GLenum)NUM2LNG(params[0]);
+        glDrawBuffer(mode);    
+    }
+
+    native function ReadBuffer( number arg1 ) {
+        GLenum mode;
+        mode = (GLenum)NUM2LNG(params[0]);
+        glReadBuffer(mode);    
+    }
+
+    native function Enable( number arg1 ) {
+        GLenum cap;
+        cap = (GLenum)NUM2LNG(params[0]);
+        glEnable(cap);    
+    }
+
+    native function Disable( number arg1 ) {
+        GLenum cap;
+        cap = (GLenum)NUM2LNG(params[0]);
+        glDisable(cap);    
+    }
+
+    native function IsEnabled( number arg1) {
+        GLenum cap;
+        GLboolean ret;
+        cap = (GLenum)NUM2LNG(params[0]);
+        ret = glIsEnabled(cap);
+        FE_RETURN_LONG( ret );
+    }
+
+    native function GetDoublev( number arg1 ) {
+        GLenum pname;
+        int nitems;
+        FeriteVariable *ary, *ary2;
+        int i,j;
+        GLdouble items[32];
+
+        pname = NUM2LNG(params[0]);
+        switch(pname) {
+            case GL_ACCUM_CLEAR_VALUE:
+#ifdef GL_BLEND_COLOR_EXT
+            case GL_BLEND_COLOR_EXT:
+#endif
+            case GL_COLOR_CLEAR_VALUE:
+            case GL_COLOR_WRITEMASK:
+            case GL_CURRENT_COLOR:
+            case GL_CURRENT_RASTER_COLOR:
+            case GL_CURRENT_RASTER_POSITION:
+            case GL_CURRENT_RASTER_TEXTURE_COORDS:
+            case GL_CURRENT_TEXTURE_COORDS:
+            case GL_FOG_COLOR:
+            case GL_LIGHT_MODEL_AMBIENT:
+            case GL_MAP2_GRID_DOMAIN:
+            case GL_SCISSOR_BOX:
+            case GL_TEXTURE_ENV_COLOR:
+            case GL_VIEWPORT:
+                nitems = 4;
+                break;
+            case GL_CURRENT_NORMAL:
+                nitems = 3;
+                break;
+            case GL_DEPTH_RANGE:	
+            case GL_LINE_WIDTH_RANGE:
+            case GL_MAP1_GRID_DOMAIN:
+            case GL_MAP2_GRID_SEGMENTS:
+            case GL_MAX_VIEWPORT_DIMS:
+            case GL_POINT_SIZE_RANGE:
+            case GL_POLYGON_MODE:
+                nitems = 2;
+                break;
+            case GL_MODELVIEW_MATRIX:
+            case GL_PROJECTION_MATRIX:
+            case GL_TEXTURE_MATRIX:
+            {
+                glGetDoublev(pname, items);
+                ary = fe_new_array_static( "texture-matrix", 4 );
+                for (i = 0; i < 4; i++) {
+                    ary2 = fe_new_array_static( "texture-matrix-sub", 4 );
+                    for (j = 0; j < 4; j++)
+                        ferite_uarray_push( script, VAUA(ary2), fe_new_dbl_static( "f", items[i*4+j] ));
+                    ferite_uarray_push( script, VAUA(ary), ary2 );
+                }
+                FE_RETURN_VAR(ary);
+            }
+            case GL_POLYGON_STIPPLE:
+                glGetDoublev(pname, items);
+                /* FIXME: possible overflow */
+                FE_RETURN_CSTR( (char*)items, FE_FALSE );
+            default:
+                glGetDoublev(pname, items);
+                FE_RETURN_DOUBLE(items[0]);
+        }
+        glGetDoublev(pname, items);
+        ary = fe_new_array_static("GetDoublev", nitems);
+        for (i = 0; i < nitems; i++)
+            ferite_uarray_push( script, VAUA(ary), fe_new_dbl_static( "f", items[i] ));
+        FE_RETURN_VAR(ary);
+    }
+
+    native function PushAttrib( number arg1 ) {
+        GLbitfield mask;
+        mask = (GLbitfield)NUM2LNG(params[0]);
+        glPushAttrib(mask);
+    }
+    
+    native function PopAttrib() {
+        glPopAttrib();
+    }
+
+    native function PushClientAttrib( number arg1 ) {
+        GLbitfield mask;
+        mask = (GLbitfield)NUM2LNG(params[0]);
+        glPushClientAttrib(mask);
+    }
+
+    native function PopClientAttrib() {
+        glPopClientAttrib();
+    }
+
+    native function RenderMode( number arg1 ) {
+        GLenum mode;
+        GLint ret;
+        mode = (GLenum)NUM2LNG(params[0]);
+        ret = glRenderMode(mode);
+        FE_RETURN_LONG( ret );
+    }
+
+    native function GetError() {
+        GLenum ret;
+        ret = glGetError();
+        FE_RETURN_LONG( ret );
+    }
+
+    native function GetString( number arg1 ){
+        GLenum name;
+        const GLubyte *ret;
+        name = (GLenum)NUM2LNG(params[0]);
+        ret = glGetString(name);
+        FE_RETURN_CSTR( (char*)ret, FE_FALSE );
+    }
+
+    native function Finish() {
+        glFinish();        
+    }
+
+    native function Flush() {
+        glFlush();
+    }
+
+    native function Hint( number arg1, number arg2 ) {
+        GLenum target;
+        GLenum mode;
+        target = (GLenum)NUM2LNG(params[0]);
+        mode = (GLenum)NUM2LNG(params[1]);
+        glHint(target,mode);    
+    }
+
+    native function ClearDepth( number arg1 ) {
+        GLclampd depth;
+        depth = (GLclampd)NUM2DBL(params[0]);
+        glClearDepth(depth);
+    }
+
+    native function DepthFunc( number arg1 ){
+        GLenum func;
+        func = (GLenum)NUM2LNG(params[0]);
+        glDepthFunc(func);
+    }
+
+    native function DepthMask( number arg1 ) {
+        GLboolean flag;
+        flag = (GLboolean)NUM2LNG(params[0]);
+        glDepthMask(flag);
+    }
+
+    native function DepthRange( number arg1, number arg2) {
+        GLclampd near_val;
+        GLclampd far_val;
+        near_val = (GLclampd)NUM2DBL(params[0]);
+        far_val = (GLclampd)NUM2DBL(params[1]);
+        glDepthRange(near_val,far_val);
+    }
+
+    native function ClearAccum( number arg1, number arg2, number arg3, number arg4) {
+        GLfloat red;
+        GLfloat green;
+        GLfloat blue;
+        GLfloat alpha;
+        red = (GLfloat)NUM2DBL(params[0]);
+        green = (GLfloat)NUM2DBL(params[1]);
+        blue = (GLfloat)NUM2DBL(params[2]);
+        alpha = (GLfloat)NUM2DBL(params[3]);
+        glClearAccum(red,green,blue,alpha);
+    }
+
+    native function Accum( number arg1, number arg2 ) {
+        GLenum op;
+        GLfloat value;
+        op = (GLenum)NUM2LNG(params[0]);
+        value = (GLfloat)NUM2DBL(params[1]);
+        glAccum(op,value);
+    }
+
+    native function MatrixMode( number arg1 ) {
+        GLenum mode;
+        mode = (GLenum)NUM2LNG(params[0]);
+        glMatrixMode(mode);
+    }
+
+    native function Ortho( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6 ) {
+        GLdouble left;
+        GLdouble right;
+        GLdouble bottom;
+        GLdouble top;
+        GLdouble near_val;
+        GLdouble far_val;
+        left = (GLdouble)NUM2DBL(params[0]);
+        right = (GLdouble)NUM2DBL(params[1]);
+        bottom = (GLdouble)NUM2DBL(params[2]);
+        top = (GLdouble)NUM2DBL(params[3]);
+        near_val = (GLdouble)NUM2DBL(params[4]);
+        far_val = (GLdouble)NUM2DBL(params[5]);
+        glOrtho(left,right,bottom,top,near_val,far_val);
+    }
+    
+    native function Frustum( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6 ) {
+        GLdouble left;
+        GLdouble right;
+        GLdouble bottom;
+        GLdouble top;
+        GLdouble near_val;
+        GLdouble far_val;
+        left = (GLdouble)NUM2DBL(params[0]);
+        right = (GLdouble)NUM2DBL(params[1]);
+        bottom = (GLdouble)NUM2DBL(params[2]);
+        top = (GLdouble)NUM2DBL(params[3]);
+        near_val = (GLdouble)NUM2DBL(params[4]);
+        far_val = (GLdouble)NUM2DBL(params[5]);
+        glFrustum(left,right,bottom,top,near_val,far_val);
+    }
+
+    native function Viewport( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        width = (GLsizei)NUM2LNG(params[2]);
+        height = (GLsizei)NUM2LNG(params[3]);
+        glViewport(x,y,width,height);
+    }
+
+    native function PushMatrix() {
+        glPushMatrix();
+    }
+
+    native function PopMatrix() {
+        glPopMatrix();
+    }
+
+    native function LoadIdentity() {
+        glLoadIdentity();
+    }
+
+    native function LoadMatrixd( array arg1 ) {
+        GLdouble m[4*4];
+        ary2cmat4x4(params[0], m);
+        glLoadMatrixd(m);
+    }
+
+    native function MultMatrixd( array arg1 ) {
+        GLdouble m[4*4];
+        ary2cmat4x4(params[0], m);
+        glMultMatrixd(m);
+    }
+
+    native function Rotated( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble angle;
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        angle = (GLdouble)NUM2DBL(params[0]);
+        x = (GLdouble)NUM2DBL(params[1]);
+        y = (GLdouble)NUM2DBL(params[2]);
+        z = (GLdouble)NUM2DBL(params[3]);
+        glRotated(angle,x,y,z);
+    }
+    
+    native function Scaled( number arg1, number arg2, number arg3 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        glScaled(x,y,z);
+    }
+
+    native function Translated( number arg1, number arg2, number arg3 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        glTranslated(x,y,z);
+    }
+
+    native function IsList( number arg1 ) {
+        GLuint list;
+        GLboolean ret;
+        list = (GLuint)NUM2LNG(params[0]);
+        ret = glIsList(list);
+        FE_RETURN_LONG(ret);
+    }
+
+    native function DeleteLists( number arg1, number arg2 ) {
+        GLuint list;
+        GLsizei range;
+        list = (GLuint)NUM2LNG(params[0]);
+        range = (GLsizei)NUM2LNG(params[1]);
+        glDeleteLists(list,range);
+    }
+
+    native function GenLists( number arg1 ) {
+        GLsizei range;
+        GLuint ret;
+        range = (GLsizei)NUM2LNG(params[0]);
+        ret = glGenLists(range);
+        FE_RETURN_LONG(ret);
+    }
+
+    native function NewList( number arg1, number arg2) {
+        GLuint list;
+        GLenum mode;
+        list = (GLuint)NUM2LNG(params[0]);
+        mode = (GLenum)NUM2LNG(params[1]);
+        glNewList(list,mode);
+    }
+
+    native function EndList() {
+        glEndList();
+    }
+
+    native function CallList( number arg1 ) {
+        GLuint list;
+        list = (GLuint)NUM2LNG(params[0]);
+        glCallList(list);    
+    }
+
+    native function CallLists( void arg1 ) {
+        GLsizei n;
+        GLenum type;
+        GLvoid *lists;
+        switch( params[0]->type ) {
+            case F_VAR_STR:
+                type = GL_BYTE;
+                lists = VAS(params[0])->data;
+                n = VAS(params[0])->length;
+                break;
+            case F_VAR_UARRAY:
+                type = GL_INT;
+                lists = fcalloc( sizeof(int), VAUA(params[0])->size );
+                n = ary2cint( params[0], lists, 0 );
+                break;
+            default:
+                ferite_error( script, 0, "GL.CallLists: Invalid type expecting array or string\n" );
+                FE_RETURN_VOID;
+        }
+        glCallLists(n, type, lists);
+        if( type == GL_INT ) 
+            ffree(lists);        
+    }
+
+    native function ListBase( number arg1) {
+        GLuint base;
+        base = (GLuint)NUM2LNG(params[0]);
+        glListBase(base);
+    }
+
+    native function Begin( number arg1 ) {
+        GLenum mode;
+        mode = (GLenum)NUM2LNG(params[0]);
+        glBegin(mode);    
+    }
+
+    native function End() {
+        glEnd();        
+    }
+
+    native function Vertex2d( number arg1, number arg2 ) {
+        GLdouble x;
+        GLdouble y;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        glVertex2d(x,y);
+    }
+
+    native function Vertex2f( number arg1, number arg2 ) {
+        GLfloat x;
+        GLfloat y;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        glVertex2f(x,y);
+    }
+
+    native function Vertex2i( number arg1, number arg2 ) {
+        GLint x;
+        GLint y;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        glVertex2i(x,y);
+    }
+
+    native function Vertex2s( number arg1, number arg2 ) {
+        GLshort x;
+        GLshort y;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        glVertex2s(x,y);
+    }
+
+    native function Vertex3d( number arg1, number arg2, number arg3 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        glVertex3d(x,y,z);
+    }
+
+    native function Vertex3f( number arg1, number arg2, number arg3 ) {
+        GLfloat x;
+        GLfloat y;
+        GLfloat z;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        z = (GLfloat)NUM2DBL(params[2]);
+        glVertex3f(x,y,z);        
+    }
+
+    native function Vertex3i( number arg1, number arg2, number arg3 ) {
+        GLint x;
+        GLint y;
+        GLint z;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        z = (GLint)NUM2LNG(params[2]);
+        glVertex3i(x,y,z);
+    }
+
+    native function Vertex3s( number arg1, number arg2, number arg3 ) {
+        GLshort x;
+        GLshort y;
+        GLshort z;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        z = (GLshort)NUM2LNG(params[2]);
+        glVertex3s(x,y,z);
+    }
+
+    native function Vertex4d( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        GLdouble w;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        w = (GLdouble)NUM2DBL(params[3]);
+        glVertex4d(x,y,z,w);
+    }
+
+    native function Vertex4f( number arg1, number arg2, number arg3, number arg4 ) {
+        GLfloat x;
+        GLfloat y;
+        GLfloat z;
+        GLfloat w;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        z = (GLfloat)NUM2DBL(params[2]);
+        w = (GLfloat)NUM2DBL(params[3]);
+        glVertex4f(x,y,z,w);
+    }
+    
+    native function Vertex4i( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint x;
+        GLint y;
+        GLint z;
+        GLint w;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        z = (GLint)NUM2LNG(params[2]);
+        w = (GLint)NUM2LNG(params[3]);
+        glVertex4i(x,y,z,w);
+    }
+
+    native function Vertex4s( number arg1, number arg2, number arg3, number arg4 ) {
+        GLshort x;
+        GLshort y;
+        GLshort z;
+        GLshort w;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        z = (GLshort)NUM2LNG(params[2]);
+        w = (GLshort)NUM2LNG(params[3]);
+        glVertex4s(x,y,z,w);        
+    }
+
+    function Vertex( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 2:
+                            .Vertex2d( b[0], b[1] );
+                            break;
+                        case 3:
+                            .Vertex3d( b[0], b[1], b[2] );
+                            break;
+                        case 4:
+                            .Vertex4d( b[0], b[1], b[2], b[3] );
+                            break;
+                        default:
+                            Sys.error( "Vertex array size error\n", 0 );
+                    }
+                }
+                break;
+            case 2:
+		.Vertex2d( a[0], a[1]);
+		break;
+            case 3:
+		.Vertex3d( a[0], a[1], a[2]);
+		break;
+            case 4:
+		.Vertex4d( a[0], a[1], a[2], a[3]);
+		break;
+        }
+    }
+
+    native function Normal3b( number arg1, number arg2, number arg3 ) {
+        GLbyte nx;
+        GLbyte ny;
+        GLbyte nz;
+        nx = (GLbyte)NUM2LNG(params[0]);
+        ny = (GLbyte)NUM2LNG(params[1]);
+        nz = (GLbyte)NUM2LNG(params[2]);
+        glNormal3b(nx,ny,nz);        
+    }
+
+    native function Normal3d( number arg1, number arg2, number arg3 ) {
+        GLdouble nx;
+        GLdouble ny;
+        GLdouble nz;
+        nx = (GLdouble)NUM2DBL(params[0]);
+        ny = (GLdouble)NUM2DBL(params[1]);
+        nz = (GLdouble)NUM2DBL(params[2]);
+        glNormal3d(nx,ny,nz);        
+    }
+
+    native function Normal3f( number arg1, number arg2, number arg3 ) {
+        GLfloat nx;
+        GLfloat ny;
+        GLfloat nz;
+        nx = (GLfloat)NUM2DBL(params[0]);
+        ny = (GLfloat)NUM2DBL(params[1]);
+        nz = (GLfloat)NUM2DBL(params[2]);
+        glNormal3f(nx,ny,nz);
+    }
+
+    native function Normal3i( number arg1, number arg2, number arg3 ) {
+        GLint nx;
+        GLint ny;
+        GLint nz;
+        nx = (GLint)NUM2LNG(params[0]);
+        ny = (GLint)NUM2LNG(params[1]);
+        nz = (GLint)NUM2LNG(params[2]);
+        glNormal3i(nx,ny,nz);    
+    }
+
+    native function Normal3s( number arg1, number arg2, number arg3 ) {
+        GLshort nx;
+        GLshort ny;
+        GLshort nz;
+        nx = (GLshort)NUM2LNG(params[0]);
+        ny = (GLshort)NUM2LNG(params[1]);
+        nz = (GLshort)NUM2LNG(params[2]);
+        glNormal3s(nx,ny,nz);        
+    }
+
+    function Normal( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 3:
+                            .Normal3d( b[0], b[1], b[2] );
+                            break;
+                        default:
+                            Sys.error( "Normal array size error\n", 0 );
+                    }
+                }
+                break;
+            case 3:
+                .Normal3d( a[0], a[1], a[2]);
+                break;
+            default:
+                Sys.error( "Normal args size error\n", 0 );
+        }
+    }
+    
+    native function Indexd( number arg1 ) {
+        GLdouble c;
+        c = (GLdouble)NUM2DBL(params[0]);
+        glIndexd(c);    
+    }
+
+    native function Indexf( number arg1 ) {
+        GLfloat c;
+        c = (GLfloat)NUM2DBL(params[0]);
+        glIndexf(c);        
+    }
+
+    native function Indexi( number arg1 ) {
+        GLint c;
+        c = (GLint)NUM2LNG(params[0]);
+        glIndexi(c);
+    }
+
+    native function Indexs( number arg1 ) {
+        GLshort c;
+        c = (GLshort)NUM2LNG(params[0]);
+        glIndexs(c);
+    }
+
+    native function Indexub( number arg1 ) {
+        GLubyte c;
+        c = (GLubyte)NUM2LNG(params[0]);
+        glIndexub(c);
+    }
+
+    native function Color3d( number arg1, number arg2, number arg3 ) {
+        GLdouble red;
+        GLdouble green;
+        GLdouble blue;
+        red = (GLdouble)NUM2DBL(params[0]);
+        green = (GLdouble)NUM2DBL(params[1]);
+        blue = (GLdouble)NUM2DBL(params[2]);
+        glColor3d(red,green,blue);
+    }
+
+    native function Color3f( number arg1, number arg2, number arg3 ) {
+        GLfloat red;
+        GLfloat green;
+        GLfloat blue;
+        red = (GLfloat)NUM2DBL(params[0]);
+        green = (GLfloat)NUM2DBL(params[1]);
+        blue = (GLfloat)NUM2DBL(params[2]);
+        glColor3f(red,green,blue);        
+    }
+
+    native function Color3i( number arg1, number arg2, number arg3 ) {
+        GLint red;
+        GLint green;
+        GLint blue;
+        red = (GLint)NUM2LNG(params[0]);
+        green = (GLint)NUM2LNG(params[1]);
+        blue = (GLint)NUM2LNG(params[2]);
+        glColor3i(red,green,blue);        
+    }
+
+    native function Color3s( number arg1, number arg2, number arg3 ) {
+        GLshort red;
+        GLshort green;
+        GLshort blue;
+        red = (GLshort)NUM2LNG(params[0]);
+        green = (GLshort)NUM2LNG(params[1]);
+        blue = (GLshort)NUM2LNG(params[2]);
+        glColor3s(red,green,blue);    
+    }
+
+    native function Color3ub( number arg1, number arg2, number arg3 ) {
+        GLubyte red;
+        GLubyte green;
+        GLubyte blue;
+        red = (GLubyte)NUM2LNG(params[0]);
+        green = (GLubyte)NUM2LNG(params[1]);
+        blue = (GLubyte)NUM2LNG(params[2]);
+        glColor3ub(red,green,blue);        
+    }
+
+    native function Color3ui( number arg1, number arg2, number arg3 ) {
+        GLuint red;
+        GLuint green;
+        GLuint blue;
+        red = (GLuint)NUM2LNG(params[0]);
+        green = (GLuint)NUM2LNG(params[1]);
+        blue = (GLuint)NUM2LNG(params[2]);
+        glColor3ui(red,green,blue);        
+    }
+
+    native function Color3us( number arg1, number arg2, number arg3 ) {
+        GLushort red;
+        GLushort green;
+        GLushort blue;
+        red = (GLushort)NUM2LNG(params[0]);
+        green = (GLushort)NUM2LNG(params[1]);
+        blue = (GLushort)NUM2LNG(params[2]);
+        glColor3us(red,green,blue);
+    }
+
+    native function Color4b( number arg1, number arg2, number arg3, number arg4 ) {
+        GLbyte red;
+        GLbyte green;
+        GLbyte blue;
+        GLbyte alpha;
+        red = (GLbyte)NUM2LNG(params[0]);
+        green = (GLbyte)NUM2LNG(params[1]);
+        blue = (GLbyte)NUM2LNG(params[2]);
+        alpha = (GLbyte)NUM2LNG(params[3]);
+        glColor4b(red,green,blue,alpha);
+    }
+
+    native function Color4d( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble red;
+        GLdouble green;
+        GLdouble blue;
+        GLdouble alpha;
+        red = (GLdouble)NUM2DBL(params[0]);
+        green = (GLdouble)NUM2DBL(params[1]);
+        blue = (GLdouble)NUM2DBL(params[2]);
+        alpha = (GLdouble)NUM2DBL(params[3]);
+        glColor4d(red,green,blue,alpha);
+    }
+
+    native function Color4f( number arg1, number arg2, number arg3, number arg4 ) {
+        GLfloat red;
+        GLfloat green;
+        GLfloat blue;
+        GLfloat alpha;
+        red = (GLfloat)NUM2DBL(params[0]);
+        green = (GLfloat)NUM2DBL(params[1]);
+        blue = (GLfloat)NUM2DBL(params[2]);
+        alpha = (GLfloat)NUM2DBL(params[3]);
+        glColor4f(red,green,blue,alpha);
+    }
+
+    native function Color4i( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint red;
+        GLint green;
+        GLint blue;
+        GLint alpha;
+        red = (GLint)NUM2LNG(params[0]);
+        green = (GLint)NUM2LNG(params[1]);
+        blue = (GLint)NUM2LNG(params[2]);
+        alpha = (GLint)NUM2LNG(params[3]);
+        glColor4i(red,green,blue,alpha);
+    }
+
+    native function Color4s( number arg1, number arg2, number arg3, number arg4 ) {
+        GLshort red;
+        GLshort green;
+        GLshort blue;
+        GLshort alpha;
+        red = (GLshort)NUM2LNG(params[0]);
+        green = (GLshort)NUM2LNG(params[1]);
+        blue = (GLshort)NUM2LNG(params[2]);
+        alpha = (GLshort)NUM2LNG(params[3]);
+        glColor4s(red,green,blue,alpha);
+    }
+
+    native function Color4ub( number arg1, number arg2, number arg3, number arg4 ) {
+        GLubyte red;
+        GLubyte green;
+        GLubyte blue;
+        GLubyte alpha;
+        red = (GLubyte)NUM2LNG(params[0]);
+        green = (GLubyte)NUM2LNG(params[1]);
+        blue = (GLubyte)NUM2LNG(params[2]);
+        alpha = (GLubyte)NUM2LNG(params[3]);
+        glColor4ub(red,green,blue,alpha);
+    }
+
+    native function Color4ui( number arg1, number arg2, number arg3, number arg4 ) {
+        GLuint red;
+        GLuint green;
+        GLuint blue;
+        GLuint alpha;
+        red = (GLuint)NUM2LNG(params[0]);
+        green = (GLuint)NUM2LNG(params[1]);
+        blue = (GLuint)NUM2LNG(params[2]);
+        alpha = (GLuint)NUM2LNG(params[3]);
+        glColor4ui(red,green,blue,alpha);        
+    }
+
+    native function Color4us( number arg1, number arg2, number arg3, number arg4) {
+        GLushort red;
+        GLushort green;
+        GLushort blue;
+        GLushort alpha;
+        red = (GLushort)NUM2LNG(params[0]);
+        green = (GLushort)NUM2LNG(params[1]);
+        blue = (GLushort)NUM2LNG(params[2]);
+        alpha = (GLushort)NUM2LNG(params[3]);
+        glColor4us(red,green,blue,alpha);
+    }
+
+     function Color( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 3:
+                            .Color3d( b[0], b[1], b[2] );
+                            break;
+                        case 4:
+                            .Color4d( b[0], b[1], b[2], b[3] );
+                            break;
+                        default:
+                            Sys.error( "Colour array size error\n", 0 );
+                    }
+                }
+                break;
+            case 3:
+		.Color3d( a[0], a[1], a[2]);
+		break;
+            case 4:
+		.Color4d( a[0], a[1], a[2], a[3]);
+		break;
+        }
+    }
+
+    native function TexCoord1d( number arg1 ) {
+        GLdouble s;
+        s = (GLdouble)NUM2DBL(params[0]);
+        glTexCoord1d(s);
+    }
+
+    native function TexCoord1f( number arg1 ) {
+        GLfloat s;
+        s = (GLfloat)NUM2DBL(params[0]);
+        glTexCoord1f(s);
+    }
+    
+    native function TexCoord1i( number arg1 ) {
+        GLint s;
+        s = (GLint)NUM2LNG(params[0]);
+        glTexCoord1i(s);
+    }
+    
+    native function TexCoord1s( number arg1 ) {
+        GLshort s;
+        s = (GLshort)NUM2LNG(params[0]);
+        glTexCoord1s(s);
+    }
+    
+    native function TexCoord2d( number arg1, number arg2 ) {
+        GLdouble s;
+        GLdouble t;
+        s = (GLdouble)NUM2DBL(params[0]);
+        t = (GLdouble)NUM2DBL(params[1]);
+        glTexCoord2d(s,t);
+    }
+    
+    native function TexCoord2f( number arg1, number arg2 ) {
+        GLfloat s;
+        GLfloat t;
+        s = (GLfloat)NUM2DBL(params[0]);
+        t = (GLfloat)NUM2DBL(params[1]);
+        glTexCoord2f(s,t);
+    }
+    
+    native function TexCoord2i( number arg1, number arg2 ) {
+        GLint s;
+        GLint t;
+        s = (GLint)NUM2LNG(params[0]);
+        t = (GLint)NUM2LNG(params[1]);
+        glTexCoord2i(s,t);
+    }
+    
+    native function TexCoord2s( number arg1, number arg2 ) {
+        GLshort s;
+        GLshort t;
+        s = (GLshort)NUM2LNG(params[0]);
+        t = (GLshort)NUM2LNG(params[1]);
+        glTexCoord2s(s,t);
+    }
+    
+    native function TexCoord3d( number arg1, number arg2, number arg3 ) {
+        GLdouble s;
+        GLdouble t;
+        GLdouble r;
+        s = (GLdouble)NUM2DBL(params[0]);
+        t = (GLdouble)NUM2DBL(params[1]);
+        r = (GLdouble)NUM2DBL(params[2]);
+        glTexCoord3d(s,t,r);
+    }
+    
+    native function TexCoord3f( number arg1, number arg2, number arg3 ) {
+        GLfloat s;
+        GLfloat t;
+        GLfloat r;
+        s = (GLfloat)NUM2DBL(params[0]);
+        t = (GLfloat)NUM2DBL(params[1]);
+        r = (GLfloat)NUM2DBL(params[2]);
+        glTexCoord3f(s,t,r);
+    }
+    
+    native function TexCoord3i( number arg1, number arg2, number arg3 ) {
+        GLint s;
+        GLint t;
+        GLint r;
+        s = (GLint)NUM2LNG(params[0]);
+        t = (GLint)NUM2LNG(params[1]);
+        r = (GLint)NUM2LNG(params[2]);
+        glTexCoord3i(s,t,r);
+    }
+    
+    native function TexCoord3s( number arg1, number arg2, number arg3 ) {
+        GLshort s;
+        GLshort t;
+        GLshort r;
+        s = (GLshort)NUM2LNG(params[0]);
+        t = (GLshort)NUM2LNG(params[1]);
+        r = (GLshort)NUM2LNG(params[2]);
+        glTexCoord3s(s,t,r);
+    }
+    
+    native function TexCoord4d( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble s;
+        GLdouble t;
+        GLdouble r;
+        GLdouble q;
+        s = (GLdouble)NUM2DBL(params[0]);
+        t = (GLdouble)NUM2DBL(params[1]);
+        r = (GLdouble)NUM2DBL(params[2]);
+        q = (GLdouble)NUM2DBL(params[3]);
+        glTexCoord4d(s,t,r,q);
+    }
+    
+    native function TexCoord4f( number arg1, number arg2, number arg3, number arg4 ) {
+        GLfloat s;
+        GLfloat t;
+        GLfloat r;
+        GLfloat q;
+        s = (GLfloat)NUM2DBL(params[0]);
+        t = (GLfloat)NUM2DBL(params[1]);
+        r = (GLfloat)NUM2DBL(params[2]);
+        q = (GLfloat)NUM2DBL(params[3]);
+        glTexCoord4f(s,t,r,q);
+    }
+    
+    native function TexCoord4i( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint s;
+        GLint t;
+        GLint r;
+        GLint q;
+        s = (GLint)NUM2LNG(params[0]);
+        t = (GLint)NUM2LNG(params[1]);
+        r = (GLint)NUM2LNG(params[2]);
+        q = (GLint)NUM2LNG(params[3]);
+        glTexCoord4i(s,t,r,q);
+    }
+    
+    native function TexCoord4s( number arg1, number arg2, number arg3, number arg4 ) {
+        GLshort s;
+        GLshort t;
+        GLshort r;
+        GLshort q;
+        s = (GLshort)NUM2LNG(params[0]);
+        t = (GLshort)NUM2LNG(params[1]);
+        r = (GLshort)NUM2LNG(params[2]);
+        q = (GLshort)NUM2LNG(params[3]);
+        glTexCoord4s(s,t,r,q);
+        
+    }
+    
+    function TexCoord( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 2:
+                            .TexCoord2d( b[0], b[1] );
+                            break;
+                        case 3:
+                            .TexCoord3d( b[0], b[1], b[2] );
+                            break;
+                        case 4:
+                            .TexCoord4d( b[0], b[1], b[2], b[3] );
+                            break;
+                        default:
+                            Sys.error( "TexCoord array size error\n", 0 );
+                    }
+                }
+                break;
+            case 2:
+                .TexCoord2d( a[0], a[1]);
+                break;
+            case 3:
+                .TexCoord3d( a[0], a[1], a[2]);
+                break;
+            case 4:
+                .TexCoord4d( a[0], a[1], a[2], a[3]);
+                break;
+        }
+    }
+    
+    native function RasterPos2d( number arg1, number arg2 ) {
+        GLdouble x;
+        GLdouble y;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        glRasterPos2d(x,y);
+    }
+    
+    native function RasterPos2f( number arg1, number arg2 ) {
+        GLfloat x;
+        GLfloat y;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        glRasterPos2f(x,y);
+    }
+    
+    native function RasterPos2i( number arg1, number arg2 ) {
+        GLint x;
+        GLint y;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        glRasterPos2i(x,y);
+    }
+    
+    native function RasterPos2s( number arg1, number arg2 ) {
+        GLshort x;
+        GLshort y;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        glRasterPos2s(x,y);
+    }
+    
+    native function RasterPos3d( number arg1, number arg2, number arg3 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        glRasterPos3d(x,y,z);
+    }
+    
+    native function RasterPos3f( number arg1, number arg2, number arg3 ) {
+        GLfloat x;
+        GLfloat y;
+        GLfloat z;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        z = (GLfloat)NUM2DBL(params[2]);
+        glRasterPos3f(x,y,z);
+    }
+    
+    native function RasterPos3i( number arg1, number arg2, number arg3 ) {
+        GLint x;
+        GLint y;
+        GLint z;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        z = (GLint)NUM2LNG(params[2]);
+        glRasterPos3i(x,y,z);
+    }
+    
+    native function RasterPos3s( number arg1, number arg2, number arg3 ) {
+        GLshort x;
+        GLshort y;
+        GLshort z;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        z = (GLshort)NUM2LNG(params[2]);
+        glRasterPos3s(x,y,z);
+    }
+    
+    native function RasterPos4d( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble x;
+        GLdouble y;
+        GLdouble z;
+        GLdouble w;
+        x = (GLdouble)NUM2DBL(params[0]);
+        y = (GLdouble)NUM2DBL(params[1]);
+        z = (GLdouble)NUM2DBL(params[2]);
+        w = (GLdouble)NUM2DBL(params[3]);
+        glRasterPos4d(x,y,z,w);
+    }
+    
+    native function RasterPos4f( number arg1, number arg2, number arg3, number arg4 ) {
+        GLfloat x;
+        GLfloat y;
+        GLfloat z;
+        GLfloat w;
+        x = (GLfloat)NUM2DBL(params[0]);
+        y = (GLfloat)NUM2DBL(params[1]);
+        z = (GLfloat)NUM2DBL(params[2]);
+        w = (GLfloat)NUM2DBL(params[3]);
+        glRasterPos4f(x,y,z,w);
+    }
+    
+    native function RasterPos4i( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint x;
+        GLint y;
+        GLint z;
+        GLint w;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        z = (GLint)NUM2LNG(params[2]);
+        w = (GLint)NUM2LNG(params[3]);
+        glRasterPos4i(x,y,z,w);
+    }
+    
+    native function RasterPos4s( number arg1, number arg2, number arg3, number arg4 ) {
+        GLshort x;
+        GLshort y;
+        GLshort z;
+        GLshort w;
+        x = (GLshort)NUM2LNG(params[0]);
+        y = (GLshort)NUM2LNG(params[1]);
+        z = (GLshort)NUM2LNG(params[2]);
+        w = (GLshort)NUM2LNG(params[3]);
+        glRasterPos4s(x,y,z,w);
+    }
+    
+    function RasterPos( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 2:
+                            .RasterPos2d( b[0], b[1] );
+                            break;
+                        case 3:
+                            .RasterPos3d( b[0], b[1], b[2] );
+                            break;
+                        case 4:
+                            .RasterPos4d( b[0], b[1], b[2], b[3] );
+                            break;
+                        default:
+                            Sys.error( "TexCoord array size error\n", 0 );
+                    }
+                }
+                break;
+            case 2:
+                .RasterPos2d( a[0], a[1]);
+                break;
+            case 3:
+                .RasterPos3d( a[0], a[1], a[2]);
+                break;
+            case 4:
+                .RasterPos4d( a[0], a[1], a[2], a[3]);
+                break;
+        }
+    }
+    
+    native function Rectd( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble x1;
+        GLdouble y1;
+        GLdouble x2;
+        GLdouble y2;
+        x1 = (GLdouble)NUM2DBL(params[0]);
+        y1 = (GLdouble)NUM2DBL(params[1]);
+        x2 = (GLdouble)NUM2DBL(params[2]);
+        y2 = (GLdouble)NUM2DBL(params[3]);
+        glRectd(x1,y1,x2,y2);
+    }
+    
+    native function Rectf( number arg1, number arg2, number arg3, number arg4 ) {
+        GLfloat x1;
+        GLfloat y1;
+        GLfloat x2;
+        GLfloat y2;
+        x1 = (GLfloat)NUM2DBL(params[0]);
+        y1 = (GLfloat)NUM2DBL(params[1]);
+        x2 = (GLfloat)NUM2DBL(params[2]);
+        y2 = (GLfloat)NUM2DBL(params[3]);
+        glRectf(x1,y1,x2,y2);
+    }
+    
+    native function Recti( number arg1, number arg2, number arg3, number arg4 ) {
+        GLint x1;
+        GLint y1;
+        GLint x2;
+        GLint y2;
+        x1 = (GLint)NUM2LNG(params[0]);
+        y1 = (GLint)NUM2LNG(params[1]);
+        x2 = (GLint)NUM2LNG(params[2]);
+        y2 = (GLint)NUM2LNG(params[3]);
+        glRecti(x1,y1,x2,y2);
+    }
+    
+    native function Rects( number arg1, number arg2, number arg3, number arg4 ) {
+        GLshort x1;
+        GLshort y1;
+        GLshort x2;
+        GLshort y2;
+        x1 = (GLshort)NUM2LNG(params[0]);
+        y1 = (GLshort)NUM2LNG(params[1]);
+        x2 = (GLshort)NUM2LNG(params[2]);
+        y2 = (GLshort)NUM2LNG(params[3]);
+        glRects(x1,y1,x2,y2);
+    }
+    
+    function Rect( ... ) {
+        array a = arguments();
+        switch( Array.size(a) ) {            
+            case 1:
+                if( a[0] isa array ) {
+                    array b = a[0];
+                    switch( Array.size(b) ) {
+                        case 4:
+                            .Rectd( b[0], b[1], b[2], b[3] );
+                            break;
+                        default:
+                            Sys.error( "Rect array size error\n", 0 );
+                    }
+                }
+                break;
+            case 4:
+                .Rectd( a[0], a[1], a[2], a[3]);
+                break;
+        }
+    }
+    
+    native function ShadeModel( number arg1 ) {
+        GLenum mode;
+        mode = (GLenum)NUM2LNG(params[0]);
+        glShadeModel(mode);
+    }
+    
+    native function Lightf( number arg1, number arg2, number arg3) {
+        GLenum light;
+        GLenum pname;
+        GLfloat param;
+        light = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLfloat)NUM2DBL(params[2]);
+        glLightf(light,pname,param);
+    }
+    
+    native function Lighti( number arg1, number arg2, number arg3 ) {
+        GLenum light;
+        GLenum pname;
+        GLint param;
+        light = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLint)NUM2LNG(params[2]);
+        glLighti(light,pname,param);
+    }
+    
+    native function Lightiv( number arg1, number arg2, array arg3 ) {
+        GLenum light;
+        GLenum pname;
+        GLint iparams[4];
+        int i;
+        
+        memset( iparams, 0x0, sizeof(GLint[4]) );
+        light = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        for( i = 0; i < VAUA(params[2])->size && i < 4; i++ ) {
+            iparams[i] = (GLint)NUM2LNG(VAUA(params[2])->array[i]);
+        }
+        glLightiv(light,pname,iparams);    
+    }
+    
+    native function Light( number arg1, number arg2, void arg3 ) {
+        GLenum light;
+        GLenum pname;
+        GLfloat iparams[4];
+        
+        memset(iparams, 0x0, sizeof(GLfloat[4]));
+        light = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        if( params[2]->type == F_VAR_UARRAY) {
+            ary2cflt(params[2],iparams,4);
+            glLightfv(light,pname,iparams);
+        } 
+        else {
+            iparams[0] = (GLfloat)NUM2DBL(params[2]);
+            glLightf(light,pname,iparams[0]);
+        }
+    }
+    
+    native function LightModelf( number arg1, number arg2 ) {
+        GLenum pname;
+        GLfloat param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLfloat)NUM2DBL(params[1]);
+        glLightModelf(pname,param);
+    }
+
+    native function LightModeli( number arg1, number arg2 ) {
+        GLenum pname;
+        GLint param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLint)NUM2LNG(params[1]);
+        glLightModeli(pname,param);
+    }
+
+    native function LightModel( number arg1, void arg2 ) {
+        GLenum pname;
+        GLfloat iparams[4];
+        
+        memset(iparams, 0x0, sizeof(GLfloat[4]));
+        pname = (GLenum)NUM2LNG(params[0]);
+        if( params[1]->type == F_VAR_UARRAY ) {
+            ary2cflt( params[1], iparams, 4 );
+            glLightModelfv(pname,iparams);
+        }
+        else {
+            iparams[0] = (GLfloat)NUM2DBL(params[1]);
+            glLightModelf(pname,iparams[0]);
+        }    
+    }
+
+    native function Materialf( number arg1, number arg2, number arg3 ) {
+        GLenum face;
+        GLenum pname;
+        GLfloat param;
+        face = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLfloat)NUM2DBL(params[2]);
+        glMaterialf(face,pname,param);        
+    }
+
+    native function Materiali( number arg1, number arg2, number arg3 ) {
+        GLenum face;
+        GLenum pname;
+        GLint param;
+        face = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLint)NUM2LNG(params[2]);
+        glMateriali(face,pname,param);    
+    }
+
+    native function Material( number arg1, number arg2, void arg3 ) {
+        GLenum face;
+        GLenum pname;
+        GLfloat iparams[4];
+        memset(iparams, 0x0, sizeof(GLfloat[4]));
+        face = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        if( params[2]->type == F_VAR_UARRAY ) {
+            ary2cflt(params[2],iparams,4);
+            glMaterialfv(face,pname,iparams);
+        }
+        else {
+            iparams[0] = (GLfloat)NUM2DBL(params[2]);
+            glMaterialf(face,pname,iparams[0]);
+        }
+    }
+
+    native function GetMaterial( number arg1, number arg2 ) {
+        GLenum face;
+        GLenum pname;
+        GLfloat iparams[4];
+        FeriteVariable *ret;
+        int i;
+        
+        face = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        glGetMaterialfv(face, pname, iparams);
+        if (pname == GL_SHININESS) {
+            ret = fe_new_array_static("GetMaterial", 1);
+            ferite_uarray_push( script, VAUA(ret), fe_new_dbl_static("", iparams[0]) );
+        }
+        else {
+            ret = fe_new_array_static("GetMaterial", 4 );
+            for (i = 0; i < 4; i++) {
+                ferite_uarray_push( script, VAUA(ret), fe_new_dbl_static("", iparams[i]));
+            }
+        }
+        FE_RETURN_VAR(ret);
+    }
+    
+    native function ColorMaterial( number arg1, number arg2 ) {
+        GLenum face;
+        GLenum mode;
+        face = (GLenum)NUM2LNG(params[0]);
+        mode = (GLenum)NUM2LNG(params[1]);
+        glColorMaterial(face,mode);
+    }
+
+    native function PixelZoom( number arg1, number arg2 ) {
+        GLfloat xfactor;
+        GLfloat yfactor;
+        xfactor = (GLfloat)NUM2DBL(params[0]);
+        yfactor = (GLfloat)NUM2DBL(params[1]);
+        glPixelZoom(xfactor,yfactor);    
+    }
+
+    native function PixelStoref( number arg1, number arg2 ) {
+        GLenum pname;
+        GLfloat param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLfloat)NUM2DBL(params[1]);
+        glPixelStoref(pname,param);    
+    }
+
+    native function PixelStorei( number arg1, number arg2 ) {
+        GLenum pname;
+        GLint param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLint)NUM2LNG(params[1]);
+        glPixelStorei(pname,param);        
+    }
+
+    native function PixelTransferf( number arg1, number arg2 ) {
+        GLenum pname;
+        GLfloat param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLfloat)NUM2DBL(params[1]);
+        glPixelTransferf(pname,param);    
+    }
+
+    native function PixelTransferi( number arg1, number arg2 ) {
+        GLenum pname;
+        GLint param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLint)NUM2LNG(params[1]);
+        glPixelTransferi(pname,param);    
+    }
+
+    native function Bitmap( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, string arg7 ) {
+        GLsizei width;
+        GLsizei height;
+        GLfloat xorig;
+        GLfloat yorig;
+        GLfloat xmove;
+        GLfloat ymove;
+        const GLubyte *bitmap;
+        width = (GLsizei)NUM2LNG(params[0]);
+        height = (GLsizei)NUM2LNG(params[1]);
+        xorig = (GLfloat)NUM2DBL(params[2]);
+        yorig = (GLfloat)NUM2DBL(params[3]);
+        xmove = (GLfloat)NUM2DBL(params[4]);
+        ymove = (GLfloat)NUM2DBL(params[5]);
+        if( arg7->length < (width * height / 8)) {
+            ferite_error( script, 0, "Bitmap size doesn't reflect dimensions given\n" );
+            FE_RETURN_VOID;
+        }
+        bitmap = (const GLubyte*)arg7->data;
+        glBitmap(width, height, xorig, yorig, xmove, ymove, bitmap);        
+    }
+
+    native function ReadPixels( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6) {
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        int format;
+        int type;
+        int type_size;
+        int format_size;
+        FeriteVariable *pixels;
+        
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        width = (GLsizei)NUM2LNG(params[2]);
+        height = (GLsizei)NUM2LNG(params[3]);
+        format = NUM2LNG(params[4]);
+        type = NUM2LNG(params[5]);
+        if (format != -1 && type != -1) {
+            type_size = gltype_size(type) / 8;
+            format_size = glformat_size(format);
+            pixels = allocate_buffer_with_string(width*height*format_size*type_size);
+            glReadPixels(x,y,width,height,format,type,(GLvoid*)VAS(pixels)->data);
+            FE_RETURN_VAR( pixels );
+        }
+    }
+
+    native function DrawPixels( number arg1, number arg2, number arg3, number arg4, string arg5 ) {
+        GLsizei width;
+        GLsizei height;
+        GLenum format;
+        GLenum type;
+        const char *pixels;
+        width = (GLsizei)NUM2LNG(params[0]);
+        height = (GLsizei)NUM2LNG(params[1]);
+        format = (GLenum)NUM2LNG(params[2]);
+        type = (GLenum)NUM2LNG(params[3]);
+        if (format != -1 && type != -1) {
+            if( arg5->length < width * height * glformat_size(format) * gltype_size(type) / 8 ) {
+                ferite_error( script, 0, "DrawPixels: Bitmap size doesn't reflect given dimensions\n" );
+                FE_RETURN_VOID;
+            }
+            pixels = arg5->data;
+            glDrawPixels(width,height,format,type,pixels);
+        }    
+    }
+    
+    native function CopyPixels( number arg1, number arg2, number arg3, number arg4, number arg5 ) {
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        GLenum type;
+        x = (GLint)NUM2LNG(params[0]);
+        y = (GLint)NUM2LNG(params[1]);
+        width = (GLsizei)NUM2LNG(params[2]);
+        height = (GLsizei)NUM2LNG(params[3]);
+        type = (GLenum)NUM2LNG(params[4]);
+        glCopyPixels(x,y,width,height,type);    
+    }
+
+    native function StencilFunc( number arg1, number arg2, number arg3 ) {
+        GLenum func;
+        GLint ref;
+        GLuint mask;
+        func = (GLenum)NUM2LNG(params[0]);
+        ref = (GLint)NUM2LNG(params[1]);
+        mask = (GLuint)NUM2LNG(params[2]);
+        glStencilFunc(func,ref,mask);
+    }
+
+    native function StencilMask( number arg1 ) {
+        GLuint mask;
+        mask = (GLuint)NUM2LNG(params[0]);
+        glStencilMask(mask);
+    }
+
+    native function StencilOp( number arg1, number arg2, number arg3 ) {
+        GLenum fail;
+        GLenum zfail;
+        GLenum zpass;
+        fail = (GLenum)NUM2LNG(params[0]);
+        zfail = (GLenum)NUM2LNG(params[1]);
+        zpass = (GLenum)NUM2LNG(params[2]);
+        glStencilOp(fail,zfail,zpass);
+    }
+
+    native function ClearStencil( number arg1 ) {
+        GLint s;
+        s = (GLint)NUM2LNG(params[0]);
+        glClearStencil(s);
+    }
+
+    native function TexGend( number arg1, number arg2, number arg3 ) {
+        GLenum coord;
+        GLenum pname;
+        GLdouble param;
+        coord = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLdouble)NUM2DBL(params[2]);
+        glTexGend(coord,pname,param);
+    }
+
+    native function TexGenf( number arg1, number arg2, number arg3 ) {
+        GLenum coord;
+        GLenum pname;
+        GLfloat param;
+        coord = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLfloat)NUM2DBL(params[2]);
+        glTexGenf(coord,pname,param);
+    }
+
+    native function TexGeni( number arg1, number arg2, number arg3 ) {
+        GLenum coord;
+        GLenum pname;
+        GLint param;
+        coord = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLint)NUM2LNG(params[2]);
+        glTexGeni(coord,pname,param);
+    }
+
+    native function TexGen( number arg1, number arg2, void arg3 ) {
+        GLenum coord;
+        GLenum pname;
+        GLdouble param[4];
+        if( params[2]->type == F_VAR_UARRAY ) {
+            coord = (GLenum)NUM2LNG(params[0]);
+            pname = (GLenum)NUM2LNG(params[1]);
+            ary2cdbl( params[2], param, 4 );
+            glTexGendv(coord,pname,param);
+        }
+        else {
+            FeriteFunction *f = ferite_find_namespace_element_contents( script, self, "TextGend", FENS_FNC );
+            ferite_variable_destroy( script, (f->fncPtr)( script, __container__, current_recipient, f, params ) );
+        }    
+    }
+
+    native function TexEnvf( number arg1, number arg2, number arg3 ) {
+        GLenum target;
+        GLenum pname;
+        GLfloat param;
+        target = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLfloat)NUM2DBL(params[2]);
+        glTexEnvf(target,pname,param);
+    }
+
+    native function TexEnvi( number arg1, number arg2, number arg3 ) {
+        GLenum target;
+        GLenum pname;
+        GLint param;
+        target = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLint)NUM2LNG(params[2]);
+        glTexEnvi(target,pname,param);
+    }
+
+    native function TexEnv( number arg1, number arg2, number arg3 ) {
+        GLenum target;
+        GLenum pname;
+        GLfloat param[4];
+        int i;
+        if (params[2]->type == F_VAR_UARRAY) {
+            target = (GLenum)NUM2LNG(params[0]);
+            pname = (GLenum)NUM2LNG(params[1]);
+            if ((i = ary2cflt(params[2],param,4)) != 4) {
+                ferite_error( script, 0, "TexEnv: Array length error\n" );
+                FE_RETURN_VOID;
+            }
+            glTexEnvfv(target,pname,param);
+        }
+        else {
+            FeriteFunction *f = ferite_find_namespace_element_contents( script, self, "TextEnvf", FENS_FNC );
+            ferite_variable_destroy( script, (f->fncPtr)( script, __container__, current_recipient, f, params ) );
+        }    
+    }
+
+    native function TexParameterf( number arg1, number arg2, number arg3 ) {
+        GLenum target;
+        GLenum pname;
+        GLfloat param;
+        target = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLfloat)NUM2DBL(params[2]);
+        glTexParameterf(target,pname,param);    
+    }
+
+    native function TexParameteri( number arg1, number arg2, number arg3 ) {
+        GLenum target;
+        GLenum pname;
+        GLint param;
+        target = (GLenum)NUM2LNG(params[0]);
+        pname = (GLenum)NUM2LNG(params[1]);
+        param = (GLint)NUM2LNG(params[2]);
+        glTexParameteri(target,pname,param);
+    }
+
+    native function TexImage2D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8, void arg9 ) {
+        GLenum target;
+        GLint level;
+        GLint components;
+        GLsizei width;
+        GLsizei height;
+        GLint border;
+        GLenum format;
+        GLenum type;
+        const char *pixels;
+        int size;
+        int type_size;
+        int format_size;
+        
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        components = (GLint)NUM2LNG(params[2]);
+        width = (GLsizei)NUM2LNG(params[3]);
+        height = (GLsizei)NUM2LNG(params[4]);
+        border = (GLint)NUM2LNG(params[5]);
+        format = (GLenum)NUM2LNG(params[6]);
+        type = (GLenum)NUM2LNG(params[7]);
+        
+        if( params[8]->type == F_VAR_STR ) {
+            FeriteString *str = VAS(params[8]);
+            type_size = gltype_size(type) / 8;
+            format_size = glformat_size(format);
+            if (type_size == -1 || format_size == -1)  
+                FE_RETURN_VOID;
+            size = type_size*format_size*height*width;
+            if (str->length < size) {
+                ferite_error( script, 0, "TexImage2D: String length too short\n" );
+                FE_RETURN_VOID;
+            }
+            pixels = str->data;
+        } else if( params[8]->type == F_VAR_OBJ && VAO(params[8]) == NULL ) {
+            type_size = gltype_size(type) / 8;
+            format_size = glformat_size(format);
+            if (type_size == -1 || format_size == -1)	    
+                size = type_size*format_size*height*width;
+            pixels = NULL;
+        } else {
+            ferite_error( script, 0, "TexImage2D: Expecting either a string as a bithmap or null as final argument\n" );
+        }
+            
+        glTexImage2D(target,level,components,width,height,border,format,type,pixels);    
+    }
+
+    native function Map1d( number arg1, number arg2, number arg3, number arg4, number arg5, array arg6 ) {
+        GLenum target;
+        GLdouble u1;
+        GLdouble u2;
+        GLint stride;
+        GLint order;
+        GLdouble *points;
+
+        FeriteVariable *work_ary;
+        
+        target = (GLenum)NUM2LNG(params[0]);
+        u1 = (GLdouble)NUM2DBL(params[1]);
+        u2 = (GLdouble)NUM2DBL(params[2]);
+        stride = (GLint)NUM2LNG(params[3]);
+        order = (GLint)NUM2LNG(params[4]);
+        points = fcalloc(sizeof(GLdouble), order*stride);
+        work_ary = fe_new_array_static( "Map1d", 0 );
+        mary2ary( script, params[5], work_ary);
+        ary2cdbl( work_ary, points, order*stride );
+        glMap1d(target, u1, u2, stride, order, points);
+        ffree(points);
+        ferite_variable_destroy( script, work_ary );
+    }
+
+    native function Map2d( number arg1, number arg2, number arg3, number arg4, number arg5, 
+                           number arg6, number arg7, number arg8, number arg9, number arg10) {
+        GLenum target;
+        GLdouble u1;
+        GLdouble u2;
+        GLint ustride;
+        GLint uorder;
+        GLdouble v1;
+        GLdouble v2;
+        GLint vstride;
+        GLint vorder;
+        GLdouble *points;
+        
+        FeriteVariable *work_ary;
+    
+        target = (GLenum)NUM2LNG(params[0]);
+        u1 = (GLdouble)NUM2LNG(params[1]);
+        u2 = (GLdouble)NUM2LNG(params[2]);
+        ustride = (GLint)NUM2LNG(params[3]);
+        uorder = (GLint)NUM2LNG(params[4]);
+        v1 = (GLdouble)NUM2LNG(params[5]);
+        v2 = (GLdouble)NUM2LNG(params[6]);
+        vstride = (GLint)NUM2LNG(params[7]);
+        vorder = (GLint)NUM2LNG(params[8]);
+        
+        points = fcalloc(sizeof(GLdouble), MAX(ustride*uorder, vstride*vorder));
+        work_ary = fe_new_array_static( "Map2d", 0 );
+        mary2ary( script, params[9], work_ary );
+        ary2cdbl( params[9], points, MAX(ustride*uorder, vstride*vorder) );
+        glMap2d(target, u1, u2, ustride, uorder, v1, v2, vstride, vorder, points);
+        ffree(points);    
+        ferite_variable_destroy( script, work_ary );
+    }
+
+    native function EvalCoord1d( number arg1 ) {
+        GLdouble u;
+        u = (GLdouble)NUM2DBL(params[0]);
+        glEvalCoord1d(u);
+    }
+
+    native function EvalCoord2d( number arg1, number arg2 ) {
+        GLdouble u;
+        GLdouble v;
+        u = (GLdouble)NUM2DBL(params[0]);
+        v = (GLdouble)NUM2DBL(params[1]);
+        glEvalCoord2d(u,v);
+    }
+
+    native function EvalCoord2dv( array arg1 ) {
+    
+    }
+
+    native function MapGrid1d( number arg1, number arg2, number arg3)  {
+        GLint un;
+        GLdouble u1;
+        GLdouble u2;
+        un = (GLint)NUM2LNG(params[0]);
+        u1 = (GLdouble)NUM2DBL(params[1]);
+        u2 = (GLdouble)NUM2DBL(params[2]);
+        glMapGrid1d(un,u1,u2);
+    }
+
+    native function MapGrid1f( number arg1, number arg2, number arg3 ) {
+        GLint un;
+        GLfloat u1;
+        GLfloat u2;
+        un = (GLint)NUM2LNG(params[0]);
+        u1 = (GLfloat)NUM2DBL(params[1]);
+        u2 = (GLfloat)NUM2DBL(params[2]);
+        glMapGrid1f(un,u1,u2);
+    }
+
+    native function MapGrid2d( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6 ) {
+        GLint un;
+        GLdouble u1;
+        GLdouble u2;
+        GLint vn;
+        GLdouble v1;
+        GLdouble v2;
+        un = (GLint)NUM2LNG(params[0]);
+        u1 = (GLdouble)NUM2DBL(params[1]);
+        u2 = (GLdouble)NUM2DBL(params[2]);
+        vn = (GLint)NUM2LNG(params[3]);
+        v1 = (GLdouble)NUM2DBL(params[4]);
+        v2 = (GLdouble)NUM2DBL(params[5]);
+        glMapGrid2d(un,u1,u2,vn,v1,v2);
+    }
+
+    native function MapGrid2f( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6 ) {
+        GLint un;
+        GLfloat u1;
+        GLfloat u2;
+        GLint vn;
+        GLfloat v1;
+        GLfloat v2;
+        un = (GLint)NUM2LNG(params[0]);
+        u1 = (GLfloat)NUM2DBL(params[1]);
+        u2 = (GLfloat)NUM2DBL(params[2]);
+        vn = (GLint)NUM2LNG(params[3]);
+        v1 = (GLfloat)NUM2DBL(params[4]);
+        v2 = (GLfloat)NUM2DBL(params[5]);
+        glMapGrid2f(un,u1,u2,vn,v1,v2);
+    }
+
+    native function EvalPoint1( number arg1 ) {
+        GLint i;
+        i = (GLint)NUM2LNG(params[0]);
+        glEvalPoint1(i);
+    }
+
+    native function EvalPoint2( number arg1, number arg2 ) {
+        GLint i;
+        GLint j;
+        i = (GLint)NUM2LNG(params[0]);
+        j = (GLint)NUM2LNG(params[1]);
+        glEvalPoint2(i,j);
+    }
+
+    native function EvalMesh1( number arg1, number arg2, number arg3 ) {
+        GLenum mode;
+        GLint i1;
+        GLint i2;
+        mode = (GLenum)NUM2LNG(params[0]);
+        i1 = (GLint)NUM2LNG(params[1]);
+        i2 = (GLint)NUM2LNG(params[2]);
+        glEvalMesh1(mode,i1,i2);
+    }
+    
+    native function EvalMesh2( number arg1, number arg2, number arg3, number arg4, number arg5 ) {
+        GLenum mode;
+        GLint i1;
+        GLint i2;
+        GLint j1;
+        GLint j2;
+        mode = (GLenum)NUM2LNG(params[0]);
+        i1 = (GLint)NUM2LNG(params[1]);
+        i2 = (GLint)NUM2LNG(params[2]);
+        j1 = (GLint)NUM2LNG(params[3]);
+        j2 = (GLint)NUM2LNG(params[4]);
+        glEvalMesh2(mode,i1,i2,j1,j2);
+    }
+
+    native function Fogf( number arg1, number arg2 ) {
+        GLenum pname;
+        GLfloat param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLfloat)NUM2DBL(params[1]);
+        glFogf(pname,param);
+    }
+    
+    native function Fogi( number arg1, number arg2 ) {
+        GLenum pname;
+        GLint param;
+        pname = (GLenum)NUM2LNG(params[0]);
+        param = (GLint)NUM2LNG(params[1]);
+        glFogi(pname,param);
+    }
+
+    native function Fogfv( number arg1, void arg2 ) {
+        GLenum pname;
+        GLfloat iparams[4];
+        int i;
+        pname = (GLenum)NUM2LNG(params[0]);
+        if( params[1]->type == F_VAR_UARRAY ) {
+            if ((i = ary2cflt( params[1],iparams,4)) != 4) {
+                ferite_error( script, 0, "Fogfv: Array: expecting 4 elements\n" );
+                FE_RETURN_VOID;
+            }
+        }
+        else
+            iparams[0] = (GLfloat)NUM2DBL(params[1]);
+        glFogfv(pname,iparams);
+    }
+
+    native function Fogiv( number arg1, void arg2 ) {
+        GLenum pname;
+        GLint iparams[4];
+        int i;
+        pname = (GLenum)NUM2LNG(params[0]);
+        if( params[1]->type == F_VAR_UARRAY ) {
+            if ((i = ary2cint( params[1], (int)iparams, 4)) != 4) {
+                ferite_error( script, 0, "Fogfv: Array: expecting 4 elements\n" );
+                FE_RETURN_VOID;
+            }
+        }
+        else
+            iparams[0] = (GLfloat)NUM2LNG(params[1]);
+        glFogiv(pname,iparams);
+    }
+
+    native function PassThrough( number arg1 ) {
+        GLfloat token;
+        token = (GLfloat)NUM2DBL(params[0]);
+        glPassThrough(token);        
+    }
+    
+    native function FeedbackBuffer( ... ) {
+#define DEFAULT_BUFFER	512
+        int argc = ferite_get_parameter_count( params );
+        GLsizei size;
+        GLenum type;
+        if (argc == 0) {
+            size = DEFAULT_BUFFER;
+            type = GL_4D_COLOR_TEXTURE;
+        }
+        else if (argc == 2) {
+            size = NUM2LNG(params[0]);
+            type = NUM2LNG(params[1]);
+        }
+        else {
+            ferite_error( script, 0, "GL.FeedbackBuffer\n");
+            FE_RETURN_VOID;
+        }
+        g_current_feed_buffer = allocate_buffer_with_string(sizeof(GLfloat)*size);
+        glFeedbackBuffer(size, type, (GLfloat*)VAS(g_current_feed_buffer)->data);
+        return g_current_feed_buffer;
+    }
+
+    native function SelectBuffer( ... ) {
+        int argc = ferite_get_parameter_count( params );
+        GLsizei size;
+        size = DEFAULT_BUFFER;
+        if( params[0] != NULL )
+            size = (GLsizei)NUM2LNG(params[0]);
+        g_current_sel_buffer = allocate_buffer_with_string(sizeof(GLuint)*size);
+        glSelectBuffer(size, (GLuint*)VAS(g_current_sel_buffer)->data);
+        return g_current_sel_buffer;
+    }
+
+    native function InitNames() {
+        glInitNames();
+    }
+
+    native function LoadName( number arg1 ) {
+        GLuint name;
+        name = (GLuint)NUM2LNG(params[0]);
+        glLoadName(name);
+    }
+
+    native function PushName( number arg1 ) {
+        GLuint name;
+        name = (GLuint)NUM2LNG(params[0]);
+        glPushName(name);
+    }
+
+    native function PopName(){
+        glPopName();
+    }
+
+
+    native function EnableClientState( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum cap;
+        cap = (GLenum)NUM2LNG(params[0]);
+        glEnableClientState(cap);
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function DisableClientState( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum cap;
+        cap = (GLenum)NUM2LNG(params[0]);
+        glDisableClientState(cap);        
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function VertexPointer( number arg1, number arg2, number arg3, string arg4) {
+#if defined(GL_VERSION_1_1)
+        GLint size; 
+        GLenum type; 
+        GLsizei stride; 
+        size = (GLint)NUM2LNG(params[0]); 
+        type = (GLenum)NUM2LNG(params[1]); 
+        stride = (GLsizei)NUM2LNG(params[2]); 
+        g_Vertex_ptr = params[3]; 
+        glVertexPointer(size, type, stride, (const GLvoid*)arg4->data); 
+#endif /* GL_VERSION_1_1 */
+    }
+    
+    native function ColorPointer( number arg1, number arg2, number arg3, string arg4) {
+#if defined(GL_VERSION_1_1)
+        GLint size; 
+        GLenum type; 
+        GLsizei stride; 
+        size = (GLint)NUM2LNG(params[0]); 
+        type = (GLenum)NUM2LNG(params[1]); 
+        stride = (GLsizei)NUM2LNG(params[2]); 
+        g_Color_ptr = params[3]; 
+        glColorPointer(size, type, stride, (const GLvoid*)arg4->data); 
+#endif /* GL_VERSION_1_1 */
+    }
+    
+    native function TexCoordPointer( number arg1, number arg2, number arg3, string arg4) {
+#if defined(GL_VERSION_1_1)
+        GLint size; 
+        GLenum type; 
+        GLsizei stride; 
+        size = (GLint)NUM2LNG(params[0]); 
+        type = (GLenum)NUM2LNG(params[1]); 
+        stride = (GLsizei)NUM2LNG(params[2]); 
+        g_TexCoord_ptr = params[3]; 
+        glTexCoordPointer(size, type, stride, (const GLvoid*)arg4->data); 
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function NormalPointer( number arg1, number arg2, string arg3 ) {
+#if defined(GL_VERSION_1_1)
+         GLenum type;
+         GLsizei stride;
+         type = (GLenum)NUM2LNG(params[0]);
+         stride = (GLsizei)NUM2LNG(params[1]);
+         g_Normal_ptr = params[2];
+         glNormalPointer(type, stride, (const GLvoid*)arg3->data);
+#endif /* GL_VERSION_1_1 */
+     }
+
+    native function IndexPointer( number arg1, number arg2, string arg3 ) {
+#if defined(GL_VERSION_1_1)
+         GLenum type;
+         GLsizei stride;
+         type = (GLenum)NUM2LNG(params[0]);
+         stride = (GLsizei)NUM2LNG(params[1]);
+         g_Index_ptr = params[2];
+         glIndexPointer(type, stride, (const GLvoid*)arg3->data);
+#endif /* GL_VERSION_1_1 */
+     }
+    
+    native function EdgeFlagPointer( number arg1, number arg2, string arg3 ) {
+#if defined(GL_VERSION_1_1)
+         GLenum type;
+         GLsizei stride;
+         type = (GLenum)NUM2LNG(params[0]);
+         stride = (GLsizei)NUM2LNG(params[1]);
+         g_EdgeFlag_ptr = params[2];
+         glEdgeFlagPointer( stride, (const GLvoid*)arg3->data);
+#endif /* GL_VERSION_1_1 */
+     }
+
+     native function GetPointerv( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum pname;
+        pname = (GLenum)NUM2LNG(params[0]);
+        switch (pname) {
+            case GL_VERTEX_ARRAY_POINTER:
+                return g_Vertex_ptr;
+            case GL_NORMAL_ARRAY_POINTER:
+                return g_Normal_ptr;
+            case GL_COLOR_ARRAY_POINTER:
+                return g_Color_ptr;
+            case GL_INDEX_ARRAY_POINTER:
+                return g_Index_ptr;
+            case GL_TEXTURE_COORD_ARRAY_POINTER:
+                return g_TexCoord_ptr;
+            case GL_EDGE_FLAG_ARRAY_POINTER:
+                return g_EdgeFlag_ptr;
+        }
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function ArrayElement( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLint i;
+        i = (GLint)NUM2LNG(params[0]);
+        glArrayElement(i);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function DrawArrays( number arg1, number arg2, number arg3 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum mode;
+        GLint first;
+        GLsizei count;
+        mode = (GLenum)NUM2LNG(params[0]);
+        first = (GLint)NUM2LNG(params[1]);
+        count = (GLsizei)NUM2LNG(params[2]);
+        glDrawArrays(mode,first,count);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function DrawElements( number arg1, number arg2, number arg3, string arg4 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum mode;
+        GLsizei count;
+        GLenum type;
+        mode = (GLenum)NUM2LNG(params[0]);
+        count = (GLsizei)NUM2LNG(params[1]);
+        type = (GLenum)NUM2LNG(params[2]);
+        glDrawElements(mode, count, type, (const GLvoid*)VAS(params[3])->data);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function InterleavedArrays( number arg1, number arg2, string arg3 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum format;
+        GLsizei stride;
+        format = (GLenum)NUM2LNG(params[0]);
+        stride = (GLsizei)NUM2LNG(params[1]);
+        glInterleavedArrays(format, stride, (const GLvoid*)VAS(params[2])->data);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function GenTextures( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLsizei n;
+        GLuint *textures;
+        FeriteVariable *ret;
+        int i;
+        n = (GLsizei)NUM2LNG(params[0]);
+        textures = fcalloc(sizeof(GLuint), n);
+        glGenTextures(n, textures);
+        ret = fe_new_array_static( "GenTextures", n );
+        for (i = 0; i < n; i++)
+            ferite_uarray_push( script, VAUA(ret), fe_new_lng_static("Textures", textures[i]) );
+        ffree(textures);
+        FE_RETURN_VAR( ret );
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function DeleteTextures( array arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLsizei n;
+        GLuint *textures;
+        FeriteUnifiedArray *ary = VAUA(params[0]);
+        n = ary->size;
+        textures = fmalloc(n);
+        ary2cint( params[0], (int*)textures, 0); /* OK? */
+        glDeleteTextures( n, textures);
+        ffree(textures);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function BindTexture( number arg1, number arg2 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLuint texture;
+        target = (GLenum)NUM2LNG(params[0]);
+        texture = (GLuint)NUM2LNG(params[1]);
+        glBindTexture(target,texture);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function IsTexture( number arg1 ) {
+#if defined(GL_VERSION_1_1)
+        GLuint texture;
+        GLboolean ret;
+        texture = (GLuint)NUM2LNG(params[0]);
+        ret = glIsTexture(texture);
+        FE_RETURN_LONG(ret);
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function TexSubImage2D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8, string arg9 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLint level;
+        GLint components;
+        GLint xoffset;
+        GLint yoffset;
+        GLsizei width;
+        GLsizei height;
+        GLenum format;
+        GLenum type;
+        const char *pixels;
+        int size;
+        int type_size;
+        int format_size;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        xoffset = (GLint)NUM2LNG(params[2]);
+        yoffset = (GLint)NUM2LNG(params[3]);
+        width = (GLsizei)NUM2LNG(params[4]);
+        height = (GLsizei)NUM2LNG(params[5]);
+        format = (GLenum)NUM2LNG(params[6]);
+        type = (GLenum)NUM2LNG(params[7]);
+
+        type_size = gltype_size(type) / 8;
+        format_size = glformat_size(format);
+        if (type_size == -1 || format_size == -1)	    
+            FE_RETURN_VOID;
+        size = type_size*format_size*height*width;
+        if (VAS(params[8])->length < size) {
+            ferite_error( script, 0, "TexSubImage2D: image date not the correct size\n" );
+            FE_RETURN_VOID;
+        }
+        pixels = VAS(params[8])->data;
+        glTexSubImage2D(target,level,xoffset,yoffset,width,height,format,type,pixels);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function CopyTexImage1D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLint level;
+        GLenum internalformat;
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLint border;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        internalformat = (GLenum)NUM2LNG(params[2]);
+        x = (GLint)NUM2LNG(params[3]);
+        y = (GLint)NUM2LNG(params[4]);
+        width = (GLsizei)NUM2LNG(params[5]);
+        border = (GLint)NUM2LNG(params[6]);
+        glCopyTexImage1D(target,level,internalformat,x,y,width,border);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function CopyTexImage2D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLint level;
+        GLenum internalformat;
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        GLint border;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        internalformat = (GLenum)NUM2LNG(params[2]);
+        x = (GLint)NUM2LNG(params[3]);
+        y = (GLint)NUM2LNG(params[4]);
+        width = (GLsizei)NUM2LNG(params[5]);
+        height = (GLsizei)NUM2LNG(params[6]);
+        border = (GLint)NUM2LNG(params[7]);
+        glCopyTexImage2D(target,level,internalformat,x,y,width,height,border);
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function CopyTexSubImage1D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLint level;
+        GLint xoffset;
+        GLint x;
+        GLint y;
+        GLsizei width;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        xoffset = (GLint)NUM2LNG(params[2]);
+        x = (GLint)NUM2LNG(params[3]);
+        y = (GLint)NUM2LNG(params[4]);
+        width = (GLsizei)NUM2LNG(params[5]);
+        glCopyTexSubImage1D(target,level,xoffset,x,y,width);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+    native function CopyTexSubImage2D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8 ) {
+#if defined(GL_VERSION_1_1)
+        GLenum target;
+        GLint level;
+        GLint xoffset;
+        GLint yoffset;
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        xoffset = (GLint)NUM2LNG(params[2]);
+        yoffset = (GLint)NUM2LNG(params[3]);
+        x = (GLint)NUM2LNG(params[4]);
+        y = (GLint)NUM2LNG(params[5]);
+        width = (GLsizei)NUM2LNG(params[6]);
+        height = (GLsizei)NUM2LNG(params[7]);
+        glCopyTexSubImage2D(target,level,xoffset,yoffset,x,y,width,height);    
+#endif /* GL_VERSION_1_1 */
+    }
+
+
+    native function DrawRangeElements( number arg1, number arg2, number arg3, number arg4, number arg5, string arg6 ) {
+#if defined(GL_VERSION_1_2)
+        GLenum mode;
+        GLuint start;
+        GLuint end;
+        GLsizei count;
+        GLenum type;
+        mode = (GLenum)NUM2LNG(params[0]);
+        start = (GLuint)NUM2LNG(params[1]);
+        end = (GLuint)NUM2LNG(params[2]);
+        count = (GLsizei)NUM2LNG(params[3]);
+        type = (GLenum)NUM2LNG(params[4]);
+        glDrawRangeElements(mode, start, end, count, type, VAS(params[5])->data);    
+#endif /* GL_VERSION_1_2 */
+    }
+
+    native function TexImage3D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, number arg7, number arg8, number arg9, string arg10 ) {
+#if defined(GL_VERSION_1_2)
+        GLenum target;
+        GLint level;
+        GLint internalFormat;
+        GLsizei width;
+        GLsizei height;
+        GLsizei depth;
+        GLint border;
+        GLenum format;
+        GLenum type;
+        int size;
+        int type_size;
+        int format_size;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        internalFormat = (GLint)NUM2LNG(params[2]);
+        width = (GLsizei)NUM2LNG(params[3]);
+        height = (GLsizei)NUM2LNG(params[4]);
+        depth = (GLsizei)NUM2LNG(params[5]);
+        border = (GLint)NUM2LNG(params[6]);
+        format = (GLenum)NUM2LNG(params[7]);
+        type = (GLenum)NUM2LNG(params[8]);
+        
+        type_size = gltype_size(type) / 8;
+        format_size = glformat_size(format);
+        if (type_size == -1 || format_size == -1)        
+            FE_RETURN_VOID;
+        size = type_size*format_size*height*width*depth;
+        if (VAS(params[9])->length < size){
+            ferite_error( script, 0, "TexSubImage2D: image date not the correct size\n" );
+            FE_RETURN_VOID;
+        }
+        glTexImage3D( target, level, internalFormat, width, height,
+                      depth, border, format, type,
+                      (const GLvoid*)VAS(params[9])->data);
+        
+#endif /* GL_VERSION_1_2 */
+    }
+    native function TexSubImage3D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, 
+                                   number arg7, number arg8, number arg9, number arg10, string arg11 )
+    {
+#if defined(GL_VERSION_1_2)
+        GLenum target;
+        GLint level;
+        GLint xoffset;
+        GLint yoffset;
+        GLint zoffset;
+        GLsizei width;
+        GLsizei height;
+        GLsizei depth;
+        GLenum format;
+        GLenum type;
+        int size;
+        int type_size;
+        int format_size;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        xoffset = (GLint)NUM2LNG(params[2]);
+        yoffset = (GLint)NUM2LNG(params[3]);
+        zoffset = (GLint)NUM2LNG(params[4]);
+        width = (GLsizei)NUM2LNG(params[5]);
+        height = (GLsizei)NUM2LNG(params[6]);
+        depth = (GLsizei)NUM2LNG(params[7]);
+        format = (GLenum)NUM2LNG(params[8]);
+        type = (GLenum)NUM2LNG(params[9]);
+        type_size = gltype_size(type) / 8;
+        format_size = glformat_size(format);
+        if (type_size == -1 || format_size == -1)
+            FE_RETURN_VOID;
+        size = type_size*format_size*height*width*depth;
+        if (VAS(params[10])->length < size){
+            ferite_error( script, 0, "TexSubImage2D: image date not the correct size\n" );
+            FE_RETURN_VOID;
+        }
+        glTexSubImage3D( target, level, xoffset, yoffset, zoffset,
+                width, height, depth,
+                format, type, VAS(params[10])->data);
+#endif /* GL_VERSION_1_2 */
+    }
+    native function CopyTexSubImage3D( number arg1, number arg2, number arg3, number arg4, number arg5, number arg6, 
+                                       number arg7, number arg8, number arg9 ) {
+#if defined(GL_VERSION_1_2)
+        GLenum target;
+        GLint level;
+        GLint xoffset;
+        GLint yoffset;
+        GLint zoffset;
+        GLint x;
+        GLint y;
+        GLsizei width;
+        GLsizei height;
+        target = (GLenum)NUM2LNG(params[0]);
+        level = (GLint)NUM2LNG(params[1]);
+        xoffset = (GLint)NUM2LNG(params[2]);
+        yoffset = (GLint)NUM2LNG(params[3]);
+        zoffset = (GLint)NUM2LNG(params[4]);
+        x = (GLint)NUM2LNG(params[5]);
+        y = (GLint)NUM2LNG(params[6]);
+        width = (GLsizei)NUM2LNG(params[7]);
+        height = (GLsizei)NUM2LNG(params[8]);
+        glCopyTexSubImage3D( target, level,
+                xoffset, yoffset, zoffset,
+                x, y, width, height );
+#endif /* GL_VERSION_1_2 */
+    }
+}
+
+module-init {
+    
+    FeriteNamespace *mOGL = ferite_register_namespace( script, "GL", script->mainns );
+
+    ferite_define_final(mOGL, "FALSE", INT2NUM(GL_FALSE));
+    ferite_define_final(mOGL, "TRUE", INT2NUM(GL_TRUE));
+    ferite_define_final(mOGL, "BYTE", INT2NUM(GL_BYTE));
+    ferite_define_final(mOGL, "UNSIGNED_BYTE", INT2NUM(GL_UNSIGNED_BYTE));
+    ferite_define_final(mOGL, "SHORT", INT2NUM(GL_SHORT));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT", INT2NUM(GL_UNSIGNED_SHORT));
+    ferite_define_final(mOGL, "INT", INT2NUM(GL_INT));
+    ferite_define_final(mOGL, "UNSIGNED_INT", INT2NUM(GL_UNSIGNED_INT));
+    ferite_define_final(mOGL, "FLOAT", INT2NUM(GL_FLOAT));
+    ferite_define_final(mOGL, "DOUBLE", INT2NUM(GL_DOUBLE));
+    ferite_define_final(mOGL, "GL_2_BYTES", INT2NUM(GL_2_BYTES));
+    ferite_define_final(mOGL, "GL_3_BYTES", INT2NUM(GL_3_BYTES));
+    ferite_define_final(mOGL, "GL_4_BYTES", INT2NUM(GL_4_BYTES));
+    ferite_define_final(mOGL, "LINES", INT2NUM(GL_LINES));
+    ferite_define_final(mOGL, "POINTS", INT2NUM(GL_POINTS));
+    ferite_define_final(mOGL, "LINE_STRIP", INT2NUM(GL_LINE_STRIP));
+    ferite_define_final(mOGL, "LINE_LOOP", INT2NUM(GL_LINE_LOOP));
+    ferite_define_final(mOGL, "TRIANGLES", INT2NUM(GL_TRIANGLES));
+    ferite_define_final(mOGL, "TRIANGLE_STRIP", INT2NUM(GL_TRIANGLE_STRIP));
+    ferite_define_final(mOGL, "TRIANGLE_FAN", INT2NUM(GL_TRIANGLE_FAN));
+    ferite_define_final(mOGL, "QUADS", INT2NUM(GL_QUADS));
+    ferite_define_final(mOGL, "QUAD_STRIP", INT2NUM(GL_QUAD_STRIP));
+    ferite_define_final(mOGL, "POLYGON", INT2NUM(GL_POLYGON));
+    ferite_define_final(mOGL, "EDGE_FLAG", INT2NUM(GL_EDGE_FLAG));
+#if defined(GL_VERSION_1_1)
+    ferite_define_final(mOGL, "VERTEX_ARRAY", INT2NUM(GL_VERTEX_ARRAY));
+    ferite_define_final(mOGL, "NORMAL_ARRAY", INT2NUM(GL_NORMAL_ARRAY));
+    ferite_define_final(mOGL, "COLOR_ARRAY", INT2NUM(GL_COLOR_ARRAY));
+    ferite_define_final(mOGL, "INDEX_ARRAY", INT2NUM(GL_INDEX_ARRAY));
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY", INT2NUM(GL_TEXTURE_COORD_ARRAY));
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY", INT2NUM(GL_EDGE_FLAG_ARRAY));
+    ferite_define_final(mOGL, "VERTEX_ARRAY_SIZE", INT2NUM(GL_VERTEX_ARRAY_SIZE));
+    ferite_define_final(mOGL, "VERTEX_ARRAY_TYPE", INT2NUM(GL_VERTEX_ARRAY_TYPE));
+    ferite_define_final(mOGL, "VERTEX_ARRAY_STRIDE", INT2NUM(GL_VERTEX_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "NORMAL_ARRAY_TYPE", INT2NUM(GL_NORMAL_ARRAY_TYPE));
+    ferite_define_final(mOGL, "NORMAL_ARRAY_STRIDE", INT2NUM(GL_NORMAL_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "COLOR_ARRAY_SIZE", INT2NUM(GL_COLOR_ARRAY_SIZE));
+    ferite_define_final(mOGL, "COLOR_ARRAY_TYPE", INT2NUM(GL_COLOR_ARRAY_TYPE));
+    ferite_define_final(mOGL, "COLOR_ARRAY_STRIDE", INT2NUM(GL_COLOR_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "INDEX_ARRAY_TYPE", INT2NUM(GL_INDEX_ARRAY_TYPE));
+    ferite_define_final(mOGL, "INDEX_ARRAY_STRIDE", INT2NUM(GL_INDEX_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_SIZE", INT2NUM(GL_TEXTURE_COORD_ARRAY_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_TYPE", INT2NUM(GL_TEXTURE_COORD_ARRAY_TYPE));
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_STRIDE", INT2NUM(GL_TEXTURE_COORD_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_STRIDE", INT2NUM(GL_EDGE_FLAG_ARRAY_STRIDE));
+    ferite_define_final(mOGL, "VERTEX_ARRAY_POINTER", INT2NUM(GL_VERTEX_ARRAY_POINTER));
+    ferite_define_final(mOGL, "NORMAL_ARRAY_POINTER", INT2NUM(GL_NORMAL_ARRAY_POINTER));
+    ferite_define_final(mOGL, "COLOR_ARRAY_POINTER", INT2NUM(GL_COLOR_ARRAY_POINTER));
+    ferite_define_final(mOGL, "INDEX_ARRAY_POINTER", INT2NUM(GL_INDEX_ARRAY_POINTER));
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_POINTER", INT2NUM(GL_TEXTURE_COORD_ARRAY_POINTER));
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_POINTER", INT2NUM(GL_EDGE_FLAG_ARRAY_POINTER));
+    ferite_define_final(mOGL, "V2F", INT2NUM(GL_V2F));
+    ferite_define_final(mOGL, "V3F", INT2NUM(GL_V3F));
+    ferite_define_final(mOGL, "C4UB_V2F", INT2NUM(GL_C4UB_V2F));
+    ferite_define_final(mOGL, "C4UB_V3F", INT2NUM(GL_C4UB_V3F));
+    ferite_define_final(mOGL, "C3F_V3F", INT2NUM(GL_C3F_V3F));
+    ferite_define_final(mOGL, "N3F_V3F", INT2NUM(GL_N3F_V3F));
+    ferite_define_final(mOGL, "C4F_N3F_V3F", INT2NUM(GL_C4F_N3F_V3F));
+    ferite_define_final(mOGL, "T2F_V3F", INT2NUM(GL_T2F_V3F));
+    ferite_define_final(mOGL, "T4F_V4F", INT2NUM(GL_T4F_V4F));
+    ferite_define_final(mOGL, "T2F_C4UB_V3F", INT2NUM(GL_T2F_C4UB_V3F));
+    ferite_define_final(mOGL, "T2F_C3F_V3F", INT2NUM(GL_T2F_C3F_V3F));
+    ferite_define_final(mOGL, "T2F_N3F_V3F", INT2NUM(GL_T2F_N3F_V3F));
+    ferite_define_final(mOGL, "T2F_C4F_N3F_V3F", INT2NUM(GL_T2F_C4F_N3F_V3F));
+    ferite_define_final(mOGL, "T4F_C4F_N3F_V4F", INT2NUM(GL_T4F_C4F_N3F_V4F));
+#endif /* GL_VERSION_1_1 */
+    ferite_define_final(mOGL, "MATRIX_MODE", INT2NUM(GL_MATRIX_MODE));
+    ferite_define_final(mOGL, "MODELVIEW", INT2NUM(GL_MODELVIEW));
+    ferite_define_final(mOGL, "PROJECTION", INT2NUM(GL_PROJECTION));
+    ferite_define_final(mOGL, "TEXTURE", INT2NUM(GL_TEXTURE));
+    ferite_define_final(mOGL, "POINT_SMOOTH", INT2NUM(GL_POINT_SMOOTH));
+    ferite_define_final(mOGL, "POINT_SIZE", INT2NUM(GL_POINT_SIZE));
+    ferite_define_final(mOGL, "POINT_SIZE_GRANULARITY", INT2NUM(GL_POINT_SIZE_GRANULARITY));
+    ferite_define_final(mOGL, "POINT_SIZE_RANGE", INT2NUM(GL_POINT_SIZE_RANGE));
+    ferite_define_final(mOGL, "LINE_SMOOTH", INT2NUM(GL_LINE_SMOOTH));
+    ferite_define_final(mOGL, "LINE_STIPPLE", INT2NUM(GL_LINE_STIPPLE));
+    ferite_define_final(mOGL, "LINE_STIPPLE_PATTERN", INT2NUM(GL_LINE_STIPPLE_PATTERN));
+    ferite_define_final(mOGL, "LINE_STIPPLE_REPEAT", INT2NUM(GL_LINE_STIPPLE_REPEAT));
+    ferite_define_final(mOGL, "LINE_WIDTH", INT2NUM(GL_LINE_WIDTH));
+    ferite_define_final(mOGL, "LINE_WIDTH_GRANULARITY", INT2NUM(GL_LINE_WIDTH_GRANULARITY));
+    ferite_define_final(mOGL, "LINE_WIDTH_RANGE", INT2NUM(GL_LINE_WIDTH_RANGE));
+    ferite_define_final(mOGL, "POINT", INT2NUM(GL_POINT));
+    ferite_define_final(mOGL, "LINE", INT2NUM(GL_LINE));
+    ferite_define_final(mOGL, "FILL", INT2NUM(GL_FILL));
+    ferite_define_final(mOGL, "CCW", INT2NUM(GL_CCW));
+    ferite_define_final(mOGL, "CW", INT2NUM(GL_CW));
+    ferite_define_final(mOGL, "FRONT", INT2NUM(GL_FRONT));
+    ferite_define_final(mOGL, "BACK", INT2NUM(GL_BACK));
+    ferite_define_final(mOGL, "CULL_FACE", INT2NUM(GL_CULL_FACE));
+    ferite_define_final(mOGL, "CULL_FACE_MODE", INT2NUM(GL_CULL_FACE_MODE));
+    ferite_define_final(mOGL, "POLYGON_SMOOTH", INT2NUM(GL_POLYGON_SMOOTH));
+    ferite_define_final(mOGL, "POLYGON_STIPPLE", INT2NUM(GL_POLYGON_STIPPLE));
+    ferite_define_final(mOGL, "FRONT_FACE", INT2NUM(GL_FRONT_FACE));
+    ferite_define_final(mOGL, "POLYGON_MODE", INT2NUM(GL_POLYGON_MODE));
+    ferite_define_final(mOGL, "POLYGON_OFFSET_FACTOR", INT2NUM(GL_POLYGON_OFFSET_FACTOR));
+    ferite_define_final(mOGL, "POLYGON_OFFSET_UNITS", INT2NUM(GL_POLYGON_OFFSET_UNITS));
+    ferite_define_final(mOGL, "POLYGON_OFFSET_POINT", INT2NUM(GL_POLYGON_OFFSET_POINT));
+    ferite_define_final(mOGL, "POLYGON_OFFSET_LINE", INT2NUM(GL_POLYGON_OFFSET_LINE));
+    ferite_define_final(mOGL, "POLYGON_OFFSET_FILL", INT2NUM(GL_POLYGON_OFFSET_FILL));
+    ferite_define_final(mOGL, "COMPILE", INT2NUM(GL_COMPILE));
+    ferite_define_final(mOGL, "COMPILE_AND_EXECUTE", INT2NUM(GL_COMPILE_AND_EXECUTE));
+    ferite_define_final(mOGL, "LIST_BASE", INT2NUM(GL_LIST_BASE));
+    ferite_define_final(mOGL, "LIST_INDEX", INT2NUM(GL_LIST_INDEX));
+    ferite_define_final(mOGL, "LIST_MODE", INT2NUM(GL_LIST_MODE));
+    ferite_define_final(mOGL, "NEVER", INT2NUM(GL_NEVER));
+    ferite_define_final(mOGL, "LESS", INT2NUM(GL_LESS));
+    ferite_define_final(mOGL, "GEQUAL", INT2NUM(GL_GEQUAL));
+    ferite_define_final(mOGL, "LEQUAL", INT2NUM(GL_LEQUAL));
+    ferite_define_final(mOGL, "GREATER", INT2NUM(GL_GREATER));
+    ferite_define_final(mOGL, "NOTEQUAL", INT2NUM(GL_NOTEQUAL));
+    ferite_define_final(mOGL, "EQUAL", INT2NUM(GL_EQUAL));
+    ferite_define_final(mOGL, "ALWAYS", INT2NUM(GL_ALWAYS));
+    ferite_define_final(mOGL, "DEPTH_TEST", INT2NUM(GL_DEPTH_TEST));
+    ferite_define_final(mOGL, "DEPTH_BITS", INT2NUM(GL_DEPTH_BITS));
+    ferite_define_final(mOGL, "DEPTH_CLEAR_VALUE", INT2NUM(GL_DEPTH_CLEAR_VALUE));
+    ferite_define_final(mOGL, "DEPTH_FUNC", INT2NUM(GL_DEPTH_FUNC));
+    ferite_define_final(mOGL, "DEPTH_RANGE", INT2NUM(GL_DEPTH_RANGE));
+    ferite_define_final(mOGL, "DEPTH_WRITEMASK", INT2NUM(GL_DEPTH_WRITEMASK));
+    ferite_define_final(mOGL, "DEPTH_COMPONENT", INT2NUM(GL_DEPTH_COMPONENT));
+    ferite_define_final(mOGL, "LIGHTING", INT2NUM(GL_LIGHTING));
+    ferite_define_final(mOGL, "LIGHT0", INT2NUM(GL_LIGHT0));
+    ferite_define_final(mOGL, "LIGHT1", INT2NUM(GL_LIGHT1));
+    ferite_define_final(mOGL, "LIGHT2", INT2NUM(GL_LIGHT2));
+    ferite_define_final(mOGL, "LIGHT3", INT2NUM(GL_LIGHT3));
+    ferite_define_final(mOGL, "LIGHT4", INT2NUM(GL_LIGHT4));
+    ferite_define_final(mOGL, "LIGHT5", INT2NUM(GL_LIGHT5));
+    ferite_define_final(mOGL, "LIGHT6", INT2NUM(GL_LIGHT6));
+    ferite_define_final(mOGL, "LIGHT7", INT2NUM(GL_LIGHT7));
+    ferite_define_final(mOGL, "SPOT_EXPONENT", INT2NUM(GL_SPOT_EXPONENT));
+    ferite_define_final(mOGL, "SPOT_CUTOFF", INT2NUM(GL_SPOT_CUTOFF));
+    ferite_define_final(mOGL, "CONSTANT_ATTENUATION", INT2NUM(GL_CONSTANT_ATTENUATION));
+    ferite_define_final(mOGL, "LINEAR_ATTENUATION", INT2NUM(GL_LINEAR_ATTENUATION));
+    ferite_define_final(mOGL, "QUADRATIC_ATTENUATION", INT2NUM(GL_QUADRATIC_ATTENUATION));
+    ferite_define_final(mOGL, "AMBIENT", INT2NUM(GL_AMBIENT));
+    ferite_define_final(mOGL, "DIFFUSE", INT2NUM(GL_DIFFUSE));
+    ferite_define_final(mOGL, "SPECULAR", INT2NUM(GL_SPECULAR));
+    ferite_define_final(mOGL, "SHININESS", INT2NUM(GL_SHININESS));
+    ferite_define_final(mOGL, "EMISSION", INT2NUM(GL_EMISSION));
+    ferite_define_final(mOGL, "POSITION", INT2NUM(GL_POSITION));
+    ferite_define_final(mOGL, "SPOT_DIRECTION", INT2NUM(GL_SPOT_DIRECTION));
+    ferite_define_final(mOGL, "AMBIENT_AND_DIFFUSE", INT2NUM(GL_AMBIENT_AND_DIFFUSE));
+    ferite_define_final(mOGL, "COLOR_INDEXES", INT2NUM(GL_COLOR_INDEXES));
+    ferite_define_final(mOGL, "LIGHT_MODEL_TWO_SIDE", INT2NUM(GL_LIGHT_MODEL_TWO_SIDE));
+    ferite_define_final(mOGL, "LIGHT_MODEL_LOCAL_VIEWER", INT2NUM(GL_LIGHT_MODEL_LOCAL_VIEWER));
+    ferite_define_final(mOGL, "LIGHT_MODEL_AMBIENT", INT2NUM(GL_LIGHT_MODEL_AMBIENT));
+    ferite_define_final(mOGL, "FRONT_AND_BACK", INT2NUM(GL_FRONT_AND_BACK));
+    ferite_define_final(mOGL, "SHADE_MODEL", INT2NUM(GL_SHADE_MODEL));
+    ferite_define_final(mOGL, "FLAT", INT2NUM(GL_FLAT));
+    ferite_define_final(mOGL, "SMOOTH", INT2NUM(GL_SMOOTH));
+    ferite_define_final(mOGL, "COLOR_MATERIAL", INT2NUM(GL_COLOR_MATERIAL));
+    ferite_define_final(mOGL, "COLOR_MATERIAL_FACE", INT2NUM(GL_COLOR_MATERIAL_FACE));
+    ferite_define_final(mOGL, "COLOR_MATERIAL_PARAMETER", INT2NUM(GL_COLOR_MATERIAL_PARAMETER));
+    ferite_define_final(mOGL, "NORMALIZE", INT2NUM(GL_NORMALIZE));
+    ferite_define_final(mOGL, "CLIP_PLANE0", INT2NUM(GL_CLIP_PLANE0));
+    ferite_define_final(mOGL, "CLIP_PLANE1", INT2NUM(GL_CLIP_PLANE1));
+    ferite_define_final(mOGL, "CLIP_PLANE2", INT2NUM(GL_CLIP_PLANE2));
+    ferite_define_final(mOGL, "CLIP_PLANE3", INT2NUM(GL_CLIP_PLANE3));
+    ferite_define_final(mOGL, "CLIP_PLANE4", INT2NUM(GL_CLIP_PLANE4));
+    ferite_define_final(mOGL, "CLIP_PLANE5", INT2NUM(GL_CLIP_PLANE5));
+    ferite_define_final(mOGL, "ACCUM_RED_BITS", INT2NUM(GL_ACCUM_RED_BITS));
+    ferite_define_final(mOGL, "ACCUM_GREEN_BITS", INT2NUM(GL_ACCUM_GREEN_BITS));
+    ferite_define_final(mOGL, "ACCUM_BLUE_BITS", INT2NUM(GL_ACCUM_BLUE_BITS));
+    ferite_define_final(mOGL, "ACCUM_ALPHA_BITS", INT2NUM(GL_ACCUM_ALPHA_BITS));
+    ferite_define_final(mOGL, "ACCUM_CLEAR_VALUE", INT2NUM(GL_ACCUM_CLEAR_VALUE));
+    ferite_define_final(mOGL, "ACCUM", INT2NUM(GL_ACCUM));
+    ferite_define_final(mOGL, "ADD", INT2NUM(GL_ADD));
+    ferite_define_final(mOGL, "LOAD", INT2NUM(GL_LOAD));
+    ferite_define_final(mOGL, "MULT", INT2NUM(GL_MULT));
+    ferite_define_final(mOGL, "RETURN", INT2NUM(GL_RETURN));
+    ferite_define_final(mOGL, "ALPHA_TEST", INT2NUM(GL_ALPHA_TEST));
+    ferite_define_final(mOGL, "ALPHA_TEST_REF", INT2NUM(GL_ALPHA_TEST_REF));
+    ferite_define_final(mOGL, "ALPHA_TEST_FUNC", INT2NUM(GL_ALPHA_TEST_FUNC));
+    ferite_define_final(mOGL, "BLEND", INT2NUM(GL_BLEND));
+    ferite_define_final(mOGL, "BLEND_SRC", INT2NUM(GL_BLEND_SRC));
+    ferite_define_final(mOGL, "BLEND_DST", INT2NUM(GL_BLEND_DST));
+    ferite_define_final(mOGL, "ZERO", INT2NUM(GL_ZERO));
+    ferite_define_final(mOGL, "ONE", INT2NUM(GL_ONE));
+    ferite_define_final(mOGL, "SRC_COLOR", INT2NUM(GL_SRC_COLOR));
+    ferite_define_final(mOGL, "ONE_MINUS_SRC_COLOR", INT2NUM(GL_ONE_MINUS_SRC_COLOR));
+    ferite_define_final(mOGL, "DST_COLOR", INT2NUM(GL_DST_COLOR));
+    ferite_define_final(mOGL, "ONE_MINUS_DST_COLOR", INT2NUM(GL_ONE_MINUS_DST_COLOR));
+    ferite_define_final(mOGL, "SRC_ALPHA", INT2NUM(GL_SRC_ALPHA));
+    ferite_define_final(mOGL, "ONE_MINUS_SRC_ALPHA", INT2NUM(GL_ONE_MINUS_SRC_ALPHA));
+    ferite_define_final(mOGL, "DST_ALPHA", INT2NUM(GL_DST_ALPHA));
+    ferite_define_final(mOGL, "ONE_MINUS_DST_ALPHA", INT2NUM(GL_ONE_MINUS_DST_ALPHA));
+    ferite_define_final(mOGL, "SRC_ALPHA_SATURATE", INT2NUM(GL_SRC_ALPHA_SATURATE));
+#if defined(GL_VERSION_1_2)
+    ferite_define_final(mOGL, "CONSTANT_COLOR", INT2NUM(GL_CONSTANT_COLOR));
+    ferite_define_final(mOGL, "ONE_MINUS_CONSTANT_COLOR", INT2NUM(GL_ONE_MINUS_CONSTANT_COLOR));
+    ferite_define_final(mOGL, "CONSTANT_ALPHA", INT2NUM(GL_CONSTANT_ALPHA));
+    ferite_define_final(mOGL, "ONE_MINUS_CONSTANT_ALPHA", INT2NUM(GL_ONE_MINUS_CONSTANT_ALPHA));
+#endif /* GL_VERSION_1_2 */
+    ferite_define_final(mOGL, "FEEDBACK", INT2NUM(GL_FEEDBACK));
+    ferite_define_final(mOGL, "RENDER", INT2NUM(GL_RENDER));
+    ferite_define_final(mOGL, "SELECT", INT2NUM(GL_SELECT));
+    ferite_define_final(mOGL, "GL_2D", INT2NUM(GL_2D));
+    ferite_define_final(mOGL, "GL_3D", INT2NUM(GL_3D));
+    ferite_define_final(mOGL, "GL_3D_COLOR", INT2NUM(GL_3D_COLOR));
+    ferite_define_final(mOGL, "GL_3D_COLOR_TEXTURE", INT2NUM(GL_3D_COLOR_TEXTURE));
+    ferite_define_final(mOGL, "GL_4D_COLOR_TEXTURE", INT2NUM(GL_4D_COLOR_TEXTURE));
+    ferite_define_final(mOGL, "POINT_TOKEN", INT2NUM(GL_POINT_TOKEN));
+    ferite_define_final(mOGL, "LINE_TOKEN", INT2NUM(GL_LINE_TOKEN));
+    ferite_define_final(mOGL, "LINE_RESET_TOKEN", INT2NUM(GL_LINE_RESET_TOKEN));
+    ferite_define_final(mOGL, "POLYGON_TOKEN", INT2NUM(GL_POLYGON_TOKEN));
+    ferite_define_final(mOGL, "BITMAP_TOKEN", INT2NUM(GL_BITMAP_TOKEN));
+    ferite_define_final(mOGL, "DRAW_PIXEL_TOKEN", INT2NUM(GL_DRAW_PIXEL_TOKEN));
+    ferite_define_final(mOGL, "COPY_PIXEL_TOKEN", INT2NUM(GL_COPY_PIXEL_TOKEN));
+    ferite_define_final(mOGL, "PASS_THROUGH_TOKEN", INT2NUM(GL_PASS_THROUGH_TOKEN));
+    ferite_define_final(mOGL, "FEEDBACK_BUFFER_POINTER", INT2NUM(GL_FEEDBACK_BUFFER_POINTER));
+    ferite_define_final(mOGL, "FEEDBACK_BUFFER_SIZE", INT2NUM(GL_FEEDBACK_BUFFER_SIZE));
+    ferite_define_final(mOGL, "FEEDBACK_BUFFER_TYPE", INT2NUM(GL_FEEDBACK_BUFFER_TYPE));
+    ferite_define_final(mOGL, "FOG", INT2NUM(GL_FOG));
+    ferite_define_final(mOGL, "FOG_MODE", INT2NUM(GL_FOG_MODE));
+    ferite_define_final(mOGL, "FOG_DENSITY", INT2NUM(GL_FOG_DENSITY));
+    ferite_define_final(mOGL, "FOG_COLOR", INT2NUM(GL_FOG_COLOR));
+    ferite_define_final(mOGL, "FOG_INDEX", INT2NUM(GL_FOG_INDEX));
+    ferite_define_final(mOGL, "FOG_START", INT2NUM(GL_FOG_START));
+    ferite_define_final(mOGL, "FOG_END", INT2NUM(GL_FOG_END));
+    ferite_define_final(mOGL, "LINEAR", INT2NUM(GL_LINEAR));
+    ferite_define_final(mOGL, "EXP", INT2NUM(GL_EXP));
+    ferite_define_final(mOGL, "EXP2", INT2NUM(GL_EXP2));
+    ferite_define_final(mOGL, "LOGIC_OP", INT2NUM(GL_LOGIC_OP));
+    ferite_define_final(mOGL, "INDEX_LOGIC_OP", INT2NUM(GL_INDEX_LOGIC_OP));
+    ferite_define_final(mOGL, "COLOR_LOGIC_OP", INT2NUM(GL_COLOR_LOGIC_OP));
+    ferite_define_final(mOGL, "LOGIC_OP_MODE", INT2NUM(GL_LOGIC_OP_MODE));
+    ferite_define_final(mOGL, "CLEAR", INT2NUM(GL_CLEAR));
+    ferite_define_final(mOGL, "SET", INT2NUM(GL_SET));
+    ferite_define_final(mOGL, "COPY", INT2NUM(GL_COPY));
+    ferite_define_final(mOGL, "COPY_INVERTED", INT2NUM(GL_COPY_INVERTED));
+    ferite_define_final(mOGL, "NOOP", INT2NUM(GL_NOOP));
+    ferite_define_final(mOGL, "INVERT", INT2NUM(GL_INVERT));
+    ferite_define_final(mOGL, "AND", INT2NUM(GL_AND));
+    ferite_define_final(mOGL, "NAND", INT2NUM(GL_NAND));
+    ferite_define_final(mOGL, "OR", INT2NUM(GL_OR));
+    ferite_define_final(mOGL, "NOR", INT2NUM(GL_NOR));
+    ferite_define_final(mOGL, "XOR", INT2NUM(GL_XOR));
+    ferite_define_final(mOGL, "EQUIV", INT2NUM(GL_EQUIV));
+    ferite_define_final(mOGL, "AND_REVERSE", INT2NUM(GL_AND_REVERSE));
+    ferite_define_final(mOGL, "AND_INVERTED", INT2NUM(GL_AND_INVERTED));
+    ferite_define_final(mOGL, "OR_REVERSE", INT2NUM(GL_OR_REVERSE));
+    ferite_define_final(mOGL, "OR_INVERTED", INT2NUM(GL_OR_INVERTED));
+    ferite_define_final(mOGL, "STENCIL_TEST", INT2NUM(GL_STENCIL_TEST));
+    ferite_define_final(mOGL, "STENCIL_WRITEMASK", INT2NUM(GL_STENCIL_WRITEMASK));
+    ferite_define_final(mOGL, "STENCIL_BITS", INT2NUM(GL_STENCIL_BITS));
+    ferite_define_final(mOGL, "STENCIL_FUNC", INT2NUM(GL_STENCIL_FUNC));
+    ferite_define_final(mOGL, "STENCIL_VALUE_MASK", INT2NUM(GL_STENCIL_VALUE_MASK));
+    ferite_define_final(mOGL, "STENCIL_REF", INT2NUM(GL_STENCIL_REF));
+    ferite_define_final(mOGL, "STENCIL_FAIL", INT2NUM(GL_STENCIL_FAIL));
+    ferite_define_final(mOGL, "STENCIL_PASS_DEPTH_PASS", INT2NUM(GL_STENCIL_PASS_DEPTH_PASS));
+    ferite_define_final(mOGL, "STENCIL_PASS_DEPTH_FAIL", INT2NUM(GL_STENCIL_PASS_DEPTH_FAIL));
+    ferite_define_final(mOGL, "STENCIL_CLEAR_VALUE", INT2NUM(GL_STENCIL_CLEAR_VALUE));
+    ferite_define_final(mOGL, "STENCIL_INDEX", INT2NUM(GL_STENCIL_INDEX));
+    ferite_define_final(mOGL, "KEEP", INT2NUM(GL_KEEP));
+    ferite_define_final(mOGL, "REPLACE", INT2NUM(GL_REPLACE));
+    ferite_define_final(mOGL, "INCR", INT2NUM(GL_INCR));
+    ferite_define_final(mOGL, "DECR", INT2NUM(GL_DECR));
+    ferite_define_final(mOGL, "NONE", INT2NUM(GL_NONE));
+    ferite_define_final(mOGL, "LEFT", INT2NUM(GL_LEFT));
+    ferite_define_final(mOGL, "RIGHT", INT2NUM(GL_RIGHT));
+    ferite_define_final(mOGL, "FRONT_LEFT", INT2NUM(GL_FRONT_LEFT));
+    ferite_define_final(mOGL, "FRONT_RIGHT", INT2NUM(GL_FRONT_RIGHT));
+    ferite_define_final(mOGL, "BACK_LEFT", INT2NUM(GL_BACK_LEFT));
+    ferite_define_final(mOGL, "BACK_RIGHT", INT2NUM(GL_BACK_RIGHT));
+    ferite_define_final(mOGL, "AUX0", INT2NUM(GL_AUX0));
+    ferite_define_final(mOGL, "AUX1", INT2NUM(GL_AUX1));
+    ferite_define_final(mOGL, "AUX2", INT2NUM(GL_AUX2));
+    ferite_define_final(mOGL, "AUX3", INT2NUM(GL_AUX3));
+    ferite_define_final(mOGL, "COLOR_INDEX", INT2NUM(GL_COLOR_INDEX));
+    ferite_define_final(mOGL, "RED", INT2NUM(GL_RED));
+    ferite_define_final(mOGL, "GREEN", INT2NUM(GL_GREEN));
+    ferite_define_final(mOGL, "BLUE", INT2NUM(GL_BLUE));
+    ferite_define_final(mOGL, "ALPHA", INT2NUM(GL_ALPHA));
+    ferite_define_final(mOGL, "LUMINANCE", INT2NUM(GL_LUMINANCE));
+    ferite_define_final(mOGL, "LUMINANCE_ALPHA", INT2NUM(GL_LUMINANCE_ALPHA));
+    ferite_define_final(mOGL, "ALPHA_BITS", INT2NUM(GL_ALPHA_BITS));
+    ferite_define_final(mOGL, "RED_BITS", INT2NUM(GL_RED_BITS));
+    ferite_define_final(mOGL, "GREEN_BITS", INT2NUM(GL_GREEN_BITS));
+    ferite_define_final(mOGL, "BLUE_BITS", INT2NUM(GL_BLUE_BITS));
+    ferite_define_final(mOGL, "INDEX_BITS", INT2NUM(GL_INDEX_BITS));
+    ferite_define_final(mOGL, "SUBPIXEL_BITS", INT2NUM(GL_SUBPIXEL_BITS));
+    ferite_define_final(mOGL, "AUX_BUFFERS", INT2NUM(GL_AUX_BUFFERS));
+    ferite_define_final(mOGL, "READ_BUFFER", INT2NUM(GL_READ_BUFFER));
+    ferite_define_final(mOGL, "DRAW_BUFFER", INT2NUM(GL_DRAW_BUFFER));
+    ferite_define_final(mOGL, "DOUBLEBUFFER", INT2NUM(GL_DOUBLEBUFFER));
+    ferite_define_final(mOGL, "STEREO", INT2NUM(GL_STEREO));
+    ferite_define_final(mOGL, "BITMAP", INT2NUM(GL_BITMAP));
+    ferite_define_final(mOGL, "COLOR", INT2NUM(GL_COLOR));
+    ferite_define_final(mOGL, "DEPTH", INT2NUM(GL_DEPTH));
+    ferite_define_final(mOGL, "STENCIL", INT2NUM(GL_STENCIL));
+    ferite_define_final(mOGL, "DITHER", INT2NUM(GL_DITHER));
+    ferite_define_final(mOGL, "RGB", INT2NUM(GL_RGB));
+    ferite_define_final(mOGL, "RGBA", INT2NUM(GL_RGBA));
+    ferite_define_final(mOGL, "MAX_LIST_NESTING", INT2NUM(GL_MAX_LIST_NESTING));
+    ferite_define_final(mOGL, "MAX_ATTRIB_STACK_DEPTH", INT2NUM(GL_MAX_ATTRIB_STACK_DEPTH));
+    ferite_define_final(mOGL, "MAX_MODELVIEW_STACK_DEPTH", INT2NUM(GL_MAX_MODELVIEW_STACK_DEPTH));
+    ferite_define_final(mOGL, "MAX_NAME_STACK_DEPTH", INT2NUM(GL_MAX_NAME_STACK_DEPTH));
+    ferite_define_final(mOGL, "MAX_PROJECTION_STACK_DEPTH", INT2NUM(GL_MAX_PROJECTION_STACK_DEPTH));
+    ferite_define_final(mOGL, "MAX_TEXTURE_STACK_DEPTH", INT2NUM(GL_MAX_TEXTURE_STACK_DEPTH));
+    ferite_define_final(mOGL, "MAX_EVAL_ORDER", INT2NUM(GL_MAX_EVAL_ORDER));
+    ferite_define_final(mOGL, "MAX_LIGHTS", INT2NUM(GL_MAX_LIGHTS));
+    ferite_define_final(mOGL, "MAX_CLIP_PLANES", INT2NUM(GL_MAX_CLIP_PLANES));
+    ferite_define_final(mOGL, "MAX_TEXTURE_SIZE", INT2NUM(GL_MAX_TEXTURE_SIZE));
+    ferite_define_final(mOGL, "MAX_PIXEL_MAP_TABLE", INT2NUM(GL_MAX_PIXEL_MAP_TABLE));
+    ferite_define_final(mOGL, "MAX_VIEWPORT_DIMS", INT2NUM(GL_MAX_VIEWPORT_DIMS));
+    ferite_define_final(mOGL, "ATTRIB_STACK_DEPTH", INT2NUM(GL_ATTRIB_STACK_DEPTH));
+    ferite_define_final(mOGL, "CLIENT_ATTRIB_STACK_DEPTH", INT2NUM(GL_CLIENT_ATTRIB_STACK_DEPTH));
+    ferite_define_final(mOGL, "COLOR_CLEAR_VALUE", INT2NUM(GL_COLOR_CLEAR_VALUE));
+    ferite_define_final(mOGL, "COLOR_WRITEMASK", INT2NUM(GL_COLOR_WRITEMASK));
+    ferite_define_final(mOGL, "CURRENT_INDEX", INT2NUM(GL_CURRENT_INDEX));
+    ferite_define_final(mOGL, "CURRENT_COLOR", INT2NUM(GL_CURRENT_COLOR));
+    ferite_define_final(mOGL, "CURRENT_NORMAL", INT2NUM(GL_CURRENT_NORMAL));
+    ferite_define_final(mOGL, "CURRENT_RASTER_COLOR", INT2NUM(GL_CURRENT_RASTER_COLOR));
+    ferite_define_final(mOGL, "CURRENT_RASTER_DISTANCE", INT2NUM(GL_CURRENT_RASTER_DISTANCE));
+    ferite_define_final(mOGL, "CURRENT_RASTER_INDEX", INT2NUM(GL_CURRENT_RASTER_INDEX));
+    ferite_define_final(mOGL, "CURRENT_RASTER_POSITION", INT2NUM(GL_CURRENT_RASTER_POSITION));
+    ferite_define_final(mOGL, "CURRENT_RASTER_TEXTURE_COORDS", INT2NUM(GL_CURRENT_RASTER_TEXTURE_COORDS));
+    ferite_define_final(mOGL, "CURRENT_RASTER_POSITION_VALID", INT2NUM(GL_CURRENT_RASTER_POSITION_VALID));
+    ferite_define_final(mOGL, "CURRENT_TEXTURE_COORDS", INT2NUM(GL_CURRENT_TEXTURE_COORDS));
+    ferite_define_final(mOGL, "INDEX_CLEAR_VALUE", INT2NUM(GL_INDEX_CLEAR_VALUE));
+    ferite_define_final(mOGL, "INDEX_MODE", INT2NUM(GL_INDEX_MODE));
+    ferite_define_final(mOGL, "INDEX_WRITEMASK", INT2NUM(GL_INDEX_WRITEMASK));
+    ferite_define_final(mOGL, "MODELVIEW_MATRIX", INT2NUM(GL_MODELVIEW_MATRIX));
+    ferite_define_final(mOGL, "MODELVIEW_STACK_DEPTH", INT2NUM(GL_MODELVIEW_STACK_DEPTH));
+    ferite_define_final(mOGL, "NAME_STACK_DEPTH", INT2NUM(GL_NAME_STACK_DEPTH));
+    ferite_define_final(mOGL, "PROJECTION_MATRIX", INT2NUM(GL_PROJECTION_MATRIX));
+    ferite_define_final(mOGL, "PROJECTION_STACK_DEPTH", INT2NUM(GL_PROJECTION_STACK_DEPTH));
+    ferite_define_final(mOGL, "RENDER_MODE", INT2NUM(GL_RENDER_MODE));
+    ferite_define_final(mOGL, "RGBA_MODE", INT2NUM(GL_RGBA_MODE));
+    ferite_define_final(mOGL, "TEXTURE_MATRIX", INT2NUM(GL_TEXTURE_MATRIX));
+    ferite_define_final(mOGL, "TEXTURE_STACK_DEPTH", INT2NUM(GL_TEXTURE_STACK_DEPTH));
+    ferite_define_final(mOGL, "VIEWPORT", INT2NUM(GL_VIEWPORT));
+    ferite_define_final(mOGL, "AUTO_NORMAL", INT2NUM(GL_AUTO_NORMAL));
+    ferite_define_final(mOGL, "MAP1_COLOR_4", INT2NUM(GL_MAP1_COLOR_4));
+    ferite_define_final(mOGL, "MAP1_GRID_DOMAIN", INT2NUM(GL_MAP1_GRID_DOMAIN));
+    ferite_define_final(mOGL, "MAP1_GRID_SEGMENTS", INT2NUM(GL_MAP1_GRID_SEGMENTS));
+    ferite_define_final(mOGL, "MAP1_INDEX", INT2NUM(GL_MAP1_INDEX));
+    ferite_define_final(mOGL, "MAP1_NORMAL", INT2NUM(GL_MAP1_NORMAL));
+    ferite_define_final(mOGL, "MAP1_TEXTURE_COORD_1", INT2NUM(GL_MAP1_TEXTURE_COORD_1));
+    ferite_define_final(mOGL, "MAP1_TEXTURE_COORD_2", INT2NUM(GL_MAP1_TEXTURE_COORD_2));
+    ferite_define_final(mOGL, "MAP1_TEXTURE_COORD_3", INT2NUM(GL_MAP1_TEXTURE_COORD_3));
+    ferite_define_final(mOGL, "MAP1_TEXTURE_COORD_4", INT2NUM(GL_MAP1_TEXTURE_COORD_4));
+    ferite_define_final(mOGL, "MAP1_VERTEX_3", INT2NUM(GL_MAP1_VERTEX_3));
+    ferite_define_final(mOGL, "MAP1_VERTEX_4", INT2NUM(GL_MAP1_VERTEX_4));
+    ferite_define_final(mOGL, "MAP2_COLOR_4", INT2NUM(GL_MAP2_COLOR_4));
+    ferite_define_final(mOGL, "MAP2_GRID_DOMAIN", INT2NUM(GL_MAP2_GRID_DOMAIN));
+    ferite_define_final(mOGL, "MAP2_GRID_SEGMENTS", INT2NUM(GL_MAP2_GRID_SEGMENTS));
+    ferite_define_final(mOGL, "MAP2_INDEX", INT2NUM(GL_MAP2_INDEX));
+    ferite_define_final(mOGL, "MAP2_NORMAL", INT2NUM(GL_MAP2_NORMAL));
+    ferite_define_final(mOGL, "MAP2_TEXTURE_COORD_1", INT2NUM(GL_MAP2_TEXTURE_COORD_1));
+    ferite_define_final(mOGL, "MAP2_TEXTURE_COORD_2", INT2NUM(GL_MAP2_TEXTURE_COORD_2));
+    ferite_define_final(mOGL, "MAP2_TEXTURE_COORD_3", INT2NUM(GL_MAP2_TEXTURE_COORD_3));
+    ferite_define_final(mOGL, "MAP2_TEXTURE_COORD_4", INT2NUM(GL_MAP2_TEXTURE_COORD_4));
+    ferite_define_final(mOGL, "MAP2_VERTEX_3", INT2NUM(GL_MAP2_VERTEX_3));
+    ferite_define_final(mOGL, "MAP2_VERTEX_4", INT2NUM(GL_MAP2_VERTEX_4));
+    ferite_define_final(mOGL, "COEFF", INT2NUM(GL_COEFF));
+    ferite_define_final(mOGL, "DOMAIN", INT2NUM(GL_DOMAIN));
+    ferite_define_final(mOGL, "ORDER", INT2NUM(GL_ORDER));
+    ferite_define_final(mOGL, "FOG_HINT", INT2NUM(GL_FOG_HINT));
+    ferite_define_final(mOGL, "LINE_SMOOTH_HINT", INT2NUM(GL_LINE_SMOOTH_HINT));
+    ferite_define_final(mOGL, "PERSPECTIVE_CORRECTION_HINT", INT2NUM(GL_PERSPECTIVE_CORRECTION_HINT));
+    ferite_define_final(mOGL, "POINT_SMOOTH_HINT", INT2NUM(GL_POINT_SMOOTH_HINT));
+    ferite_define_final(mOGL, "POLYGON_SMOOTH_HINT", INT2NUM(GL_POLYGON_SMOOTH_HINT));
+    ferite_define_final(mOGL, "DONT_CARE", INT2NUM(GL_DONT_CARE));
+    ferite_define_final(mOGL, "FASTEST", INT2NUM(GL_FASTEST));
+    ferite_define_final(mOGL, "NICEST", INT2NUM(GL_NICEST));
+    ferite_define_final(mOGL, "SCISSOR_TEST", INT2NUM(GL_SCISSOR_TEST));
+    ferite_define_final(mOGL, "SCISSOR_BOX", INT2NUM(GL_SCISSOR_BOX));
+    ferite_define_final(mOGL, "MAP_COLOR", INT2NUM(GL_MAP_COLOR));
+    ferite_define_final(mOGL, "MAP_STENCIL", INT2NUM(GL_MAP_STENCIL));
+    ferite_define_final(mOGL, "INDEX_SHIFT", INT2NUM(GL_INDEX_SHIFT));
+    ferite_define_final(mOGL, "INDEX_OFFSET", INT2NUM(GL_INDEX_OFFSET));
+    ferite_define_final(mOGL, "RED_SCALE", INT2NUM(GL_RED_SCALE));
+    ferite_define_final(mOGL, "RED_BIAS", INT2NUM(GL_RED_BIAS));
+    ferite_define_final(mOGL, "GREEN_SCALE", INT2NUM(GL_GREEN_SCALE));
+    ferite_define_final(mOGL, "GREEN_BIAS", INT2NUM(GL_GREEN_BIAS));
+    ferite_define_final(mOGL, "BLUE_SCALE", INT2NUM(GL_BLUE_SCALE));
+    ferite_define_final(mOGL, "BLUE_BIAS", INT2NUM(GL_BLUE_BIAS));
+    ferite_define_final(mOGL, "ALPHA_SCALE", INT2NUM(GL_ALPHA_SCALE));
+    ferite_define_final(mOGL, "ALPHA_BIAS", INT2NUM(GL_ALPHA_BIAS));
+    ferite_define_final(mOGL, "DEPTH_SCALE", INT2NUM(GL_DEPTH_SCALE));
+    ferite_define_final(mOGL, "DEPTH_BIAS", INT2NUM(GL_DEPTH_BIAS));
+    ferite_define_final(mOGL, "PIXEL_MAP_S_TO_S_SIZE", INT2NUM(GL_PIXEL_MAP_S_TO_S_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_I_SIZE", INT2NUM(GL_PIXEL_MAP_I_TO_I_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_R_SIZE", INT2NUM(GL_PIXEL_MAP_I_TO_R_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_G_SIZE", INT2NUM(GL_PIXEL_MAP_I_TO_G_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_B_SIZE", INT2NUM(GL_PIXEL_MAP_I_TO_B_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_A_SIZE", INT2NUM(GL_PIXEL_MAP_I_TO_A_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_R_TO_R_SIZE", INT2NUM(GL_PIXEL_MAP_R_TO_R_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_G_TO_G_SIZE", INT2NUM(GL_PIXEL_MAP_G_TO_G_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_B_TO_B_SIZE", INT2NUM(GL_PIXEL_MAP_B_TO_B_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_A_TO_A_SIZE", INT2NUM(GL_PIXEL_MAP_A_TO_A_SIZE));
+    ferite_define_final(mOGL, "PIXEL_MAP_S_TO_S", INT2NUM(GL_PIXEL_MAP_S_TO_S));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_I", INT2NUM(GL_PIXEL_MAP_I_TO_I));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_R", INT2NUM(GL_PIXEL_MAP_I_TO_R));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_G", INT2NUM(GL_PIXEL_MAP_I_TO_G));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_B", INT2NUM(GL_PIXEL_MAP_I_TO_B));
+    ferite_define_final(mOGL, "PIXEL_MAP_I_TO_A", INT2NUM(GL_PIXEL_MAP_I_TO_A));
+    ferite_define_final(mOGL, "PIXEL_MAP_R_TO_R", INT2NUM(GL_PIXEL_MAP_R_TO_R));
+    ferite_define_final(mOGL, "PIXEL_MAP_G_TO_G", INT2NUM(GL_PIXEL_MAP_G_TO_G));
+    ferite_define_final(mOGL, "PIXEL_MAP_B_TO_B", INT2NUM(GL_PIXEL_MAP_B_TO_B));
+    ferite_define_final(mOGL, "PIXEL_MAP_A_TO_A", INT2NUM(GL_PIXEL_MAP_A_TO_A));
+    ferite_define_final(mOGL, "PACK_ALIGNMENT", INT2NUM(GL_PACK_ALIGNMENT));
+    ferite_define_final(mOGL, "PACK_LSB_FIRST", INT2NUM(GL_PACK_LSB_FIRST));
+    ferite_define_final(mOGL, "PACK_ROW_LENGTH", INT2NUM(GL_PACK_ROW_LENGTH));
+    ferite_define_final(mOGL, "PACK_SKIP_PIXELS", INT2NUM(GL_PACK_SKIP_PIXELS));
+    ferite_define_final(mOGL, "PACK_SKIP_ROWS", INT2NUM(GL_PACK_SKIP_ROWS));
+    ferite_define_final(mOGL, "PACK_SWAP_BYTES", INT2NUM(GL_PACK_SWAP_BYTES));
+    ferite_define_final(mOGL, "UNPACK_ALIGNMENT", INT2NUM(GL_UNPACK_ALIGNMENT));
+    ferite_define_final(mOGL, "UNPACK_LSB_FIRST", INT2NUM(GL_UNPACK_LSB_FIRST));
+    ferite_define_final(mOGL, "UNPACK_ROW_LENGTH", INT2NUM(GL_UNPACK_ROW_LENGTH));
+    ferite_define_final(mOGL, "UNPACK_SKIP_PIXELS", INT2NUM(GL_UNPACK_SKIP_PIXELS));
+    ferite_define_final(mOGL, "UNPACK_SKIP_ROWS", INT2NUM(GL_UNPACK_SKIP_ROWS));
+    ferite_define_final(mOGL, "UNPACK_SWAP_BYTES", INT2NUM(GL_UNPACK_SWAP_BYTES));
+    ferite_define_final(mOGL, "ZOOM_X", INT2NUM(GL_ZOOM_X));
+    ferite_define_final(mOGL, "ZOOM_Y", INT2NUM(GL_ZOOM_Y));
+    ferite_define_final(mOGL, "TEXTURE_ENV", INT2NUM(GL_TEXTURE_ENV));
+    ferite_define_final(mOGL, "TEXTURE_ENV_MODE", INT2NUM(GL_TEXTURE_ENV_MODE));
+    ferite_define_final(mOGL, "TEXTURE_1D", INT2NUM(GL_TEXTURE_1D));
+    ferite_define_final(mOGL, "TEXTURE_2D", INT2NUM(GL_TEXTURE_2D));
+    ferite_define_final(mOGL, "TEXTURE_WRAP_S", INT2NUM(GL_TEXTURE_WRAP_S));
+    ferite_define_final(mOGL, "TEXTURE_WRAP_T", INT2NUM(GL_TEXTURE_WRAP_T));
+    ferite_define_final(mOGL, "TEXTURE_MAG_FILTER", INT2NUM(GL_TEXTURE_MAG_FILTER));
+    ferite_define_final(mOGL, "TEXTURE_MIN_FILTER", INT2NUM(GL_TEXTURE_MIN_FILTER));
+    ferite_define_final(mOGL, "TEXTURE_ENV_COLOR", INT2NUM(GL_TEXTURE_ENV_COLOR));
+    ferite_define_final(mOGL, "TEXTURE_GEN_S", INT2NUM(GL_TEXTURE_GEN_S));
+    ferite_define_final(mOGL, "TEXTURE_GEN_T", INT2NUM(GL_TEXTURE_GEN_T));
+    ferite_define_final(mOGL, "TEXTURE_GEN_MODE", INT2NUM(GL_TEXTURE_GEN_MODE));
+    ferite_define_final(mOGL, "TEXTURE_BORDER_COLOR", INT2NUM(GL_TEXTURE_BORDER_COLOR));
+    ferite_define_final(mOGL, "TEXTURE_WIDTH", INT2NUM(GL_TEXTURE_WIDTH));
+    ferite_define_final(mOGL, "TEXTURE_HEIGHT", INT2NUM(GL_TEXTURE_HEIGHT));
+    ferite_define_final(mOGL, "TEXTURE_BORDER", INT2NUM(GL_TEXTURE_BORDER));
+    ferite_define_final(mOGL, "TEXTURE_COMPONENTS", INT2NUM(GL_TEXTURE_COMPONENTS));
+    ferite_define_final(mOGL, "TEXTURE_RED_SIZE", INT2NUM(GL_TEXTURE_RED_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_GREEN_SIZE", INT2NUM(GL_TEXTURE_GREEN_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_BLUE_SIZE", INT2NUM(GL_TEXTURE_BLUE_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_ALPHA_SIZE", INT2NUM(GL_TEXTURE_ALPHA_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_LUMINANCE_SIZE", INT2NUM(GL_TEXTURE_LUMINANCE_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_INTENSITY_SIZE", INT2NUM(GL_TEXTURE_INTENSITY_SIZE));
+    ferite_define_final(mOGL, "NEAREST_MIPMAP_NEAREST", INT2NUM(GL_NEAREST_MIPMAP_NEAREST));
+    ferite_define_final(mOGL, "NEAREST_MIPMAP_LINEAR", INT2NUM(GL_NEAREST_MIPMAP_LINEAR));
+    ferite_define_final(mOGL, "LINEAR_MIPMAP_NEAREST", INT2NUM(GL_LINEAR_MIPMAP_NEAREST));
+    ferite_define_final(mOGL, "LINEAR_MIPMAP_LINEAR", INT2NUM(GL_LINEAR_MIPMAP_LINEAR));
+    ferite_define_final(mOGL, "OBJECT_LINEAR", INT2NUM(GL_OBJECT_LINEAR));
+    ferite_define_final(mOGL, "OBJECT_PLANE", INT2NUM(GL_OBJECT_PLANE));
+    ferite_define_final(mOGL, "EYE_LINEAR", INT2NUM(GL_EYE_LINEAR));
+    ferite_define_final(mOGL, "EYE_PLANE", INT2NUM(GL_EYE_PLANE));
+    ferite_define_final(mOGL, "SPHERE_MAP", INT2NUM(GL_SPHERE_MAP));
+    ferite_define_final(mOGL, "DECAL", INT2NUM(GL_DECAL));
+    ferite_define_final(mOGL, "MODULATE", INT2NUM(GL_MODULATE));
+    ferite_define_final(mOGL, "NEAREST", INT2NUM(GL_NEAREST));
+    ferite_define_final(mOGL, "REPEAT", INT2NUM(GL_REPEAT));
+    ferite_define_final(mOGL, "CLAMP", INT2NUM(GL_CLAMP));
+    ferite_define_final(mOGL, "S", INT2NUM(GL_S));
+    ferite_define_final(mOGL, "T", INT2NUM(GL_T));
+    ferite_define_final(mOGL, "R", INT2NUM(GL_R));
+    ferite_define_final(mOGL, "Q", INT2NUM(GL_Q));
+    ferite_define_final(mOGL, "TEXTURE_GEN_R", INT2NUM(GL_TEXTURE_GEN_R));
+    ferite_define_final(mOGL, "TEXTURE_GEN_Q", INT2NUM(GL_TEXTURE_GEN_Q));
+#if defined(GL_VERSION_1_1)
+    ferite_define_final(mOGL, "PROXY_TEXTURE_1D", INT2NUM(GL_PROXY_TEXTURE_1D));
+    ferite_define_final(mOGL, "PROXY_TEXTURE_2D", INT2NUM(GL_PROXY_TEXTURE_2D));
+    ferite_define_final(mOGL, "TEXTURE_PRIORITY", INT2NUM(GL_TEXTURE_PRIORITY));
+    ferite_define_final(mOGL, "TEXTURE_RESIDENT", INT2NUM(GL_TEXTURE_RESIDENT));
+    ferite_define_final(mOGL, "TEXTURE_BINDING_1D", INT2NUM(GL_TEXTURE_BINDING_1D));
+    ferite_define_final(mOGL, "TEXTURE_BINDING_2D", INT2NUM(GL_TEXTURE_BINDING_2D));
+    ferite_define_final(mOGL, "TEXTURE_INTERNAL_FORMAT", INT2NUM(GL_TEXTURE_INTERNAL_FORMAT));
+#endif /* GL_VERSION_1_1 */
+
+#if defined(GL_VERSION_1_2)
+    ferite_define_final(mOGL, "PACK_SKIP_IMAGES", INT2NUM(GL_PACK_SKIP_IMAGES));
+    ferite_define_final(mOGL, "PACK_IMAGE_HEIGHT", INT2NUM(GL_PACK_IMAGE_HEIGHT));
+    ferite_define_final(mOGL, "UNPACK_SKIP_IMAGES", INT2NUM(GL_UNPACK_SKIP_IMAGES));
+    ferite_define_final(mOGL, "UNPACK_IMAGE_HEIGHT", INT2NUM(GL_UNPACK_IMAGE_HEIGHT));
+    ferite_define_final(mOGL, "TEXTURE_3D", INT2NUM(GL_TEXTURE_3D));
+    ferite_define_final(mOGL, "PROXY_TEXTURE_3D", INT2NUM(GL_PROXY_TEXTURE_3D));
+    ferite_define_final(mOGL, "TEXTURE_DEPTH", INT2NUM(GL_TEXTURE_DEPTH));
+    ferite_define_final(mOGL, "TEXTURE_WRAP_R", INT2NUM(GL_TEXTURE_WRAP_R));
+    ferite_define_final(mOGL, "MAX_3D_TEXTURE_SIZE", INT2NUM(GL_MAX_3D_TEXTURE_SIZE));
+    ferite_define_final(mOGL, "TEXTURE_BINDING_3D", INT2NUM(GL_TEXTURE_BINDING_3D));
+#endif /* GL_VERSION_1_2 */
+
+    ferite_define_final(mOGL, "ALPHA4", INT2NUM(GL_ALPHA4));
+    ferite_define_final(mOGL, "ALPHA8", INT2NUM(GL_ALPHA8));
+    ferite_define_final(mOGL, "ALPHA12", INT2NUM(GL_ALPHA12));
+    ferite_define_final(mOGL, "ALPHA16", INT2NUM(GL_ALPHA16));
+    ferite_define_final(mOGL, "LUMINANCE4", INT2NUM(GL_LUMINANCE4));
+    ferite_define_final(mOGL, "LUMINANCE8", INT2NUM(GL_LUMINANCE8));
+    ferite_define_final(mOGL, "LUMINANCE12", INT2NUM(GL_LUMINANCE12));
+    ferite_define_final(mOGL, "LUMINANCE16", INT2NUM(GL_LUMINANCE16));
+    ferite_define_final(mOGL, "LUMINANCE4_ALPHA4", INT2NUM(GL_LUMINANCE4_ALPHA4));
+    ferite_define_final(mOGL, "LUMINANCE6_ALPHA2", INT2NUM(GL_LUMINANCE6_ALPHA2));
+    ferite_define_final(mOGL, "LUMINANCE8_ALPHA8", INT2NUM(GL_LUMINANCE8_ALPHA8));
+    ferite_define_final(mOGL, "LUMINANCE12_ALPHA4", INT2NUM(GL_LUMINANCE12_ALPHA4));
+    ferite_define_final(mOGL, "LUMINANCE12_ALPHA12", INT2NUM(GL_LUMINANCE12_ALPHA12));
+    ferite_define_final(mOGL, "LUMINANCE16_ALPHA16", INT2NUM(GL_LUMINANCE16_ALPHA16));
+    ferite_define_final(mOGL, "INTENSITY", INT2NUM(GL_INTENSITY));
+    ferite_define_final(mOGL, "INTENSITY4", INT2NUM(GL_INTENSITY4));
+    ferite_define_final(mOGL, "INTENSITY8", INT2NUM(GL_INTENSITY8));
+    ferite_define_final(mOGL, "INTENSITY12", INT2NUM(GL_INTENSITY12));
+    ferite_define_final(mOGL, "INTENSITY16", INT2NUM(GL_INTENSITY16));
+    ferite_define_final(mOGL, "R3_G3_B2", INT2NUM(GL_R3_G3_B2));
+    ferite_define_final(mOGL, "RGB4", INT2NUM(GL_RGB4));
+    ferite_define_final(mOGL, "RGB5", INT2NUM(GL_RGB5));
+    ferite_define_final(mOGL, "RGB8", INT2NUM(GL_RGB8));
+    ferite_define_final(mOGL, "RGB10", INT2NUM(GL_RGB10));
+    ferite_define_final(mOGL, "RGB12", INT2NUM(GL_RGB12));
+    ferite_define_final(mOGL, "RGB16", INT2NUM(GL_RGB16));
+    ferite_define_final(mOGL, "RGBA2", INT2NUM(GL_RGBA2));
+    ferite_define_final(mOGL, "RGBA4", INT2NUM(GL_RGBA4));
+    ferite_define_final(mOGL, "RGB5_A1", INT2NUM(GL_RGB5_A1));
+    ferite_define_final(mOGL, "RGBA8", INT2NUM(GL_RGBA8));
+    ferite_define_final(mOGL, "RGB10_A2", INT2NUM(GL_RGB10_A2));
+    ferite_define_final(mOGL, "RGBA12", INT2NUM(GL_RGBA12));
+    ferite_define_final(mOGL, "RGBA16", INT2NUM(GL_RGBA16));
+    ferite_define_final(mOGL, "VENDOR", INT2NUM(GL_VENDOR));
+    ferite_define_final(mOGL, "RENDERER", INT2NUM(GL_RENDERER));
+    ferite_define_final(mOGL, "VERSION", INT2NUM(GL_VERSION));
+    ferite_define_final(mOGL, "EXTENSIONS", INT2NUM(GL_EXTENSIONS));
+    ferite_define_final(mOGL, "INVALID_VALUE", INT2NUM(GL_INVALID_VALUE));
+    ferite_define_final(mOGL, "INVALID_ENUM", INT2NUM(GL_INVALID_ENUM));
+    ferite_define_final(mOGL, "INVALID_OPERATION", INT2NUM(GL_INVALID_OPERATION));
+    ferite_define_final(mOGL, "STACK_OVERFLOW", INT2NUM(GL_STACK_OVERFLOW));
+    ferite_define_final(mOGL, "STACK_UNDERFLOW", INT2NUM(GL_STACK_UNDERFLOW));
+    ferite_define_final(mOGL, "OUT_OF_MEMORY", INT2NUM(GL_OUT_OF_MEMORY));
+#if 0
+#if defined(CONSTANT_COLOR_EXT)
+    ferite_define_final(mOGL, "CONSTANT_COLOR_EXT", INT2NUM(GL_CONSTANT_COLOR_EXT));
+#endif
+#if defined(ONE_MINUS_CONSTANT_COLOR_EXT)
+    ferite_define_final(mOGL, "ONE_MINUS_CONSTANT_COLOR_EXT", INT2NUM(GL_ONE_MINUS_CONSTANT_COLOR_EXT));
+#endif
+#if defined(CONSTANT_ALPHA_EXT)
+    ferite_define_final(mOGL, "CONSTANT_ALPHA_EXT", INT2NUM(GL_CONSTANT_ALPHA_EXT));
+#endif
+#if defined(ONE_MINUS_CONSTANT_ALPHA_EXT)
+    ferite_define_final(mOGL, "ONE_MINUS_CONSTANT_ALPHA_EXT", INT2NUM(GL_ONE_MINUS_CONSTANT_ALPHA_EXT));
+#endif
+#if defined(BLEND_EQUATION_EXT)
+    ferite_define_final(mOGL, "BLEND_EQUATION_EXT", INT2NUM(GL_BLEND_EQUATION_EXT));
+#endif
+#if defined(MIN_EXT)
+    ferite_define_final(mOGL, "MIN_EXT", INT2NUM(GL_MIN_EXT));
+#endif
+#if defined(MAX_EXT)
+    ferite_define_final(mOGL, "MAX_EXT", INT2NUM(GL_MAX_EXT));
+#endif
+#if defined(FUNC_ADD_EXT)
+    ferite_define_final(mOGL, "FUNC_ADD_EXT", INT2NUM(GL_FUNC_ADD_EXT));
+#endif
+#if defined(FUNC_SUBTRACT_EXT)
+    ferite_define_final(mOGL, "FUNC_SUBTRACT_EXT", INT2NUM(GL_FUNC_SUBTRACT_EXT));
+#endif
+#if defined(FUNC_REVERSE_SUBTRACT_EXT)
+    ferite_define_final(mOGL, "FUNC_REVERSE_SUBTRACT_EXT", INT2NUM(GL_FUNC_REVERSE_SUBTRACT_EXT));
+#endif
+#if defined(BLEND_COLOR_EXT)
+    ferite_define_final(mOGL, "BLEND_COLOR_EXT", INT2NUM(GL_BLEND_COLOR_EXT));
+#endif
+#if defined(POLYGON_OFFSET_EXT)
+    ferite_define_final(mOGL, "POLYGON_OFFSET_EXT", INT2NUM(GL_POLYGON_OFFSET_EXT));
+#endif
+#if defined(POLYGON_OFFSET_FACTOR_EXT)
+    ferite_define_final(mOGL, "POLYGON_OFFSET_FACTOR_EXT", INT2NUM(GL_POLYGON_OFFSET_FACTOR_EXT));
+#endif
+#if defined(POLYGON_OFFSET_BIAS_EXT)
+    ferite_define_final(mOGL, "POLYGON_OFFSET_BIAS_EXT", INT2NUM(GL_POLYGON_OFFSET_BIAS_EXT));
+#endif
+#if defined(VERTEX_ARRAY_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_EXT", INT2NUM(GL_VERTEX_ARRAY_EXT));
+#endif
+#if defined(NORMAL_ARRAY_EXT)
+    ferite_define_final(mOGL, "NORMAL_ARRAY_EXT", INT2NUM(GL_NORMAL_ARRAY_EXT));
+#endif
+#if defined(COLOR_ARRAY_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_EXT", INT2NUM(GL_COLOR_ARRAY_EXT));
+#endif
+#if defined(INDEX_ARRAY_EXT)
+    ferite_define_final(mOGL, "INDEX_ARRAY_EXT", INT2NUM(GL_INDEX_ARRAY_EXT));
+#endif
+#if defined(TEXTURE_COORD_ARRAY_EXT)
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_EXT", INT2NUM(GL_TEXTURE_COORD_ARRAY_EXT));
+#endif
+#if defined(EDGE_FLAG_ARRAY_EXT)
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_EXT", INT2NUM(GL_EDGE_FLAG_ARRAY_EXT));
+#endif
+#if defined(VERTEX_ARRAY_SIZE_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_SIZE_EXT", INT2NUM(GL_VERTEX_ARRAY_SIZE_EXT));
+#endif
+#if defined(VERTEX_ARRAY_TYPE_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_TYPE_EXT", INT2NUM(GL_VERTEX_ARRAY_TYPE_EXT));
+#endif
+#if defined(VERTEX_ARRAY_STRIDE_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_STRIDE_EXT", INT2NUM(GL_VERTEX_ARRAY_STRIDE_EXT));
+#endif
+#if defined(VERTEX_ARRAY_COUNT_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_COUNT_EXT", INT2NUM(GL_VERTEX_ARRAY_COUNT_EXT));
+#endif
+#if defined(NORMAL_ARRAY_TYPE_EXT)
+    ferite_define_final(mOGL, "NORMAL_ARRAY_TYPE_EXT", INT2NUM(GL_NORMAL_ARRAY_TYPE_EXT));
+#endif
+#if defined(NORMAL_ARRAY_STRIDE_EXT)
+    ferite_define_final(mOGL, "NORMAL_ARRAY_STRIDE_EXT", INT2NUM(GL_NORMAL_ARRAY_STRIDE_EXT));
+#endif
+#if defined(NORMAL_ARRAY_COUNT_EXT)
+    ferite_define_final(mOGL, "NORMAL_ARRAY_COUNT_EXT", INT2NUM(GL_NORMAL_ARRAY_COUNT_EXT));
+#endif
+#if defined(COLOR_ARRAY_SIZE_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_SIZE_EXT", INT2NUM(GL_COLOR_ARRAY_SIZE_EXT));
+#endif
+#if defined(COLOR_ARRAY_TYPE_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_TYPE_EXT", INT2NUM(GL_COLOR_ARRAY_TYPE_EXT));
+#endif
+#if defined(COLOR_ARRAY_STRIDE_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_STRIDE_EXT", INT2NUM(GL_COLOR_ARRAY_STRIDE_EXT));
+#endif
+#if defined(COLOR_ARRAY_COUNT_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_COUNT_EXT", INT2NUM(GL_COLOR_ARRAY_COUNT_EXT));
+#endif
+#if defined(INDEX_ARRAY_TYPE_EXT)
+    ferite_define_final(mOGL, "INDEX_ARRAY_TYPE_EXT", INT2NUM(GL_INDEX_ARRAY_TYPE_EXT));
+#endif
+#if defined(INDEX_ARRAY_STRIDE_EXT)
+    ferite_define_final(mOGL, "INDEX_ARRAY_STRIDE_EXT", INT2NUM(GL_INDEX_ARRAY_STRIDE_EXT));
+#endif
+#if defined(INDEX_ARRAY_COUNT_EXT)
+    ferite_define_final(mOGL, "INDEX_ARRAY_COUNT_EXT", INT2NUM(GL_INDEX_ARRAY_COUNT_EXT));
+#endif
+#if defined(TEXTURE_COORD_ARRAY_SIZE_EXT)
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_SIZE_EXT", INT2NUM(GL_TEXTURE_COORD_ARRAY_SIZE_EXT));
+#endif
+#if defined(TEXTURE_COORD_ARRAY_TYPE_EXT)
+    ferite_define_final(mOGL, "TEXTURE_COORD_ARRAY_TYPE_EXT", INT2NUM(GL_TEXTURE_COORD_ARRAY_TYPE_EXT));
+#endif
+#if defined(EDGE_FLAG_ARRAY_STRIDE_EXT)
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_STRIDE_EXT", INT2NUM(GL_EDGE_FLAG_ARRAY_STRIDE_EXT));
+#endif
+#if defined(EDGE_FLAG_ARRAY_COUNT_EXT)
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_COUNT_EXT", INT2NUM(GL_EDGE_FLAG_ARRAY_COUNT_EXT));
+#endif
+#if defined(VERTEX_ARRAY_POINTER_EXT)
+    ferite_define_final(mOGL, "VERTEX_ARRAY_POINTER_EXT", INT2NUM(GL_VERTEX_ARRAY_POINTER_EXT));
+#endif
+#if defined(NORMAL_ARRAY_POINTER_EXT)
+    ferite_define_final(mOGL, "NORMAL_ARRAY_POINTER_EXT", INT2NUM(GL_NORMAL_ARRAY_POINTER_EXT));
+#endif
+#if defined(COLOR_ARRAY_POINTER_EXT)
+    ferite_define_final(mOGL, "COLOR_ARRAY_POINTER_EXT", INT2NUM(GL_COLOR_ARRAY_POINTER_EXT));
+#endif
+#if defined(INDEX_ARRAY_POINTER_EXT)
+    ferite_define_final(mOGL, "INDEX_ARRAY_POINTER_EXT", INT2NUM(GL_INDEX_ARRAY_POINTER_EXT));
+#endif
+#if defined(EDGE_FLAG_ARRAY_POINTER_EXT)
+    ferite_define_final(mOGL, "EDGE_FLAG_ARRAY_POINTER_EXT", INT2NUM(GL_EDGE_FLAG_ARRAY_POINTER_EXT));
+#endif
+#if defined(TEXTURE_PRIORITY_EXT)
+    ferite_define_final(mOGL, "TEXTURE_PRIORITY_EXT", INT2NUM(GL_TEXTURE_PRIORITY_EXT));
+#endif
+#if defined(TEXTURE_RESIDENT_EXT)
+    ferite_define_final(mOGL, "TEXTURE_RESIDENT_EXT", INT2NUM(GL_TEXTURE_RESIDENT_EXT));
+#endif
+#if defined(TEXTURE_1D_BINDING_EXT)
+    ferite_define_final(mOGL, "TEXTURE_1D_BINDING_EXT", INT2NUM(GL_TEXTURE_1D_BINDING_EXT));
+#endif
+#if defined(TEXTURE_2D_BINDING_EXT)
+    ferite_define_final(mOGL, "TEXTURE_2D_BINDING_EXT", INT2NUM(GL_TEXTURE_2D_BINDING_EXT));
+#endif
+#if defined(PACK_SKIP_IMAGES_EXT)
+    ferite_define_final(mOGL, "PACK_SKIP_IMAGES_EXT", INT2NUM(GL_PACK_SKIP_IMAGES_EXT));
+#endif
+#if defined(PACK_IMAGE_HEIGHT_EXT)
+    ferite_define_final(mOGL, "PACK_IMAGE_HEIGHT_EXT", INT2NUM(GL_PACK_IMAGE_HEIGHT_EXT));
+#endif
+#if defined(UNPACK_SKIP_IMAGES_EXT)
+    ferite_define_final(mOGL, "UNPACK_SKIP_IMAGES_EXT", INT2NUM(GL_UNPACK_SKIP_IMAGES_EXT));
+#endif
+#if defined(UNPACK_IMAGE_HEIGHT_EXT)
+    ferite_define_final(mOGL, "UNPACK_IMAGE_HEIGHT_EXT", INT2NUM(GL_UNPACK_IMAGE_HEIGHT_EXT));
+#endif
+#if defined(TEXTURE_3D_EXT)
+    ferite_define_final(mOGL, "TEXTURE_3D_EXT", INT2NUM(GL_TEXTURE_3D_EXT));
+#endif
+#if defined(PROXY_TEXTURE_3D_EXT)
+    ferite_define_final(mOGL, "PROXY_TEXTURE_3D_EXT", INT2NUM(GL_PROXY_TEXTURE_3D_EXT));
+#endif
+#if defined(TEXTURE_DEPTH_EXT)
+    ferite_define_final(mOGL, "TEXTURE_DEPTH_EXT", INT2NUM(GL_TEXTURE_DEPTH_EXT));
+#endif
+#if defined(TEXTURE_WRAP_R_EXT)
+    ferite_define_final(mOGL, "TEXTURE_WRAP_R_EXT", INT2NUM(GL_TEXTURE_WRAP_R_EXT));
+#endif
+#if defined(MAX_3D_TEXTURE_SIZE_EXT)
+    ferite_define_final(mOGL, "MAX_3D_TEXTURE_SIZE_EXT", INT2NUM(GL_MAX_3D_TEXTURE_SIZE_EXT));
+#endif
+#if defined(TEXTURE_3D_BINDING_EXT)
+    ferite_define_final(mOGL, "TEXTURE_3D_BINDING_EXT", INT2NUM(GL_TEXTURE_3D_BINDING_EXT));
+#endif
+#endif
+
+#if defined(GL_VERSION_1_2)
+    ferite_define_final(mOGL, "RESCALE_NORMAL", INT2NUM(GL_RESCALE_NORMAL));
+    ferite_define_final(mOGL, "CLAMP_TO_EDGE", INT2NUM(GL_CLAMP_TO_EDGE));
+    ferite_define_final(mOGL, "MAX_ELEMENTS_VERTICES", INT2NUM(GL_MAX_ELEMENTS_VERTICES));
+    ferite_define_final(mOGL, "MAX_ELEMENTS_INDICES", INT2NUM(GL_MAX_ELEMENTS_INDICES));
+    ferite_define_final(mOGL, "BGR", INT2NUM(GL_BGR));
+    ferite_define_final(mOGL, "BGRA", INT2NUM(GL_BGRA));
+    ferite_define_final(mOGL, "UNSIGNED_BYTE_3_3_2", INT2NUM(GL_UNSIGNED_BYTE_3_3_2));
+    ferite_define_final(mOGL, "UNSIGNED_BYTE_2_3_3_REV", INT2NUM(GL_UNSIGNED_BYTE_2_3_3_REV));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_5_6_5", INT2NUM(GL_UNSIGNED_SHORT_5_6_5));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_5_6_5_REV", INT2NUM(GL_UNSIGNED_SHORT_5_6_5_REV));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_4_4_4_4", INT2NUM(GL_UNSIGNED_SHORT_4_4_4_4));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_4_4_4_4_REV", INT2NUM(GL_UNSIGNED_SHORT_4_4_4_4_REV));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_5_5_5_1", INT2NUM(GL_UNSIGNED_SHORT_5_5_5_1));
+    ferite_define_final(mOGL, "UNSIGNED_SHORT_1_5_5_5_REV", INT2NUM(GL_UNSIGNED_SHORT_1_5_5_5_REV));
+    ferite_define_final(mOGL, "UNSIGNED_INT_8_8_8_8", INT2NUM(GL_UNSIGNED_INT_8_8_8_8));
+    ferite_define_final(mOGL, "UNSIGNED_INT_8_8_8_8_REV", INT2NUM(GL_UNSIGNED_INT_8_8_8_8_REV));
+    ferite_define_final(mOGL, "UNSIGNED_INT_10_10_10_2", INT2NUM(GL_UNSIGNED_INT_10_10_10_2));
+    ferite_define_final(mOGL, "UNSIGNED_INT_2_10_10_10_REV", INT2NUM(GL_UNSIGNED_INT_2_10_10_10_REV));
+    ferite_define_final(mOGL, "LIGHT_MODEL_COLOR_CONTROL", INT2NUM(GL_LIGHT_MODEL_COLOR_CONTROL));
+    ferite_define_final(mOGL, "SINGLE_COLOR", INT2NUM(GL_SINGLE_COLOR));
+    ferite_define_final(mOGL, "SEPARATE_SPECULAR_COLOR", INT2NUM(GL_SEPARATE_SPECULAR_COLOR));
+    ferite_define_final(mOGL, "TEXTURE_MIN_LOD", INT2NUM(GL_TEXTURE_MIN_LOD));
+    ferite_define_final(mOGL, "TEXTURE_MAX_LOD", INT2NUM(GL_TEXTURE_MAX_LOD));
+    ferite_define_final(mOGL, "TEXTURE_BASE_LEVEL", INT2NUM(GL_TEXTURE_BASE_LEVEL));
+    ferite_define_final(mOGL, "TEXTURE_MAX_LEVEL", INT2NUM(GL_TEXTURE_MAX_LEVEL));
+#endif /* GL_VERSION_1_2 */
+
+    ferite_define_final(mOGL, "CURRENT_BIT", INT2NUM(GL_CURRENT_BIT));
+    ferite_define_final(mOGL, "POINT_BIT", INT2NUM(GL_POINT_BIT));
+    ferite_define_final(mOGL, "LINE_BIT", INT2NUM(GL_LINE_BIT));
+    ferite_define_final(mOGL, "POLYGON_BIT", INT2NUM(GL_POLYGON_BIT));
+    ferite_define_final(mOGL, "POLYGON_STIPPLE_BIT", INT2NUM(GL_POLYGON_STIPPLE_BIT));
+    ferite_define_final(mOGL, "PIXEL_MODE_BIT", INT2NUM(GL_PIXEL_MODE_BIT));
+    ferite_define_final(mOGL, "LIGHTING_BIT", INT2NUM(GL_LIGHTING_BIT));
+    ferite_define_final(mOGL, "FOG_BIT", INT2NUM(GL_FOG_BIT));
+    ferite_define_final(mOGL, "DEPTH_BUFFER_BIT", INT2NUM(GL_DEPTH_BUFFER_BIT));
+    ferite_define_final(mOGL, "ACCUM_BUFFER_BIT", INT2NUM(GL_ACCUM_BUFFER_BIT));
+    ferite_define_final(mOGL, "STENCIL_BUFFER_BIT", INT2NUM(GL_STENCIL_BUFFER_BIT));
+    ferite_define_final(mOGL, "VIEWPORT_BIT", INT2NUM(GL_VIEWPORT_BIT));
+    ferite_define_final(mOGL, "TRANSFORM_BIT", INT2NUM(GL_TRANSFORM_BIT));
+    ferite_define_final(mOGL, "ENABLE_BIT", INT2NUM(GL_ENABLE_BIT));
+    ferite_define_final(mOGL, "COLOR_BUFFER_BIT", INT2NUM(GL_COLOR_BUFFER_BIT));
+    ferite_define_final(mOGL, "HINT_BIT", INT2NUM(GL_HINT_BIT));
+    ferite_define_final(mOGL, "EVAL_BIT", INT2NUM(GL_EVAL_BIT));
+    ferite_define_final(mOGL, "LIST_BIT", INT2NUM(GL_LIST_BIT));
+    ferite_define_final(mOGL, "TEXTURE_BIT", INT2NUM(GL_TEXTURE_BIT));
+    ferite_define_final(mOGL, "SCISSOR_BIT", INT2NUM(GL_SCISSOR_BIT));
+    ferite_define_final(mOGL, "ALL_ATTRIB_BITS", INT2NUM(GL_ALL_ATTRIB_BITS));
+#if defined(GL_VERSION_1_1)
+    ferite_define_final(mOGL, "CLIENT_PIXEL_STORE_BIT", INT2NUM(GL_CLIENT_PIXEL_STORE_BIT));
+    ferite_define_final(mOGL, "CLIENT_VERTEX_ARRAY_BIT", INT2NUM(GL_CLIENT_VERTEX_ARRAY_BIT));
+#ifndef GL_ALL_CLIENT_ATTRIB_BITS
+#define GL_ALL_CLIENT_ATTRIB_BITS GL_CLIENT_ALL_ATTRIB_BITS
+#endif
+    ferite_define_final(mOGL, "ALL_CLIENT_ATTRIB_BITS", INT2NUM(GL_ALL_CLIENT_ATTRIB_BITS));
+#endif /* GL_VERSION_1_1 */
+}

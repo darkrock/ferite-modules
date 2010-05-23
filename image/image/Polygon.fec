@@ -1,0 +1,154 @@
+uses "image.lib";
+
+/**
+ * @class Polygon
+ * @description This calls holds a polygon used for drawing.
+ */
+class Polygon
+{
+	native function constructor()
+	{
+		self->odata = imlib_polygon_new();
+	}
+	
+        /**
+	 * @function add
+	 * @declaration function add(number x,number y)
+	 * @brief Add a point to the this polygon
+	 * @param number x the x coordinate
+	 * @param number y the y coordinate
+	 * @return number bool false on failure and true on success
+	 */
+	native function add(number x,number y)
+        {
+		if( SelfPoly == NULL ) {
+			ferite_error( script, 0,"[Ferite::Plygon] Error, cant add point to an empty object\n" );
+			FE_RETURN_FALSE;
+		}
+		imlib_polygon_add_point(SelfPoly, (int) x, (int) y);
+		FE_RETURN_TRUE;
+	}
+        /**
+	 * @function add
+	 * @declaration function add( object p )
+	 * @brief Add a point to the this polygon
+	 * @param object p A Point object
+	 * @return number bool false on failure and true on success
+	 */
+	function add( object p )
+	{
+	    return .add( p.x, p.y );
+	}
+	
+	/**
+	 * @function fill
+	 * @declaration function fill( object color )
+	 * @brief fill the polygon with a color
+	 * @param object color an object of class color to fill the polygon with
+	 * @return number bool, false on failure and true on success
+	 */
+	native function fill( object color )
+        {
+		if( SelfPoly == NULL ) {
+			ferite_error( script, 0, "[Ferite::Plygon] Error. Object is NULL\n" );
+			FE_RETURN_FALSE;
+		}
+		
+		set_color( script, color );
+		imlib_image_fill_polygon(SelfPoly);
+		FE_RETURN_TRUE;
+	}
+
+        /**
+	 * @function isPart
+	 * @declaration function isPart(number x, number y) 
+	 * @brief Check if a specified coodinate is inside of the polygon
+ 	 * @param number x the x coordinate
+	 * @param number y the y coordinate
+	 * @return number bool, false if the coordinate is not part of the polygon 
+	 *  success if it is.
+	 */
+	native function isPart(number x, number y) 
+        {
+		if( SelfPoly == NULL ) {
+			ferite_error( script, 0,"[Ferite::Plygon] Error. Object is NULL\n" );
+			FE_RETURN_FALSE;
+		}
+		
+		FE_RETURN_LONG( imlib_polygon_contains_point(SelfPoly, (int) x, (int) y) );
+	}
+        /**
+	 * @function isPart
+	 * @declaration function isPart(object p) 
+	 * @brief Check if a specified coodinate is inside of the polygon
+	 * @param object p The point as an instance of a Point class
+	 * @return number bool, false if the coordinate is not part of the polygon success if it is.
+	 */
+	function isPart( object p )
+	{
+		return .isPart( p.x, p.y );
+	}
+
+        /**
+	 * @function getBounds
+	 * @declaration function getBounds() 
+	 * @brief Get the bounding rectangle for the polygon
+	 * @return A Rect object with the bounds information within it.
+	 */
+	native function getBounds()
+	{
+		FeriteNamespaceBucket *nsb;
+		FeriteClass *pointklass, *rectklass, *sizeklass;
+		FeriteVariable *retv, *tmpvar, *tmpobj, *point, *size, **params;
+		int px1, py1, px2, py2;
+
+		if( SelfPoly == NULL ) {
+			ferite_error( script, 0,"[Ferite::Plygon] Error. Object is NULL\n" );
+			FE_RETURN_FALSE;
+		}
+		// Calculate the bounding area of the polygon. (px1, py1) defines the upper left 
+		// corner of the bounding box and (px2, py2) defines it's lower right corner.
+		imlib_polygon_get_bounds( SelfPoly, &px1, &py1, &px2, &py2 );
+
+		nsb = ferite_find_namespace( script, script->mainns, "Point", FENS_CLS );
+		if( nsb == NULL ){
+		    ferite_error(script, 0, "Error creating Point object\n");
+		    FE_RETURN_NULL_OBJECT;
+		}	
+		point = ferite_new_object( script, nsb->data, NULL );
+		tmpvar = ferite_object_get_var( script, VAO(point), "x" );
+		VAI(tmpvar) = px1;
+		tmpvar = ferite_object_get_var( script, VAO(point), "y" );
+		VAI(tmpvar) = py1;
+		MARK_VARIABLE_AS_DISPOSABLE(point);
+
+		nsb = ferite_find_namespace( script, script->mainns, "Size", FENS_CLS );
+		if( nsb == NULL ){
+		    ferite_error(script, 0, "Error creating Size object\n");
+		    FE_RETURN_NULL_OBJECT;
+		}	
+		size = ferite_new_object( script, nsb->data, NULL );
+		tmpvar = ferite_object_get_var( script, VAO(size), "width" );
+		VAI(tmpvar) = px2 - px1;
+		tmpvar = ferite_object_get_var( script, VAO(size), "height" );
+		VAI(tmpvar) = py2 - py1;
+		MARK_VARIABLE_AS_DISPOSABLE(size);
+
+		nsb = ferite_find_namespace( script, script->mainns, "Rect", FENS_CLS );
+		if( nsb == NULL ){
+		    ferite_error(script, 0, "Error creating Rect object\n");
+		    FE_RETURN_NULL_OBJECT;
+		}			
+		params = ferite_create_parameter_list(script, 3);
+		params[0] = point;
+		params[1] = size;
+		retv = ferite_new_object( script, nsb->data, params );
+		ferite_delete_parameter_list(script, params);
+		
+		FE_RETURN_VAR(retv);
+	}
+	
+}
+/**
+ * @end
+ */

@@ -1,0 +1,227 @@
+/*
+ * Copyright (C) 2004 Christian M. Stamgren and Cention AB
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+uses "zip.lib";
+
+module-header 
+{
+    #include <zzip/zzip.h>
+
+    typedef struct zipentry_s {
+   	ZZIP_FILE   *file;
+   	ZZIP_DIRENT dir;	
+    } zipentry_t;
+
+}
+ 
+/**
+ * @namespace Zip
+ * @brief This namespace is a contianer for the diffrent classes zipArchive and zipEntry
+ */
+namespace Zip 
+{
+
+    /**
+     * @function open
+     * @declaration function open( string filename );
+     * @brief This function opens a zip archive for reading. 
+     * @return object a newly created object of the class zipArchive.
+     * @param string filename The path to the zip archive to open.
+     */
+    native function open( string filename ) {
+      	FeriteClass *cls;
+      	FeriteVariable *obj;
+      	ZZIP_DIR *archive = NULL;
+	
+      	archive = zzip_opendir( filename->data );
+      	ferite_set_error( script, -1, "Could not open file %s" , filename->data);
+      	if(archive == NULL) FE_RETURN_NULL_OBJECT;
+	
+      	cls = ferite_find_class( script, script->mainns, "Zip.zipArchive" );
+      	obj = ferite_build_object( script, cls );
+	    
+      	VAO(obj)->odata = archive;
+      	FE_RETURN_VAR( obj );
+    }
+   
+    /**
+     * @class zipArchive
+     * @brief This class is for loading and reading the archive.
+     */
+    class zipArchive
+    {
+	
+   /**
+	 * @function read
+	 * @declaration function read( )
+	 * @brief Read through a zip archive one-by-one.
+	 * @description This function is like readdir() c function makes it possible to read though an archive.
+	   Each time you call this function, the next entry within the zip file is read.
+	 * @return an object of type zipEntry which makes it possible to work with the data.
+	 */
+	native function read()
+	{
+	    FeriteClass *cls;
+	    FeriteVariable *obj;
+	
+	    ZZIP_DIR *archive = self->odata;
+	    zipentry_t *entry = fmalloc( sizeof(zipentry_t) );
+	
+	    if( zzip_dir_read( archive, &entry->dir) == 0) {
+   		ffree( entry );
+   		FE_RETURN_NULL_OBJECT;
+	    }
+	
+	    entry->file = zzip_file_open(archive, entry->dir.d_name, O_RDONLY);
+	    
+	    cls = ferite_find_class( script, script->mainns, "Zip.zipEntry" );
+	    obj = ferite_build_object( script, cls );
+	    VAO(obj)->odata = entry;
+	    FE_RETURN_VAR( obj );
+	} 
+    
+	/**
+	 * @function close
+	 * @declaration function close( );
+	 * @brief close an open archive.
+	 * @return null 
+	 */
+	native function close( ) {
+	    ZZIP_DIR *archive = self->odata;
+	    zzip_closedir(archive);
+	    archive = NULL;
+	}
+
+	native function destructor( ) {
+	    ZZIP_DIR *archive = self->odata;
+	    if( archive != NULL ) zzip_closedir(archive);
+	}
+    }
+    /**
+     * @end
+     */
+
+    /**
+     * @class zipEntry
+     * @brief This class is the container for an entry in the zip-archive.  
+     *        
+     */
+    class zipEntry
+    {
+	/**
+	 * @function name
+	 * @declaration function name( )
+	 * @brief this function returns the name of the file in this entry.
+	 * @return string name, the name
+	 */
+	native function name( ) {
+	    FeriteVariable *str;
+	    zipentry_t *entry = self->odata;
+
+	    str = fe_new_str("zipentry::name", entry->dir.d_name, 0, FE_CHARSET_DEFAULT);
+	    FE_RETURN_VAR( str );
+	}
+
+	/**
+	 * @function size
+	 * @declaration function size( )
+	 * @brief this function returns the actual size of the entry when it has been decompressed.
+	 * @return number, the size in bytes.
+	 */
+	native function size( ) {
+	    zipentry_t *entry = self->odata;
+	    FE_RETURN_LONG( entry->dir.st_size );
+	}
+
+	/**
+	 * @function compressionMethod
+	 * @declaration function compressionMethod( )
+	 * @brief fetch the comprresion method of the file. 
+	 * @declaraion Depending on the archive, the file might be deflated or simply stored depending if the 
+	   file is zipped internaly or not.
+	 * @return string 
+	 */
+	native function compressionMethod( ) {
+	    FeriteVariable *str;
+	    const char *method = NULL;
+	    zipentry_t *entry = self->odata;
+
+	    method = zzip_compr_str(entry->dir.d_compr);
+	    str = fe_new_str("zipentry::compressedMethod", (char *)method, 0, FE_CHARSET_DEFAULT);
+	    FE_RETURN_VAR( str );
+	}
+	
+	/**
+	 * @function compressedSize
+	 * @declaration function compressedSize( );
+	 * @brief the size of the file in its compressed format.
+	 * @return The size in bytes.
+	 */
+	native function compressedSize( ) {
+	    zipentry_t *entry = self->odata;
+	    FE_RETURN_LONG( entry->dir.d_csize );
+	}
+
+	/**
+	 * @function data
+	 * @declaration function data( );
+	 * @brief return the data of the entry
+	 * @return string the actual file contents having been decompressed.
+	 */
+	native function data( ) {
+	    FeriteVariable *str;
+	    int retval = 0;
+	    char *buf = NULL;
+	    zipentry_t *entry = self->odata;
+	    buf = fmalloc( entry->dir.st_size +1 );
+	    
+	    retval = zzip_read(entry->file, buf, entry->dir.st_size);
+	    buf[retval] = '\0';
+
+	    str = fe_new_str("zipentry::data", buf, entry->dir.st_size, FE_CHARSET_DEFAULT);
+	    ffree( buf );
+
+	    FE_RETURN_VAR( str );
+	}
+
+	native function destructor () {
+	    zipentry_t *entry = self->odata;
+
+	    if (entry->file)
+		zzip_close(entry->file);	    
+	    ffree(entry);
+	}
+    }
+    /**
+     * @end 
+     */
+}
+/**
+ * @end 
+ */

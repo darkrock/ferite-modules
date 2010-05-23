@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<module>
+    <name>serial</name>
+    <documentation-list>
+        <include>serial.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

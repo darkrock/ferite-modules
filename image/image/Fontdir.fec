@@ -1,0 +1,20 @@
+/**
+ * @namespace Fontdir
+ * @brief This provides the access to setting up the font paths.
+ */	
+namespace Fontdir
+{
+      /**
+       * @function add
+       * @declaration function add(string path) 
+       * @brief Add a directory to the list of directories that will be search while trying to load a font.
+       * @param string path the path to add.
+       */
+        native function add(string path) 
+        {
+	   imlib_add_path_to_font_path(path->data);
+	}
+}	
+/**
+ * @end
+ */

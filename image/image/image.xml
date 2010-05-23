@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<module>
+    <name>image</name>
+    <documentation-list>
+        <include>image.fec</include>
+        <include>ImageClass.fec</include>
+        <include>Polygon.fec</include>
+        <include>Font.fec</include>
+        <include>Fontdir.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

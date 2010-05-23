@@ -1,0 +1,55 @@
+uses "dbi", "console","sys";
+ 
+array arr;
+object res,dbh = Dbi.connect("pgsql", "root", "", "localhost", 1234, "test");
+
+
+if (dbh == null) {
+    Console.println("Error: " + "Can't connect to database");	 
+    Sys.exit(1);	
+}
+
+//Query database
+res = dbh.query("SELECT * from testtable");
+if(res == null) { 	
+    Console.println("Error: " + dbh.errstr());	 
+    Sys.exit(1);
+}
+ 
+//Loop through the records
+while(arr = res.nextRecord()) {
+    Console.print("testrecord1: " +  arr["testrecord1"]);
+    Console.println(" testrecord2: " +  arr["testrecord2"]);	
+}
+
+//Print the number of rows in the recordset
+Console.println("Number of rows fetched: " + res.rows());
+
+//List all databases in this instance
+res = dbh.list_dbs();
+if(res == null) { 	
+    Console.println("Error: " + dbh.errstr());
+    Sys.exit(1);
+}
+	
+while(arr = res.nextRecord()) {
+    Console.println("Db: " +  arr[0]);
+}
+
+//List all tables in a specified database
+res = dbh.listTables("mysql");
+if(res == null) { 	
+    Console.println("Error: " + dbh.errstr());
+    Sys.exit(1);
+}
+	
+while(arr = res.nextRecord()) {
+    Console.println("Table: " +  arr[0]);
+}
+
+//Escape a string so that its safe to use in queries.
+Console.println("Quoted string: " + dbh.quote("quoted ' % ' string"));
+
+//Disconnect from the database.
+dbh.disconnect();
+

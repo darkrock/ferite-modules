@@ -1,0 +1,45 @@
+#!/usr/bin/env ferite
+
+uses "curses", "sys", "string";
+
+number ch, i = 0;
+object scr, p1, p2;
+
+scr = Curses.init();
+Curses.start_color();
+Curses.cbreak(true);
+Curses.echo(false);
+Curses.nl(false);
+scr.intrflush(false);
+scr.keypad(true);
+scr.nodelay(true);
+
+Curses.init_pair(1, Curses.COLOR_WHITE, Curses.COLOR_BLACK);
+Curses.init_pair(2, Curses.COLOR_YELLOW, Curses.COLOR_BLUE);
+Curses.init_pair(3, Curses.COLOR_BLACK, Curses.COLOR_WHITE);
+
+scr.bkgd(Curses.color_pair(1));
+scr.attrset(Curses.color_pair(1) | Curses.A_BOLD);
+scr.refresh();
+p1 = Curses.newpad(20, 20);
+p1.bkgd(Curses.color_pair(2));
+p1.attrset(Curses.color_pair(2) | Curses.A_BOLD);
+p1.scrollok(true);
+p2 = Curses.newpad(20, 20);
+p2.bkgd(Curses.color_pair(3));
+p2.attrset(Curses.color_pair(3) | Curses.A_BOLD);
+p2.scrollok(true);
+
+do {
+	p1.addstr(" ONE " + i);
+	p2.addstr(" TWO " + i);
+	i++;
+	ch = scr.getch();
+	if(ch == String.charToNum(' ')) {
+		p1.refresh(0, 0, 0, 0, 20, 20);
+		p2.refresh(20, 0, 0, 0, 20, 20);
+		scr.refresh();
+	}
+} while(ch != Curses.KEY_BREAK);
+
+scr.close();

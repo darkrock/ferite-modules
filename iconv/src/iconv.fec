@@ -1,0 +1,101 @@
+
+uses "iconv.lib";
+
+module-header {
+	
+#include <iconv.h>
+	
+#define SelfICONVT()  *((iconv_t*)self->odata)
+	
+}
+
+namespace iconv {
+	
+	class Convertor {
+		
+		native constructor( string target, string source ) {
+			iconv_t real = iconv_open( target->data, source->data );
+			if( real == (iconv_t)-1 ) {
+				ferite_error( script, 0, "Conversion from '%s' to '%s' is not availiable\n", source->data, target->data );
+				FE_RETURN_NULL_OBJECT;
+			} else {
+				iconv_t *cd = fmalloc( sizeof( iconv_t ) );
+				*cd = real;
+				self->odata = cd;
+			}
+		}
+		native function destructor() {
+			if( self->odata ) {
+				iconv_t cd = SelfICONVT();
+				iconv_close( cd );
+				self->odata = NULL;
+			}
+		}
+		
+		native function convert( string value ) {
+			size_t in_size, out_size, out_left, out_final, result;
+			char *in_buffer, *out_buffer = NULL, *out_p = NULL;
+			iconv_t cd = SelfICONVT();
+			FeriteVariable *retv = NULL;
+			
+			in_buffer = value->data;
+			in_size = value->length;
+			out_size = in_size * sizeof(int) + 15;
+			out_left = out_size;
+			
+			out_buffer = (char*)fmalloc( out_size + 1 );
+			out_p = out_buffer;
+			
+			result = iconv( cd, (const char**)&in_buffer, &in_size, (char**)&out_p, &out_left );
+			if( result == (size_t)-1 ) {
+				ffree( out_buffer );
+				ferite_error( script, 0, "Unknown conversion error for string '%s'\n", value->data );
+				FE_RETURN_VOID;
+			}
+			
+			if (out_left < 8) {
+				out_buffer = (char *) frealloc(out_buffer, out_size + 8);
+			}
+			
+			/* flush the shift-out sequences */ 
+			result = iconv(cd, NULL, NULL, &out_p, &out_left);
+			
+			if (result == (size_t)(-1)) {
+				ffree( out_buffer );
+				ferite_error( script, 0, "Unknown conversion error for string '%s'\n", value->data );
+				FE_RETURN_VOID;	
+			}
+			
+			
+			out_final = out_size - out_left;
+			out_buffer[out_final] = '\0';
+			retv = ferite_create_string_variable_from_ptr( script, "iconv", out_buffer, out_final, FE_CHARSET_DEFAULT, FE_STATIC );
+			ffree( out_buffer );
+			
+			FE_RETURN_VAR( retv );
+		}
+	}
+	
+	object globalConvertor;
+	
+	function open( string target, string source ) {
+		object convertor = new iconv.Convertor( target, source );
+		if( convertor ) {
+			if( recipient() ) {
+				deliver( convertor );
+				convertor = null;
+			}
+		}	
+		return convertor;
+	}
+	
+	function setGlobalConvertor( string target, string source ) {
+		.globalConvertor = .open( target, source );
+	}
+	function str( string value ) {
+		if( .globalConvertor ) {
+			return .globalConvertor.convert( value );
+		}
+		return value;
+	}
+}

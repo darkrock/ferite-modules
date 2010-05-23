@@ -1,0 +1,83 @@
+uses "test","console","template";
+
+class Foo
+{
+    number a = 1;
+    number b = 0;
+    object next;
+}
+class Bar
+{
+    string x = "abc";
+    string y = "def";
+    object child;
+}
+function build_object( )
+{
+    object o = new Foo();
+    o.next = new Bar();
+    o.next.child = new Foo();
+    o.next.child.b = 42;
+    return o;
+}
+
+class TemplateTest extends Test
+{
+    function TemplateTest( )
+    {
+	super.Test( );
+    }
+    function dump( )
+    {
+	/* we just skip this, it's mainly for debugging */
+	return 0;
+    }
+    function parse( )
+    {
+	object foo = build_object( );
+	object o = new Template( foo );
+	string tmpl = "[next:[x:[]]]";
+	if( !o.parse( tmpl ) )
+	    return 1;
+	if( o.run() != "abc" )
+	    return 2;
+	if( o.parse( "[foo: [a x" ) )
+	    return 3;
+	return 0;
+    }
+    function parseFile( )
+    {
+	object foo = build_object( );
+	object o = new Template( foo );
+	if( !o.parsefile("data.tmpl") )
+	    return 1;
+	return 0;
+    }
+    function debug( )
+    {
+
+    }
+    function setPath( )
+    {
+    }
+    function __shakedown__( )
+    {
+	/* There is a bug when a include is the first node */
+	object foo = build_object( );
+	object o = new Template( foo );
+	if( !o.parse("[#include hello.tpl]World") )
+	    return 1;
+	if( o.run() != "Hello\nWorld" )
+	    return 2;
+	/* Check for non parsed blocks */
+	if( !o.parse("%%%[]%%%") )
+	    return 3;
+	if( o.run() != "[]" )
+	    return 4;
+	return 0;
+    }
+}
+
+object o = new TemplateTest();
+o.run("Template");
+

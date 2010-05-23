@@ -1,0 +1,115 @@
+#!/usr/bin/env ferite
+
+uses "console", "sys", "serial";
+
+function printSettings(object ser)
+{
+	Console.println("Serial Port Settings");
+	Console.println("--------------------");
+	Console.println("Data bits = " + ser.getDataBits());
+	Console.println("Stop bits = " + ser.getStopBits());
+	Console.print("Parity = ");
+	switch(ser.getParity()) {
+		case Serial.PARITY_NONE:
+			Console.println("none");
+			break;
+		case Serial.PARITY_ODD:
+			Console.println("odd");
+			break;
+		case Serial.PARITY_EVEN:
+			Console.println("even");
+			break;
+		default:
+			Console.println("unknown value " + ser.getParity());
+			break;
+	}
+	Console.print("Flow control = ");
+	switch(ser.getFlowControl()) {
+		case Serial.FC_NONE:
+			Console.println("none");
+			break;
+		case Serial.FC_XONXOFF:
+			Console.println("XON/XOFF");
+			break;
+		case Serial.FC_RTSCTS:
+			Console.println("RTS/CTS");
+			break;
+		case Serial.FC_BOTH:
+			Console.println("both XON/XOFF and RTS/CTS");
+			break;
+		default:
+			Console.println("unknown value " + ser.getFlowControl());
+			break;
+	}
+	Console.println("Input baud rate = " + ser.getInputSpeed());
+	Console.println("Output baud rate = " + ser.getOutputSpeed());
+}
+
+number i;
+string s;
+object ser0;
+
+ser0 = new Serial.Port("/dev/tts/0");
+if(!ser0) {
+	Console.printlnErr("Open of serial port failed: " + err.str);
+	Sys.exit(1);
+}
+
+printSettings(ser0);
+
+if(!ser0.initSettings()) {
+	Console.printlnErr("Failed to initialise port settings");
+	ser0.close();
+	Sys.exit(1);
+} else Console.println("Initialised to default port settings");
+
+if(ser0.getDataBits() != 8) {
+	if(!ser0.setDataBits(8)) {
+		Console.printlnErr("Failed to set data bits to 8");
+		ser0.close();
+		Sys.exit(1);
+	} else Console.println("Set data bits to 8");
+}
+
+if(ser0.getStopBits() != 1) {
+	if(!ser0.setStopBits(8)) {
+		Console.printlnErr("Failed to set stop bits to 1");
+		ser0.close();
+		Sys.exit(1);
+	} else Console.println("Set stop bits to 1");
+}
+
+if(ser0.getParity() != Serial.PARITY_NONE) {
+	if(!ser0.setParity(Serial.PARITY_NONE)) {
+		Console.printlnErr("Failed to turn parity off");
+		ser0.close();
+		Sys.exit(1);
+	} else Console.println("Turned parity off");
+}
+
+if(ser0.getFlowControl() != Serial.FC_NONE) {
+	if(!ser0.setFlowControl(Serial.FC_NONE)) {
+		Console.printlnErr("Failed to turn flow control off");
+		ser0.close();
+		Sys.exit(1);
+	} else Console.println("Turned flow control off");
+}
+
+if(ser0.getInputSpeed() != 19200 || ser0.getOutputSpeed() != 19200) {
+	if(!ser0.setSpeed(19200)) {
+		Console.printlnErr("Failed to set baud rate");
+		ser0.close();
+		Sys.exit(1);
+	} else Console.println("Set baud rate to 19200");
+}
+
+i = ser0.write("Hello World\r\n");
+if(i == -1) Console.printlnErr("Write failed: " + err.str);
+else Console.println("Wrote \"Hello World\" to the serial port");
+
+s = ser0.read(64);
+Console.println("Read \"" + s + "\" from the serial port");
+
+ser0.restoreSettings();
+Console.println("Restored original port settings");
+ser0.close();

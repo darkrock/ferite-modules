@@ -1,0 +1,856 @@
+uses "glut.lib";
+
+module-header {
+    
+/*
+ * $Date$
+ * $Author$
+ */
+#if defined(WIN32)
+# include "windows.h"
+#endif
+#include "utility.h"
+#include "GLUT_utility.h"
+    
+}
+
+
+/*
+ * GLUT Implementation
+ */
+namespace modifies GLUT {
+    
+    native function Init( array arg1 ) {
+        int largc;
+        char** largv;
+        int i;
+
+        largc = arg1->size+1;
+        largv = fcalloc( sizeof(char*),largc+2 );
+        largv[0] = "ferite-script";
+        for (i = 1; i < largc; i++) {
+            largv[i] = VAS(arg1->array[i])->data;
+        }
+        largv[i] = NULL;
+        glutInit(&largc, largv);
+        ffree( largv );
+    }   
+
+    native function InitDisplayMode( number arg1 ) {
+        unsigned int mode;
+        mode = (unsigned int)NUM2LNG(params[0]);
+        glutInitDisplayMode(mode);
+    }
+
+    native function InitDisplayString( string arg1 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        glutInitDisplayString( arg1->data );
+#endif
+    }
+
+    native function InitWindowPosition( number arg1, number arg2 ) {
+        int x,y;
+        x = NUM2LNG(params[0]);
+        y = NUM2LNG(params[1]);
+        glutInitWindowPosition(x,y);
+    }
+
+    native function InitWindowSize( number arg1, number arg2 ) {
+        int width,height;
+        width = NUM2LNG(params[0]);
+        height = NUM2LNG(params[1]);
+        glutInitWindowSize(width,height);
+    }
+
+    native function MainLoop() {
+        glutMainLoop();
+    }
+    native function ExitMainLoop() {
+        exit(0);
+    }
+
+/* GLUT window sub-API. */ 
+
+    native function CreateWindow( string title ) {
+        int ret;
+        ret = glutCreateWindow( title->data );
+        FE_RETURN_LONG( ret );
+    }
+
+    native function CreateSubWindow( number arg1, number arg2, number arg3, number arg4, number arg5 ) {
+        int win, x, y, width, height;
+        int ret;
+        win = NUM2LNG(params[0]);
+        x = NUM2LNG(params[1]);
+        y = NUM2LNG(params[2]);
+        width = NUM2LNG(params[3]);
+        height = NUM2LNG(params[4]);
+        ret = glutCreateSubWindow(win, x, y, width, height);
+        FE_RETURN_LONG(ret);
+    }
+
+    native function DestroyWindow( number arg1 ) {
+        int win;
+        win = NUM2LNG(params[0]);
+        glutDestroyWindow(win);
+    }
+
+    native function PostRedisplay() {
+        glutPostRedisplay();
+    }
+
+    native function SwapBuffers() {
+        glutSwapBuffers();
+    }
+
+    native function GetWindow() {
+        int ret;
+        ret = glutGetWindow();
+        FE_RETURN_LONG(ret);
+    }
+
+    native function SetWindow( number arg1 ) {
+        int win;
+        win = NUM2LNG(params[0]);
+        glutSetWindow(win);
+    }
+
+    native function SetWindowTitle( string arg1 ) {
+        glutSetWindowTitle( arg1->data );
+    }
+
+    native function SetIconTitle( string arg1 ) {
+        glutSetIconTitle( arg1->data );
+    }
+
+    native function PositionWindow( number arg1, number arg2 ) {
+        int x,y;
+        x = NUM2LNG(params[0]);
+        y = NUM2LNG(params[1]);
+        glutPositionWindow(x,y);
+    }
+
+    native function ReshapeWindow( number arg1, number arg2 ) {
+        int width,height;
+        width = NUM2LNG(params[0]);
+        height = NUM2LNG(params[1]);
+        glutReshapeWindow(width, height);
+    }
+
+    native function PopWindow() {
+        glutPopWindow();
+    }
+
+    native function PushWidow() {
+        glutPushWindow();
+    }
+
+    native function IconifyWindow() {
+        glutIconifyWindow();
+    }
+
+
+    native function ShowWindow() {
+        glutShowWindow();
+    }
+
+    native function HideWindow() {
+        glutHideWindow();
+    }
+
+    native function FullScreen() {
+#if (GLUT_API_VERSION >= 3)
+        glutFullScreen();
+#endif
+    }
+
+    native function SetCurcor( number arg1 ) {
+#if (GLUT_API_VERSION >= 3)
+        int cursor;
+        cursor = NUM2LNG(params[0]);
+        glutSetCursor(cursor);
+#endif
+    }
+
+    native function WarpPointer( number arg1, number arg2 ) {
+#if (GLUT_API_VERSION >= 3)
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        int x,y;
+        x = NUM2LNG(params[0]);
+        y = NUM2LNG(params[1]);
+        glutWarpPointer(x,y);
+#endif
+#endif
+    }
+
+    /* GLUT overlay sub-API. */
+    native function EstablishOverlay() {
+#if (GLUT_API_VERSION >= 3)
+        glutEstablishOverlay();
+#endif
+    }
+
+    native function RemoveOverlay() {
+#if (GLUT_API_VERSION >= 3)
+        glutRemoveOverlay();
+#endif
+    }
+
+    native function UseLayer( number arg1 ) {
+#if (GLUT_API_VERSION >= 3)
+        GLenum layer;
+        layer = (GLenum)NUM2LNG(params[0]);
+        glutUseLayer(layer);
+#endif
+    }
+
+    native function PostOverlayRedisplay() {
+#if (GLUT_API_VERSION >= 3)
+        glutPostOverlayRedisplay();
+#endif
+    }
+
+    native function ShowOverlay() {
+#if (GLUT_API_VERSION >= 3)
+        glutShowOverlay();
+#endif
+    }
+
+    native function HideOverlay() {
+#if (GLUT_API_VERSION >= 3)
+        glutHideOverlay();
+#endif
+    }    
+
+    native function CreateMenu( object arg1 ) {
+        int menu = glutCreateMenu(glut_CreateMenuCallback);
+        char *menustr = ferite_glut_int_to_string(menu);
+        ferite_hash_add( script, g_menucallback, menustr, arg1 );
+        ferite_hash_add( script, g_menuitems, menustr, ferite_create_stack( script, 32 ) );
+        arg1->refcount++;        
+        FE_RETURN_LONG( menu );
+    }
+    
+    native function DestroyMenu( number arg1 ) {
+        int menu = NUM2LNG(params[0]), i = 0;
+        char *menustr = ferite_glut_int_to_string(menu);
+        FeriteObject *closure = ferite_hash_get( script, g_menucallback, menustr );
+        FeriteStack *stack = ferite_hash_get( script, g_menuitems, menustr );
+        
+        glutDestroyMenu(menu);
+        closure->refcount--;
+        for( i = 1; i <= stack->size; i++ ) {
+            if( stack->stack[i] != NULL )
+                ffree( stack->stack[i] );
+        }
+        ferite_delete_stack( script, stack );
+        ferite_hash_delete( script, g_menucallback, menustr );
+        ferite_hash_delete( script, g_menuitems, menustr );
+    }
+
+    native function GetMenu() {
+        int ret = glutGetMenu();
+        FE_RETURN_LONG(ret);
+    }
+
+    native function SetMenu( number arg1 ) {
+        int menu;
+        menu = NUM2LNG(params[0]);
+        glutSetMenu(menu);
+    }
+
+    native function AddMenuEntry( string arg1, number arg2 ) {
+        FeriteStack *menuitems = NULL;
+        GlutMenuPair *gmp = fmalloc(sizeof(GlutMenuPair));
+        int menu;
+        
+        menu = glutGetMenu();
+        if (menu == 0) {
+            ferite_error( script, 0, "GLUT.AddMenuEntry: there is no current menu set\n" );
+            FE_RETURN_VOID;
+        }
+        menuitems = ferite_hash_get( script, g_menuitems, ferite_glut_int_to_string( menu ) );
+        gmp->menu = menu;
+        gmp->parameter = NUM2LNG(params[1]);
+        ferite_stack_push( script, menuitems, gmp );
+        glutAddMenuEntry( arg1->data, (int)gmp );        
+    }
+
+    native function AddSubMenu( string arg1, number arg2 ) {
+        int value;
+        value = NUM2LNG(params[1]);
+        glutAddSubMenu(arg1->data, value);
+    }
+
+    native function ChangeToMenuEntry( number arg1, string arg2, number arg3 ) {
+        int item = NUM2LNG(params[0]);
+        int menu = glutGetMenu();
+        FeriteStack *menuitems = NULL;
+        GlutMenuPair *gmp = NULL;
+        char *id = NULL;
+        
+        if (menu == 0) {
+            ferite_error( script, 0, "GLUT.AddMenuEntry: there is no current menu set\n" );
+            FE_RETURN_VOID;
+        }
+        
+        id = ferite_glut_int_to_string( menu ) ;
+        menuitems = ferite_hash_get( script, g_menuitems, id );
+        gmp = menuitems->stack[item];
+        if( gmp == NULL ) {
+            gmp = fmalloc( sizeof(GlutMenuPair) );
+            menuitems->stack[item] = gmp;
+        }
+        gmp->menu = menu;
+        gmp->parameter = NUM2LNG(params[2]);
+        
+        glutChangeToMenuEntry(item, arg2->data, (int)gmp );
+    }
+
+    native function ChangeToSubMenu( number arg1, string arg2, number arg3) {
+        int item,submenu;
+        item = NUM2LNG(params[0]);
+        submenu = NUM2LNG(params[2]);
+        glutChangeToSubMenu(item, arg2->data, submenu);
+    }
+
+    native function RemoveMenuItem( number arg1 ) {
+        FeriteStack *menuitems = NULL;
+        int item = NUM2LNG(params[0]);
+        int menu = glutGetMenu();
+        if (menu == 0) {
+            ferite_error( script, 0, "GLUT.RemoveMenuItem: there is no current menu set\n" );
+            FE_RETURN_VOID;
+        }
+        glutRemoveMenuItem(item);
+        menuitems = ferite_hash_get( script, g_menuitems, ferite_glut_int_to_string(menu) );
+        if( menuitems->stack[item] != NULL ) {
+            ffree( menuitems->stack[item] );
+        }
+        memmove( menuitems->stack + item, menuitems->stack + item + 1, (4 * (menuitems->stack_ptr - item)) );
+        menuitems->stack_ptr--;
+    }
+
+    native function AttachMenu( number arg1 ) {
+        int button = NUM2LNG(params[0]);
+        glutAttachMenu(button);
+    }
+
+    native function DetachMenu( number arg1 ) {
+        int button;
+        button = NUM2LNG(params[0]);
+        glutDetachMenu(button);
+    }
+
+    native function IdleFunc( object arg1 ) {
+        glut_IdleClosure = arg1;
+        glutIdleFunc(glut_IdleFuncCallback);
+        if( arg1 != NULL ) FINCREF(arg1);
+    }
+    
+    native function TimerFunc( number arg1, object arg2, number arg3) {
+        unsigned int millis;
+        int value;
+        millis = NUM2LNG(params[0]);
+        value = NUM2LNG(params[2]);
+        glut_TimerClosure = arg2;
+        glutTimerFunc(millis, glut_TimerFuncCallback, value);
+        if( arg2 != NULL ) FINCREF(arg2);
+    }
+
+    native function MenuStateFunc( object arg1 ) {
+        glut_MenuStateClosure = arg1;
+        glutMenuStateFunc(glut_MenuStateFuncCallback);
+        if( arg1 != NULL ) FINCREF(arg1);
+    }
+
+    /* GLUT color index sub-API. */
+    native function SetColor( number arg1, number arg2, number arg3, number arg4) {
+        int set;
+        GLfloat red;
+        GLfloat green;
+        GLfloat blue;
+        set = NUM2LNG(params[0]);
+        red = (GLfloat)NUM2DBL(params[1]);
+        green = (GLfloat)NUM2DBL(params[2]);
+        blue = (GLfloat)NUM2DBL(params[3]);
+        glutSetColor(set, red, green, blue);
+    }
+    
+    native function GetColor( number arg1, number arg2 ) {
+        int ndx = NUM2LNG(params[0]);
+        int component = NUM2LNG(params[1]);
+        GLfloat ret = (GLfloat)glutGetColor(ndx, component);
+        FE_RETURN_DOUBLE(ret);
+    }
+    
+    native function CopyColormap( number arg1 ) {
+        int win = NUM2LNG(params[0]);
+        glutCopyColormap(win);
+    }
+    
+    /* GLUT state retrieval sub-API. */
+    native function Get( number arg1 ) {
+        GLenum type = (GLenum)NUM2LNG(params[0]);
+        int ret = glutGet(type);
+        FE_RETURN_LONG(ret);
+    }
+    
+    native function DeviceGet( number arg1 ) {
+        GLenum type = (GLenum)NUM2LNG(params[0]);
+        int ret = glutDeviceGet(type);
+        FE_RETURN_LONG(ret);
+    }
+    
+    native function ExtensionSupported( string arg1 ) {
+#if (GLUT_API_VERSION >= 2)
+        /* GLUT extension support sub-API */
+        int ret = glutExtensionSupported(arg1->data);
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    native function GetModifiers() {
+#if (GLUT_API_VERSION >= 3)
+        int ret = glutGetModifiers();
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    native function LayerGet( number arg1 ) {
+#if (GLUT_API_VERSION >= 3)
+        GLenum type = (GLenum)NUM2LNG(params[0]);
+        int ret = glutLayerGet(type);
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    /* GLUT font sub-API */
+    
+    native function BitmapCharacter( number arg1, number arg2 ) {
+        int font = NUM2LNG(params[0]);
+        int character = NUM2LNG(params[1]);
+        glutBitmapCharacter((void*)font, character);
+    }
+    
+    native function BitmapWidth( number arg1, number arg2 ) {
+        int font = NUM2LNG(params[0]);
+        int character = NUM2LNG(params[1]);
+        int ret = glutBitmapWidth((void*)font, character);
+        FE_RETURN_LONG(ret);
+    }
+    
+    native function StrokeCharacter( number arg1, number arg2 ) {
+        int font = NUM2LNG(params[0]);
+        int character = NUM2LNG(params[1]);
+        glutStrokeCharacter((void*)font, character);
+    }
+    
+    native function StrokeWidth( number arg1, number arg2 ) {
+        int font = NUM2LNG(params[0]);
+        int character = NUM2LNG(params[1]);
+        int ret = glutStrokeWidth((void*)font, character);
+        FE_RETURN_LONG(ret);
+    }
+    
+    native function BitmapLength( number arg1, string arg2 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        int font = NUM2LNG(params[0]);
+        int ret = glutBitmapLength((void *)font, (const unsigned char*)arg2->data);
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    native function StrokeLength( number arg1, string arg2 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        int font = NUM2LNG(params[0]);
+        int ret = glutStrokeLength((void *)font, (const unsigned char*)arg2->data);
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    /* GLUT pre-built models sub-API */
+    native function WireSphere( number arg1, number arg2, number arg3 ) {
+        GLdouble radius;
+        GLint slices;
+        GLint stacks;
+        radius = (GLdouble)NUM2DBL(params[0]);
+        slices = (GLint)NUM2LNG(params[1]);
+        stacks = (GLint)NUM2LNG(params[2]);
+        glutWireSphere(radius, slices, stacks);
+    }
+    
+    native function SolidSphere( number arg1, number arg2, number arg3 ) {
+        GLdouble radius;
+        GLint slices;
+        GLint stacks;
+        radius = (GLdouble)NUM2DBL(params[0]);
+        slices = (GLint)NUM2LNG(params[1]);
+        stacks = (GLint)NUM2LNG(params[2]);
+        glutSolidSphere(radius, slices, stacks);
+    }
+    
+    native function WireCone( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble base;
+        GLdouble height;
+        GLint slices;
+        GLint stacks;
+        base = (GLdouble)NUM2DBL(params[0]);
+        height = (GLdouble)NUM2DBL(params[1]);
+        slices = (GLint)NUM2LNG(params[2]);
+        stacks = (GLint)NUM2LNG(params[3]);
+        glutWireCone(base, height, slices, stacks);
+    }
+    
+    native function SolidCone( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble base;
+        GLdouble height;
+        GLint slices;
+        GLint stacks;
+        base = (GLdouble)NUM2DBL(params[0]);
+        height = (GLdouble)NUM2DBL(params[1]);
+        slices = (GLint)NUM2LNG(params[2]);
+        stacks = (GLint)NUM2LNG(params[3]);
+        glutSolidCone(base, height, slices, stacks);
+    }
+    
+    native function WireCube( number arg1 ) {
+        GLdouble size;
+        size = (GLdouble)NUM2DBL(params[0]);
+        glutWireCube(size);
+    }
+    
+    native function SolidCube( number arg1 ) {
+        GLdouble size;
+        size = (GLdouble)NUM2DBL(params[0]);
+        glutSolidCube(size);
+    }
+    
+    native function WireTorus( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble innerRadius;
+        GLdouble outerRadius;
+        GLint sides;
+        GLint rings;
+        innerRadius = (GLdouble)NUM2DBL(params[0]);
+        outerRadius = (GLdouble)NUM2DBL(params[1]);
+        sides = (GLint)NUM2LNG(params[2]);
+        rings = (GLint)NUM2LNG(params[3]);
+        glutWireTorus(innerRadius, outerRadius, sides, rings);
+    }
+    
+    native function SolidTorus( number arg1, number arg2, number arg3, number arg4 ) {
+        GLdouble innerRadius;
+        GLdouble outerRadius;
+        GLint sides;
+        GLint rings;
+        innerRadius = (GLdouble)NUM2DBL(params[0]);
+        outerRadius = (GLdouble)NUM2DBL(params[1]);
+        sides = (GLint)NUM2LNG(params[2]);
+        rings = (GLint)NUM2LNG(params[3]);
+        glutSolidTorus(innerRadius, outerRadius, sides, rings);
+    }
+    
+    native function WireDodecahedron() {
+        glutWireDodecahedron();
+    }
+    
+    native function SolidDodecahedron() {
+        glutSolidDodecahedron();
+    }
+    
+    native function WireTeapot( number arg1 ) {
+        GLdouble size;
+        size = (GLdouble)NUM2DBL(params[0]);
+        glutWireTeapot(size);
+    }
+    
+    native function SolidTeapot( number arg1 ) {
+        GLdouble size;
+        size = (GLdouble)NUM2DBL(params[0]);
+        glutSolidTeapot(size);
+    }
+    
+    native function WireOctahedron() {
+        glutWireOctahedron();
+    }
+    
+    native function SolidOctahedron() {
+        glutSolidOctahedron();
+    }
+    
+    native function WireTetrahedron() {
+        glutWireTetrahedron();
+    }
+    
+    native function SolidTetrahedron() {
+        glutSolidTetrahedron();
+    }
+    
+    native function WireIcosahedron() {
+        glutWireIcosahedron();
+    }
+    
+    native function SolidIcosahedron() {
+        glutSolidIcosahedron();
+    }
+    
+    /* GLUT video resize sub-API. */
+    
+    native function VideoResizeGet( number arg1 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        GLenum param;
+        int ret;
+        param = (GLenum)NUM2LNG(params[0]);
+        ret = glutVideoResizeGet(param);
+        FE_RETURN_LONG(ret);
+#endif
+    }
+    
+    native function SetupVideoResizing() {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        glutSetupVideoResizing();
+#endif
+    }
+    
+    native function StopVideoResizing() {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        glutStopVideoResizing();
+#endif
+    }
+    
+    native function VideoResize( number arg1, number arg2, number arg3, number arg4 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        int x;
+        int y;
+        int width;
+        int height;
+        x = NUM2LNG(params[0]);
+        y = NUM2LNG(params[1]);
+        width = NUM2LNG(params[2]);
+        height = NUM2LNG(params[3]);
+        glutVideoResize(x,y, width, height);
+#endif
+    }
+    
+    native function VideoPan( number arg1, number arg2, number arg3, number arg4 ) {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        int x;
+        int y;
+        int width;
+        int height;
+        x = NUM2LNG(params[0]);
+        y = NUM2LNG(params[1]);
+        width = NUM2LNG(params[2]);
+        height = NUM2LNG(params[3]);
+        glutVideoPan(x,y, width, height);
+#endif
+    }
+    
+    /* GLUT debugging sub-API. */
+    
+    native function ReportErrors() {
+#if (GLUT_API_VERSION >= 4 || GLUT_XLIB_IMPLEMENTATION >= 9)
+        glutReportErrors();
+#endif
+    }
+}
+
+module-init
+{
+    FeriteNamespace *mGLUT = ferite_register_namespace( script, "GLUT", script->mainns );
+    
+    FeriteGLUTSetup(script);
+    
+    ferite_define_final(mGLUT, "API_VERSION", INT2NUM(GLUT_API_VERSION));
+    ferite_define_final(mGLUT, "XLIB_IMPLEMENTATION", INT2NUM(GLUT_XLIB_IMPLEMENTATION));
+    ferite_define_final(mGLUT, "RGB", INT2NUM(GLUT_RGB));
+    ferite_define_final(mGLUT, "RGBA", INT2NUM(GLUT_RGBA));
+    ferite_define_final(mGLUT, "INDEX", INT2NUM(GLUT_INDEX));
+    ferite_define_final(mGLUT, "SINGLE", INT2NUM(GLUT_SINGLE));
+    ferite_define_final(mGLUT, "DOUBLE", INT2NUM(GLUT_DOUBLE));
+    ferite_define_final(mGLUT, "ACCUM", INT2NUM(GLUT_ACCUM));
+    ferite_define_final(mGLUT, "ALPHA", INT2NUM(GLUT_ALPHA));
+    ferite_define_final(mGLUT, "DEPTH", INT2NUM(GLUT_DEPTH));
+    ferite_define_final(mGLUT, "STENCIL", INT2NUM(GLUT_STENCIL));
+    ferite_define_final(mGLUT, "MULTISAMPLE", INT2NUM(GLUT_MULTISAMPLE));
+    ferite_define_final(mGLUT, "STEREO", INT2NUM(GLUT_STEREO));
+    ferite_define_final(mGLUT, "LUMINANCE", INT2NUM(GLUT_LUMINANCE));
+    ferite_define_final(mGLUT, "LEFT_BUTTON", INT2NUM(GLUT_LEFT_BUTTON));
+    ferite_define_final(mGLUT, "MIDDLE_BUTTON", INT2NUM(GLUT_MIDDLE_BUTTON));
+    ferite_define_final(mGLUT, "RIGHT_BUTTON", INT2NUM(GLUT_RIGHT_BUTTON));
+    ferite_define_final(mGLUT, "DOWN", INT2NUM(GLUT_DOWN));
+    ferite_define_final(mGLUT, "UP", INT2NUM(GLUT_UP));
+    ferite_define_final(mGLUT, "KEY_F1", INT2NUM(GLUT_KEY_F1));
+    ferite_define_final(mGLUT, "KEY_F2", INT2NUM(GLUT_KEY_F2));
+    ferite_define_final(mGLUT, "KEY_F3", INT2NUM(GLUT_KEY_F3));
+    ferite_define_final(mGLUT, "KEY_F4", INT2NUM(GLUT_KEY_F4));
+    ferite_define_final(mGLUT, "KEY_F5", INT2NUM(GLUT_KEY_F5));
+    ferite_define_final(mGLUT, "KEY_F6", INT2NUM(GLUT_KEY_F6));
+    ferite_define_final(mGLUT, "KEY_F7", INT2NUM(GLUT_KEY_F7));
+    ferite_define_final(mGLUT, "KEY_F8", INT2NUM(GLUT_KEY_F8));
+    ferite_define_final(mGLUT, "KEY_F9", INT2NUM(GLUT_KEY_F9));
+    ferite_define_final(mGLUT, "KEY_F10", INT2NUM(GLUT_KEY_F10));
+    ferite_define_final(mGLUT, "KEY_F11", INT2NUM(GLUT_KEY_F11));
+    ferite_define_final(mGLUT, "KEY_F12", INT2NUM(GLUT_KEY_F12));
+    ferite_define_final(mGLUT, "KEY_LEFT", INT2NUM(GLUT_KEY_LEFT));
+    ferite_define_final(mGLUT, "KEY_UP", INT2NUM(GLUT_KEY_UP));
+    ferite_define_final(mGLUT, "KEY_RIGHT", INT2NUM(GLUT_KEY_RIGHT));
+    ferite_define_final(mGLUT, "KEY_DOWN", INT2NUM(GLUT_KEY_DOWN));
+    ferite_define_final(mGLUT, "KEY_PAGE_UP", INT2NUM(GLUT_KEY_PAGE_UP));
+    ferite_define_final(mGLUT, "KEY_PAGE_DOWN", INT2NUM(GLUT_KEY_PAGE_DOWN));
+    ferite_define_final(mGLUT, "KEY_HOME", INT2NUM(GLUT_KEY_HOME));
+    ferite_define_final(mGLUT, "KEY_END", INT2NUM(GLUT_KEY_END));
+    ferite_define_final(mGLUT, "KEY_INSERT", INT2NUM(GLUT_KEY_INSERT));
+    ferite_define_final(mGLUT, "LEFT", INT2NUM(GLUT_LEFT));
+    ferite_define_final(mGLUT, "ENTERED", INT2NUM(GLUT_ENTERED));
+    ferite_define_final(mGLUT, "MENU_NOT_IN_USE", INT2NUM(GLUT_MENU_NOT_IN_USE));
+    ferite_define_final(mGLUT, "MENU_IN_USE", INT2NUM(GLUT_MENU_IN_USE));
+    ferite_define_final(mGLUT, "NOT_VISIBLE", INT2NUM(GLUT_NOT_VISIBLE));
+    ferite_define_final(mGLUT, "VISIBLE", INT2NUM(GLUT_VISIBLE));
+    ferite_define_final(mGLUT, "HIDDEN", INT2NUM(GLUT_HIDDEN));
+    ferite_define_final(mGLUT, "FULLY_RETAINED", INT2NUM(GLUT_FULLY_RETAINED));
+    ferite_define_final(mGLUT, "PARTIALLY_RETAINED", INT2NUM(GLUT_PARTIALLY_RETAINED));
+    ferite_define_final(mGLUT, "FULLY_COVERED", INT2NUM(GLUT_FULLY_COVERED));
+    ferite_define_final(mGLUT, "RED", INT2NUM(GLUT_RED));
+    ferite_define_final(mGLUT, "GREEN", INT2NUM(GLUT_GREEN));
+    ferite_define_final(mGLUT, "BLUE", INT2NUM(GLUT_BLUE));
+    ferite_define_final(mGLUT, "WINDOW_X", INT2NUM(GLUT_WINDOW_X));
+    ferite_define_final(mGLUT, "WINDOW_Y", INT2NUM(GLUT_WINDOW_Y));
+    ferite_define_final(mGLUT, "WINDOW_WIDTH", INT2NUM(GLUT_WINDOW_WIDTH));
+    ferite_define_final(mGLUT, "WINDOW_HEIGHT", INT2NUM(GLUT_WINDOW_HEIGHT));
+    ferite_define_final(mGLUT, "WINDOW_BUFFER_SIZE", INT2NUM(GLUT_WINDOW_BUFFER_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_STENCIL_SIZE", INT2NUM(GLUT_WINDOW_STENCIL_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_DEPTH_SIZE", INT2NUM(GLUT_WINDOW_DEPTH_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_RED_SIZE", INT2NUM(GLUT_WINDOW_RED_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_GREEN_SIZE", INT2NUM(GLUT_WINDOW_GREEN_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_BLUE_SIZE", INT2NUM(GLUT_WINDOW_BLUE_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_ALPHA_SIZE", INT2NUM(GLUT_WINDOW_ALPHA_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_ACCUM_RED_SIZE", INT2NUM(GLUT_WINDOW_ACCUM_RED_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_ACCUM_GREEN_SIZE", INT2NUM(GLUT_WINDOW_ACCUM_GREEN_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_ACCUM_BLUE_SIZE", INT2NUM(GLUT_WINDOW_ACCUM_BLUE_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_ACCUM_ALPHA_SIZE", INT2NUM(GLUT_WINDOW_ACCUM_ALPHA_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_DOUBLEBUFFER", INT2NUM(GLUT_WINDOW_DOUBLEBUFFER));
+    ferite_define_final(mGLUT, "WINDOW_RGBA", INT2NUM(GLUT_WINDOW_RGBA));
+    ferite_define_final(mGLUT, "WINDOW_PARENT", INT2NUM(GLUT_WINDOW_PARENT));
+    ferite_define_final(mGLUT, "WINDOW_NUM_CHILDREN", INT2NUM(GLUT_WINDOW_NUM_CHILDREN));
+    ferite_define_final(mGLUT, "WINDOW_COLORMAP_SIZE", INT2NUM(GLUT_WINDOW_COLORMAP_SIZE));
+    ferite_define_final(mGLUT, "WINDOW_NUM_SAMPLES", INT2NUM(GLUT_WINDOW_NUM_SAMPLES));
+    ferite_define_final(mGLUT, "WINDOW_STEREO", INT2NUM(GLUT_WINDOW_STEREO));
+    ferite_define_final(mGLUT, "WINDOW_CURSOR", INT2NUM(GLUT_WINDOW_CURSOR));
+    ferite_define_final(mGLUT, "SCREEN_WIDTH", INT2NUM(GLUT_SCREEN_WIDTH));
+    ferite_define_final(mGLUT, "SCREEN_HEIGHT", INT2NUM(GLUT_SCREEN_HEIGHT));
+    ferite_define_final(mGLUT, "SCREEN_WIDTH_MM", INT2NUM(GLUT_SCREEN_WIDTH_MM));
+    ferite_define_final(mGLUT, "SCREEN_HEIGHT_MM", INT2NUM(GLUT_SCREEN_HEIGHT_MM));
+    ferite_define_final(mGLUT, "MENU_NUM_ITEMS", INT2NUM(GLUT_MENU_NUM_ITEMS));
+    ferite_define_final(mGLUT, "DISPLAY_MODE_POSSIBLE", INT2NUM(GLUT_DISPLAY_MODE_POSSIBLE));
+    ferite_define_final(mGLUT, "INIT_WINDOW_X", INT2NUM(GLUT_INIT_WINDOW_X));
+    ferite_define_final(mGLUT, "INIT_WINDOW_Y", INT2NUM(GLUT_INIT_WINDOW_Y));
+    ferite_define_final(mGLUT, "INIT_WINDOW_WIDTH", INT2NUM(GLUT_INIT_WINDOW_WIDTH));
+    ferite_define_final(mGLUT, "INIT_WINDOW_HEIGHT", INT2NUM(GLUT_INIT_WINDOW_HEIGHT));
+    ferite_define_final(mGLUT, "INIT_DISPLAY_MODE", INT2NUM(GLUT_INIT_DISPLAY_MODE));
+    ferite_define_final(mGLUT, "ELAPSED_TIME", INT2NUM(GLUT_ELAPSED_TIME));
+    ferite_define_final(mGLUT, "HAS_KEYBOARD", INT2NUM(GLUT_HAS_KEYBOARD));
+    ferite_define_final(mGLUT, "HAS_MOUSE", INT2NUM(GLUT_HAS_MOUSE));
+    ferite_define_final(mGLUT, "HAS_SPACEBALL", INT2NUM(GLUT_HAS_SPACEBALL));
+    ferite_define_final(mGLUT, "HAS_DIAL_AND_BUTTON_BOX", INT2NUM(GLUT_HAS_DIAL_AND_BUTTON_BOX));
+    ferite_define_final(mGLUT, "HAS_TABLET", INT2NUM(GLUT_HAS_TABLET));
+    ferite_define_final(mGLUT, "NUM_MOUSE_BUTTONS", INT2NUM(GLUT_NUM_MOUSE_BUTTONS));
+    ferite_define_final(mGLUT, "NUM_SPACEBALL_BUTTONS", INT2NUM(GLUT_NUM_SPACEBALL_BUTTONS));
+    ferite_define_final(mGLUT, "NUM_BUTTON_BOX_BUTTONS", INT2NUM(GLUT_NUM_BUTTON_BOX_BUTTONS));
+    ferite_define_final(mGLUT, "NUM_DIALS", INT2NUM(GLUT_NUM_DIALS));
+    ferite_define_final(mGLUT, "NUM_TABLET_BUTTONS", INT2NUM(GLUT_NUM_TABLET_BUTTONS));
+    ferite_define_final(mGLUT, "OVERLAY_POSSIBLE", INT2NUM(GLUT_OVERLAY_POSSIBLE));
+    ferite_define_final(mGLUT, "LAYER_IN_USE", INT2NUM(GLUT_LAYER_IN_USE));
+    ferite_define_final(mGLUT, "HAS_OVERLAY", INT2NUM(GLUT_HAS_OVERLAY));
+    ferite_define_final(mGLUT, "TRANSPARENT_INDEX", INT2NUM(GLUT_TRANSPARENT_INDEX));
+    ferite_define_final(mGLUT, "NORMAL_DAMAGED", INT2NUM(GLUT_NORMAL_DAMAGED));
+    ferite_define_final(mGLUT, "OVERLAY_DAMAGED", INT2NUM(GLUT_OVERLAY_DAMAGED));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_POSSIBLE", INT2NUM(GLUT_VIDEO_RESIZE_POSSIBLE));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_IN_USE", INT2NUM(GLUT_VIDEO_RESIZE_IN_USE));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_X_DELTA", INT2NUM(GLUT_VIDEO_RESIZE_X_DELTA));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_Y_DELTA", INT2NUM(GLUT_VIDEO_RESIZE_Y_DELTA));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_WIDTH_DELTA", INT2NUM(GLUT_VIDEO_RESIZE_WIDTH_DELTA));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_HEIGHT_DELTA", INT2NUM(GLUT_VIDEO_RESIZE_HEIGHT_DELTA));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_X", INT2NUM(GLUT_VIDEO_RESIZE_X));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_Y", INT2NUM(GLUT_VIDEO_RESIZE_Y));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_WIDTH", INT2NUM(GLUT_VIDEO_RESIZE_WIDTH));
+    ferite_define_final(mGLUT, "VIDEO_RESIZE_HEIGHT", INT2NUM(GLUT_VIDEO_RESIZE_HEIGHT));
+    ferite_define_final(mGLUT, "NORMAL", INT2NUM(GLUT_NORMAL));
+    ferite_define_final(mGLUT, "OVERLAY", INT2NUM(GLUT_OVERLAY));
+    ferite_define_final(mGLUT, "ACTIVE_SHIFT", INT2NUM(GLUT_ACTIVE_SHIFT));
+    ferite_define_final(mGLUT, "ACTIVE_CTRL", INT2NUM(GLUT_ACTIVE_CTRL));
+    ferite_define_final(mGLUT, "ACTIVE_ALT", INT2NUM(GLUT_ACTIVE_ALT));
+    ferite_define_final(mGLUT, "CURSOR_RIGHT_ARROW", INT2NUM(GLUT_CURSOR_RIGHT_ARROW));
+    ferite_define_final(mGLUT, "CURSOR_LEFT_ARROW", INT2NUM(GLUT_CURSOR_LEFT_ARROW));
+    ferite_define_final(mGLUT, "CURSOR_INFO", INT2NUM(GLUT_CURSOR_INFO));
+    ferite_define_final(mGLUT, "CURSOR_DESTROY", INT2NUM(GLUT_CURSOR_DESTROY));
+    ferite_define_final(mGLUT, "CURSOR_HELP", INT2NUM(GLUT_CURSOR_HELP));
+    ferite_define_final(mGLUT, "CURSOR_CYCLE", INT2NUM(GLUT_CURSOR_CYCLE));
+    ferite_define_final(mGLUT, "CURSOR_SPRAY", INT2NUM(GLUT_CURSOR_SPRAY));
+    ferite_define_final(mGLUT, "CURSOR_WAIT", INT2NUM(GLUT_CURSOR_WAIT));
+    ferite_define_final(mGLUT, "CURSOR_TEXT", INT2NUM(GLUT_CURSOR_TEXT));
+    ferite_define_final(mGLUT, "CURSOR_CROSSHAIR", INT2NUM(GLUT_CURSOR_CROSSHAIR));
+    ferite_define_final(mGLUT, "CURSOR_UP_DOWN", INT2NUM(GLUT_CURSOR_UP_DOWN));
+    ferite_define_final(mGLUT, "CURSOR_LEFT_RIGHT", INT2NUM(GLUT_CURSOR_LEFT_RIGHT));
+    ferite_define_final(mGLUT, "CURSOR_TOP_SIDE", INT2NUM(GLUT_CURSOR_TOP_SIDE));
+    ferite_define_final(mGLUT, "CURSOR_BOTTOM_SIDE", INT2NUM(GLUT_CURSOR_BOTTOM_SIDE));
+    ferite_define_final(mGLUT, "CURSOR_LEFT_SIDE", INT2NUM(GLUT_CURSOR_LEFT_SIDE));
+    ferite_define_final(mGLUT, "CURSOR_RIGHT_SIDE", INT2NUM(GLUT_CURSOR_RIGHT_SIDE));
+    ferite_define_final(mGLUT, "CURSOR_TOP_LEFT_CORNER", INT2NUM(GLUT_CURSOR_TOP_LEFT_CORNER));
+    ferite_define_final(mGLUT, "CURSOR_TOP_RIGHT_CORNER", INT2NUM(GLUT_CURSOR_TOP_RIGHT_CORNER));
+    ferite_define_final(mGLUT, "CURSOR_BOTTOM_RIGHT_CORNER", INT2NUM(GLUT_CURSOR_BOTTOM_RIGHT_CORNER));
+    ferite_define_final(mGLUT, "CURSOR_BOTTOM_LEFT_CORNER", INT2NUM(GLUT_CURSOR_BOTTOM_LEFT_CORNER));
+    ferite_define_final(mGLUT, "CURSOR_INHERIT", INT2NUM(GLUT_CURSOR_INHERIT));
+    ferite_define_final(mGLUT, "CURSOR_NONE", INT2NUM(GLUT_CURSOR_NONE));
+    ferite_define_final(mGLUT, "CURSOR_FULL_CROSSHAIR", INT2NUM(GLUT_CURSOR_FULL_CROSSHAIR));
+    ferite_define_final(mGLUT, "BITMAP_9_BY_15", INT2NUM((int)GLUT_BITMAP_9_BY_15));
+    ferite_define_final(mGLUT, "BITMAP_8_BY_13", INT2NUM((int)GLUT_BITMAP_8_BY_13));
+    ferite_define_final(mGLUT, "BITMAP_TIMES_ROMAN_10", INT2NUM((int)GLUT_BITMAP_TIMES_ROMAN_10));
+    ferite_define_final(mGLUT, "BITMAP_TIMES_ROMAN_24", INT2NUM((int)GLUT_BITMAP_TIMES_ROMAN_24));
+    ferite_define_final(mGLUT, "BITMAP_HELVETICA_10", INT2NUM((int)GLUT_BITMAP_HELVETICA_10));
+    ferite_define_final(mGLUT, "BITMAP_HELVETICA_12", INT2NUM((int)GLUT_BITMAP_HELVETICA_12));
+    ferite_define_final(mGLUT, "BITMAP_HELVETICA_18", INT2NUM((int)GLUT_BITMAP_HELVETICA_18));
+    ferite_define_final(mGLUT, "STROKE_ROMAN", INT2NUM((int)GLUT_STROKE_ROMAN));
+    ferite_define_final(mGLUT, "STROKE_MONO_ROMAN", INT2NUM((int)GLUT_STROKE_MONO_ROMAN));
+
+                        
+    WINDOW_CALLBACK_DEFINE(mGLUT, DisplayFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, ReshapeFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, KeyboardFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, MouseFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, MotionFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, PassiveMotionFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, EntryFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, VisibilityFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, SpecialFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, SpaceballMotionFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, SpaceballRotateFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, SpaceballButtonFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, ButtonBoxFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, DialsFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, TabletMotionFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, TabletButtonFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, OverlayDisplayFunc);
+    WINDOW_CALLBACK_DEFINE(mGLUT, WindowStatusFunc);
+}
+
+module-deinit {
+    WINDOW_CALLBACK_CLEANUP(DisplayFunc);
+    WINDOW_CALLBACK_CLEANUP(ReshapeFunc);
+    WINDOW_CALLBACK_CLEANUP(KeyboardFunc);
+    WINDOW_CALLBACK_CLEANUP(MouseFunc);
+    WINDOW_CALLBACK_CLEANUP(MotionFunc);
+    WINDOW_CALLBACK_CLEANUP(PassiveMotionFunc);
+    WINDOW_CALLBACK_CLEANUP(EntryFunc);
+    WINDOW_CALLBACK_CLEANUP(VisibilityFunc);
+    WINDOW_CALLBACK_CLEANUP(SpecialFunc);
+    WINDOW_CALLBACK_CLEANUP(SpaceballMotionFunc);
+    WINDOW_CALLBACK_CLEANUP(SpaceballRotateFunc);
+    WINDOW_CALLBACK_CLEANUP(SpaceballButtonFunc);
+    WINDOW_CALLBACK_CLEANUP(ButtonBoxFunc);
+    WINDOW_CALLBACK_CLEANUP(DialsFunc);
+    WINDOW_CALLBACK_CLEANUP(TabletMotionFunc);
+    WINDOW_CALLBACK_CLEANUP(TabletButtonFunc);
+    WINDOW_CALLBACK_CLEANUP(OverlayDisplayFunc);
+    WINDOW_CALLBACK_CLEANUP(WindowStatusFunc);    
+}

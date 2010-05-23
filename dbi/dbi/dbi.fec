@@ -1,0 +1,728 @@
+/*
+ * Copyright (C) 2002-2007 Christian M. Stamgren, Stephan Engström, Chris Ross
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+uses "dbi.lib";
+uses "DbiResult";
+uses "dbi_sql.fe";
+
+/*
+ * Dbi is a database interface for Ferite (www.ferite.org) using libdbi (libdbi.sf.net).
+ *
+ * Please make suggestions on how to make this module better to:
+ * Christian M. Stamgren  <cms@cention.se>
+ */
+
+module-header {
+#include "utility.h"
+}
+
+module-register {
+	dbi_initialize( NULL );
+}
+module-unregister {
+	dbi_shutdown();
+}
+
+/**
+ * @class Dbi
+ * @brief this class provides a database interface (dbi) for ferite
+ * @example <code>		 
+ <keyword>uses</keyword> "console", "dbi", "sys";<nl/>
+ <nl/>						   
+ <type>array</type> arr;<nl/>
+ <type>object</type> res,dbh = Dbi.connect("mysql", "root", "", "localhost", "test");<nl/>
+ <nl/>						   
+ <nl/>						   
+ <keyword>if</keyword> (dbh == <type>null</type>) {<nl/>
+ <tab/>Console.println("Err<keyword>or</keyword>: " + "Can't connect to database");<tab/> <nl/>
+ <tab/>Sys.exit(1);<nl/>		 
+ }<nl/>						  
+ <nl/>						   
+ //Query the database and print error on failure.<nl/>							   
+ res = dbh.query("SELECT * from table where id = ? ", 2);<nl/>
+ <keyword>if</keyword>(res == <type>null</type>){<nl/>
+ <tab/>Console.println("Err<keyword>or</keyword>: " + dbh.errstr());<tab/> <nl/>
+ <tab/>Sys.exit(1);<nl/>		 
+ }<nl/>						  
+ <nl/>						   
+ //Loop through all records and print them.<nl/>
+ <keyword>while</keyword>(arr = res.nextRec<keyword>or</span>d()) {<nl/>
+ <tab/>Console.print("rec1: " +  arr["rec1"]);<nl/>
+ <tab/>Console.print(" rec2: " +  arr["rec2"]);<tab/><nl/>
+ <tab/>Console.println(" rec3: " +  arr["rec3"]);<tab/><nl/>
+ }</code><nl/> */
+
+class Dbi
+{
+	/**
+	 * @variable
+	 * @type string
+	 * @private
+	 * @breif Hold the last query
+	 */
+	private string lastQuery;
+
+
+	/**
+	 * @function constructor
+	 * @declaration function constructor( string type, string username, string password,
+	 *		string hostname, string database )
+	 * @brief	Create a database connection.
+	 * @param	string type
+	 *		   The database driver to use. (e.g. mysql/postgres)
+	 * @param	string username
+	 *		   The user that you want to connect to the database.
+	 * @param	string password
+	 *		   The password for the selected user.
+	 * @param	string hostname
+	 *		   The name of the host to connect to. ( i.e localhost)
+	 * @param	string database
+	 *		   The database to connect to.
+
+	 * @description The constructor will return a null object if the connection to the database fails.
+	 *			  You should check for this in your code.
+	 *			  
+	 */
+
+	native function constructor( string type, string username, string password, string hostname, string database )
+	{
+		self->odata = ferite_dbi_connect( script, type, username, password, hostname, 0, database );
+		if( self->odata == NULL )
+			FE_RETURN_NULL_OBJECT;
+		{
+			FeriteVariable *recordQueryMetrics = ferite_object_get_var( script, self, "recordQueryMetrics" );
+			VAB(recordQueryMetrics) = FE_FALSE;
+		}
+	}
+	
+	native function destructor( )
+	{
+		DBIData *dbi = self->odata;
+		ferite_deinit_result_list(dbi->result_list);
+
+		if( dbi->connected && dbi->conn )
+			dbi_conn_close( dbi->conn );
+		ffree ( dbi );
+	}
+	
+
+
+	/**
+	 * @function connect
+	 * @static
+	 * @declaration function connect( string type, string username, string password,
+	 *		string hostname, number port, string database )
+	 * @brief	Static function. connect's a dbi object to a database.
+	 * @return   An object of the class dbi.
+	 * @param	string type
+	 *		   The database driver to use. (e.g. mysql/postgres)
+	 * @param	string username
+	 *		   The user that you want to connect to the database.
+	 * @param	string password
+	 *		   The password for the selected user.
+	 * @param	string hostname
+	 *		   The name of the host to connect to. (e.g. localhost)
+	 * @param	number port
+	 *		   The port number to conncet to
+	 * @param	string database
+	 *		   The database to connect to.
+	 */
+	static function connect(string type, string username, string password,
+	 						string hostname, string database ) 
+	{
+
+	return Dbi.connect( type, username, password, hostname, 0, database);
+	}
+
+	/**
+	 * @function connect
+	 * @static
+	 * @declaration function connect( string type, string username, string password,
+	 *		string hostname, number port, string database )
+	 * @brief	Static function. connect's a dbi object to a database.
+	 * @return   An object of the class dbi.
+	 * @param	string type
+	 *		   The database driver to use. (e.g. mysql/postgres)
+	 * @param	string username
+	 *		   The user that you want to connect to the database.
+	 * @param	string password
+	 *		   The password for the selected user.
+	 * @param	string hostname
+	 *		   The name of the host to connect to. (e.g. localhost)
+	 * @param	string database
+	 *		   The database to connect to.
+	 */
+	static native function connect( string type, string username, string password,
+		string hostname, number port, string database )
+	{
+		DBIData *dbi = ferite_dbi_connect( script, type, username, password, hostname, (int)port, database );
+		FeriteClass *cls = NULL;
+		FeriteVariable *obj = NULL;
+		
+		if( dbi == NULL )
+			FE_RETURN_NULL_OBJECT;
+		cls = ferite_find_class( script, script->mainns, "Dbi" );
+		obj = ferite_build_object( script, cls );
+		VAO(obj)->odata = dbi;
+		FE_RETURN_VAR( obj );
+	}
+
+	/**
+	 * @function disconnect
+	 * @declaration function disconnect( )
+	 * @brief	Disconnects an active database connection.
+	 */
+	native function disconnect( )
+	{
+		DBIData *dbi = self->odata;
+		ferite_deinit_result_list(dbi->result_list);
+		dbi->result_list = NULL;
+		if( dbi->connected && dbi->conn ) {
+		dbi_conn_close( dbi->conn );
+		dbi->conn = NULL;
+		dbi->connected = 0;
+		}
+	}
+
+	/**
+	 * @function lastQueryString
+	 * @declaration function lastQueryString()
+	 * @brief return the lastest issued query
+	 * @return string query - The query
+	 */	
+	function lastQueryString() {
+		return self.lastQuery;
+	}
+	
+	array   recordedQueryMetrics;
+	boolean recordQueryMetrics;
+	function recordQuery( number start, number end, string query ) {
+		if( .recordQueryMetrics ) { 
+			.recordedQueryMetrics[] = [ 'start' => start, 'end' => end, 'query' => query ];
+		} 
+	}
+
+	/**
+	 * @function query
+	 * @declaration function query( string sql, ... )
+	 * @brief	Query the database with some sql. This function emulates placholders
+	 *		   wich makes it possible to use syntax like "SELECT * from temp WHERE id = ?"
+	 * @return   A DbiResult object.
+	 * @param	string sql
+	 *		   The query.
+	 * @param	whatever ... the variables you want to replace the ?'s with
+	 *		   The variables that will be exchanged with the ? in query.
+	 * @example <nl/><code>
+	 d.query( "SELECT * FROM Users WHERE ID=?", user.id );</code><nl/>
+	*/
+	native function query( string sql, ... )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *ptr, *obj = NULL;
+		FeriteBuffer *buf;
+		FeriteString *str;
+		dbi_result result;
+		char *sql_cmd, *temp,*string;
+		int i,x,cp,len,in_quotes,num;
+		in_quotes = x = num = 0;
+		FeriteVariable *lastQuery = ferite_object_get_var( script, self, "lastQuery" );
+		double beforeQuery = 0.0;
+		
+		if(! dbi->connected )
+			FE_RETURN_NULL_OBJECT;
+		
+		temp = fcalloc(sql->length+1, 1);
+		buf = ferite_buffer_new( script, 0 );
+		cp = ferite_get_parameter_count(params);
+		
+		for(i=0; i <= sql->length; i++) {
+			if(sql->data[i] == '\'' && sql->data[i-1] != '\\')
+				in_quotes = (in_quotes) ? 0 : 1;
+			if(sql->data[i] == '?' && !in_quotes){
+				ferite_buffer_add(script,buf, temp, x);
+				x = 0;
+				
+				if(++num > cp-1)
+					continue;
+				
+				ptr = ferite_get_parameter(params,num);
+				switch( ptr->type ) {
+					case F_VAR_LONG:
+						ferite_buffer_printf(script,buf, "%ld", VAI(ptr));
+						break;
+					case F_VAR_DOUBLE:
+						ferite_buffer_printf(script,buf, "%f", VAF(ptr));
+						break;
+						
+					case F_VAR_OBJ:
+						str = ferite_variable_to_str(script , ptr, FE_FALSE); 
+						/* call .toString */
+						string = ferite_quote_internal(str->data);
+						ferite_buffer_printf(script,buf, "'%s'", string );
+						ferite_str_destroy(script, str );
+						break;
+						
+					case F_VAR_STR:
+						string = ferite_quote_internal(FE_STR2PTR(ptr));
+						ferite_buffer_printf(script,buf, "'%s'", string );
+						ffree(string);
+						break;
+						
+					default:
+						printf("Type not supported: %d\n", ptr->type); 
+						/* FIX ME */
+						break;
+				}
+			}
+			else
+				temp[x++] = sql->data[i];
+		}
+
+		if( num > (cp-1) ) {
+			dbi_conn_set_error(dbi->conn, 0,
+							   "dbi called with %d arguments when %d are needed", (cp-1),num);
+			ffree(temp);
+			ferite_buffer_delete(script,buf);
+			FE_RETURN_NULL_OBJECT;
+		}
+		
+		ferite_buffer_add(script,buf, temp ,x);
+		sql_cmd = ferite_buffer_get(script,buf, &len);
+		ferite_buffer_delete(script,buf);
+		ffree(temp);
+	   
+		ferite_str_set( script, VAS(lastQuery), sql_cmd, strlen(sql_cmd), FE_CHARSET_DEFAULT );
+
+		beforeQuery = ferite_dbi_timestamp();
+		if(!( result = dbi_conn_query( dbi->conn, sql_cmd ) ) ) {
+			ferite_dbi_recordQuery( script, self, beforeQuery, sql_cmd );
+			ffree( sql_cmd );
+			FE_RETURN_NULL_OBJECT;
+		}
+		ferite_dbi_recordQuery( script, self, beforeQuery, sql_cmd );
+		
+		obj = ferite_return_result( script, result );
+		
+		if(VAO(obj) != NULL) {
+			  ferite_add_result_list( dbi , ((RESData *)VAO(obj)->odata));
+			  ((RESData *)VAO(obj)->odata)->dbi = self->odata;
+		}
+		
+		ffree( sql_cmd );
+		
+		if( current_recipient != NULL ) {
+			FeriteVariable *row = NULL;
+			FeriteVariable *rval = NULL;
+			FeriteVariable **plist = ferite_create_parameter_list( script, 1 );
+			FeriteFunction *f = ferite_object_get_function( script, current_recipient, "invoke" );
+			RESData *res = VAO(obj)->odata;
+			
+			row = ferite_dbi_get_next_row( script, res );
+			while( VAUA(row)->size > 0 ) {
+				plist[0] = row;
+				rval = ferite_call_function( script, current_recipient, NULL, f, plist );
+				ferite_variable_destroy( script, row );
+				if( script->error_state == FE_ERROR_THROWN ) {
+					FE_RETURN_VAR(obj);
+				}
+				if( ferite_variable_is_false( script, rval ) ) {
+					ferite_variable_destroy( script, rval );
+					break;
+				}
+				ferite_variable_destroy( script, rval );
+				row = ferite_dbi_get_next_row( script, res );
+			}
+			ferite_delete_parameter_list( script, plist );
+			dbi_result_first_row(res->result);
+		}
+		FE_RETURN_VAR( obj );
+	}
+
+	/**
+	 * @function queryBinary
+	 * @declaration function queryBinary( string sql )
+	 * @brief	Queries a database. This function is binary safe use this to INSERT binary data.
+	 * @return   A DbiResult object.
+	 * @param	string sql
+	 */
+	native function queryBinary( string sql )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *obj = NULL;
+		dbi_result result;
+		
+		if(! dbi->connected )
+		FE_RETURN_NULL_OBJECT;
+		
+		if(!( result = dbi_conn_query_null( dbi->conn, sql->data, sql->length ) ) )
+			FE_RETURN_NULL_OBJECT;
+		obj = ferite_return_result( script, result );
+		ferite_add_result_list( dbi, ((RESData *)VAO(obj)->odata));
+		
+		FE_RETURN_VAR( obj );
+	 }
+
+	/**
+	 * @function errstr
+	 * @declaration function errstr( )
+	 * @brief	Fetch the last error from the connection.
+	 * @return   A string containing the error string
+	 */
+	native function errstr( )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *var;
+		const char *buffer;
+		
+		if( dbi->conn )
+			dbi_conn_error( dbi->conn, &buffer );
+
+		var = fe_new_str("dbi_errmsg", (char *)buffer, 0, FE_CHARSET_DEFAULT);
+		FE_RETURN_VAR( var );
+	 }
+
+	/**
+	 * @function changeDatabase
+	 * @declaration function changeDatabase( string str )
+	 * @brief
+	 * @return   FeriteString.
+	 * @param	string str
+	 *		   The name of the database to change to.
+	 */
+	native function changeDatabase( string str )
+	{
+		DBIData *dbi = self->odata;
+		int return_value = 0;
+		if( dbi->connected ) {
+		if(! dbi_conn_select_db( dbi->conn, str->data ) ) {
+			return_value = 1;
+			dbi_conn_set_option( dbi->conn, "dbname", str->data );
+		}
+		}
+		FE_RETURN_LONG( return_value );
+	 }
+
+	/**
+	 * @function connectInfo
+	 * @declaration function connectInfo( )
+	 * @brief	Fetch the information used to connect to the database.
+	 * @return   An array containing the conneciton information
+	 * @description The keys within the array are 'protocol', 'username', 'password', 'database' and 'hostname'
+	 */
+	native function connectInfo( )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *var,*array;
+		char *value;
+		array = ferite_create_uarray_variable( script, "dbi_connect_info",  5, FE_STATIC );
+		
+		if( dbi->connected) {
+
+		value = (char *)dbi_driver_get_name(dbi_conn_get_driver(dbi->conn));
+		
+		var = fe_new_str( "dbi_connect_info_protocol", (char *)value, 0, FE_CHARSET_DEFAULT );
+		if( var ) ferite_uarray_add( script, VAUA( array ), var, "protocol", 1 );
+		
+		value = (char *) dbi_conn_get_option( dbi->conn, "username" );
+		var = fe_new_str( "dbi_connect_info_username", (char *)value, 0, FE_CHARSET_DEFAULT );
+		if( var ) ferite_uarray_add( script, VAUA( array ), var, "username", -1 );
+
+		value = (char *) dbi_conn_get_option( dbi->conn, "password" );
+		var = fe_new_str( "dbi_connect_info_password", (char *)value, 0, FE_CHARSET_DEFAULT );
+		if( var ) ferite_uarray_add( script, VAUA( array ), var, "password", -1 );
+		
+		value = (char *) dbi_conn_get_option( dbi->conn, "dbname" );
+		var = fe_new_str( "dbi_connect_info_database", (char *)value , 0, FE_CHARSET_DEFAULT);
+		if( var ) ferite_uarray_add( script, VAUA( array ), var, "database", -1 );
+		
+		value = (char *) dbi_conn_get_option( dbi->conn, "host" );
+		var = fe_new_str( "dbi_connect_info_hostname", (char *)value , 0, FE_CHARSET_DEFAULT);
+		if( var ) ferite_uarray_add( script, VAUA( array ), var, "hostname", -1 );
+		
+		}
+		FE_RETURN_VAR( array );
+	}
+
+	/**
+	 * @function quote
+	 * @declaration function quote( string str )
+	 * @brief	Quote strings characters that will be quoted are ' \ and %
+	 * @return   A quoted string
+	 * @param	string str
+	 *		   The string that you want to quote.
+	 * @description When building a query, either use place holder values (which Dbi will auto-quote) or
+	   use this function. This will make it much harder for an SQL injection attack to occur.
+	 */
+	native function quote( string str )
+	{
+		FeriteVariable *var;
+		char *quoted;
+		quoted = (char *) ferite_quote_internal( str->data );
+		var = fe_new_str("dbi_quoted_string", quoted , 0, FE_CHARSET_DEFAULT);
+		ffree( quoted );
+		FE_RETURN_VAR( var );
+	}
+
+	/**
+	 * @function listTables
+	 * @declaration function listTables( string str )
+	 * @brief	Fetch a list of tablenames
+	 * @return   A DbiResult object
+	 * @param	string str
+	 *		   Pattern for matching.
+	 */
+	native function listTables( string str )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *obj;
+		dbi_result result;
+		if( dbi->connected ) {
+		if( ( result = dbi_conn_get_table_list( dbi->conn, str->data, NULL ) ) != NULL ) {
+			obj = ferite_return_result( script, result );
+			FE_RETURN_VAR( obj );
+		}
+		}
+		FE_RETURN_NULL_OBJECT;
+	}
+
+	/**
+	 * @function listDbs
+	 * @declaration function listDbs( )
+	 * @brief	Fetch a list of dbnames
+	 * @return   dbiResult object.
+	 */
+	native function listDbs( )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *obj;
+		dbi_result result;
+		if( dbi->connected ) {
+		if( ( result = dbi_conn_get_db_list( dbi->conn , NULL) ) != NULL ) {
+			obj = ferite_return_result( script, result );
+			FE_RETURN_VAR( obj );
+		}
+		}
+		FE_RETURN_NULL_OBJECT;
+	 }
+
+	/**
+	 * @function driverName
+	 * @declaration function driverName( )
+	 * @brief	Fetch the name of the active driver
+	 * @return   A string containing the driver name (e.g. mysql)
+	 */
+	native function driverName( )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *var;
+		var = fe_new_str("dbi_driver_name", (char *)dbi_driver_get_name(dbi_conn_get_driver(dbi->conn)),
+			0, FE_CHARSET_DEFAULT);
+		FE_RETURN_VAR( var );
+	}
+
+	/**
+	 * @function seqCurrVal
+	 * @declaration function seqCurrVal( string sequence )
+	 * @brief	Fetch the current value of a sequence
+	 * @return   The current value (a long)
+	 */
+	native function seqCurrVal( string sequence )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *var;
+		
+		var = fe_new_lng("dbi_sequence_curr_val",
+			(long)dbi_conn_sequence_last(dbi->conn, sequence->data));
+		FE_RETURN_VAR( var );
+	}
+
+	/**
+	 * @function seqNextVal
+	 * @declaration function seqNextVal( string sequence )
+	 * @brief	Fetch the next value of a sequence
+	 * @return   The next value (a long)
+	 */
+	native function seqNextVal( string sequence )
+	{
+		DBIData *dbi = self->odata;
+		FeriteVariable *var;
+		
+		var = fe_new_lng("dbi_sequence_curr_val",
+			dbi_conn_sequence_next(dbi->conn, sequence->data));
+	
+		FE_RETURN_VAR( var );	   
+	}
+
+	/**
+	 * @function isReservedWord
+	 * @declaration function isReservedWord( string word )
+	 * @brief	Checks to see if the specified word is a reserved word within the implementations query language.
+	 * @return   'true' or 'false'
+	 */
+	native function isReservedWord( string word )
+	{
+		DBIData *dbi = self->odata;
+		
+		if(dbi_driver_is_reserved_word(dbi_conn_get_driver( dbi->conn ), word->data))
+		FE_RETURN_TRUE;
+		FE_RETURN_FALSE;
+	}
+
+   /**
+	* @function setOption
+	* @declaration function setOption(string key, string value)
+	* @brief Set a string option on the database driver being used
+	* @param string key The name of theoption to set
+	* @param string value The value to set
+	*/
+   native function setOption(string key, string value)
+   {
+		DBIData *dbi = self->odata;
+		if( dbi_conn_set_option(dbi->conn, key->data, value->data) == 0)
+		FE_RETURN_TRUE;
+		FE_RETURN_FALSE;
+   }
+	
+   /**
+	* @function setOptionNumeric
+	* @declaration function setOptionNumeric(string key, number value)
+	* @brief Set a numberic option on the database driver being used
+	* @param string key The name of theoption to set
+	* @param numberic value The value to set
+	*/
+   native function setOptionNumeric(string key, number value)
+   {
+		DBIData *dbi = self->odata;
+		if( dbi_conn_set_option_numeric(dbi->conn, key->data, (long)value) == 0)
+		FE_RETURN_TRUE;
+		FE_RETURN_FALSE;
+   }
+
+   /**
+	* @function clearOptions
+	* @declaration function clearOptions()
+	* @brief Reset the options being used.
+	*/
+   native function clearOptions( )
+   {
+		DBIData *dbi = self->odata;
+		dbi_conn_clear_options(dbi->conn);
+		FE_RETURN_TRUE;
+   }
+
+	function method_missing( ... ) {
+		array  a  = arguments();
+		string sp = Array.last(a);
+		object r  = new Regexp( 'SP_(.*)' );
+		object m  = r.match(sp);
+		if( m ) {
+			array params = a[0..-2];
+			string query = '';
+			object result = null;
+			query += "SELECT * from ${m.capture(0)}(";
+			Array.eachWithIndex( params ) using ( v, index ) {
+				if( not (v isa number) )
+					query += "'${.quote(''+v)}'";
+				else
+					query += v;
+				if( index < (Array.size(params) - 1) )
+					query += ',';
+			};
+			query += ");";
+			if( recipient() )
+				return .query( query ) using recipient();
+			else {
+				array row;
+				result = .query(query);
+				if( result ) {
+					if( result.rows() == 1 ) {
+						row = result.nextRecord();
+						result.finish();
+						if( row.size() == 1 )
+							return row[0];
+						return row;
+					}
+					return result;
+				}
+			}
+		}
+		Sys.error( "Unable to invoke method $sp in Dbi object (mis-spelt SP_ ?) (${.errstr()})", 0 );
+	}
+	function queryUpdateInsert( string table, array items, array conditions ) {
+		array itemsKeys = items.keys();
+		array conditionsKeys = conditions.keys();
+		string updateQuery = "UPDATE $table SET " + 
+					itemsKeys.join(', ') using ( key ) {
+						void value = items[key];
+						if( value isa number )
+							return "$key=${items[key]}";
+						return "$key='${.quote(items[key])}'";
+					} + 
+					" WHERE " +
+					conditionsKeys.join(' AND ') using ( key ) {
+						void value = conditions[key];
+						if( value isa number )
+							return "$key=${conditions[key]}";
+						return "$key='${.quote(conditions[key])}'";
+					};
+		object result = .query( updateQuery );
+		if( not result ) {
+			raise new Error( "Error on update: {$updateQuery}:" + (.errstr() - "\n") );
+		}
+		if( result and result.rows() == 0 ) {
+			string insertQuery = "INSERT INTO $table(" + itemsKeys.join(', ') + ',' + conditionsKeys.join(',') + ") VALUES(" + 
+						itemsKeys.join(', ') using ( key ) {
+							void value = items[key];
+							if( value isa number )
+								return "${items[key]}";
+							return "'${.quote(items[key])}'";
+						} + 
+						"," +
+						conditionsKeys.join(', ') using ( key ) {
+							void value = conditions[key];
+							if( value isa number )
+								return "${conditions[key]}";
+							return "'${.quote(conditions[key])}'";
+						} + ")";
+			result = .query( insertQuery );
+			if( not result ) {
+				raise new Error( "Error on insert: {$insertQuery}:" + (.errstr() - "\n") );
+			}
+			if( result and result.rows() == 0 ) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+} /* END class Dbi */
+
+ /**
+  * @end
+  */

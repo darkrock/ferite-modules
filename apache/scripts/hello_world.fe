@@ -1,0 +1,18 @@
+uses "apache";
+
+object req = new Request();
+
+req.print('
+
+<html>
+  <head>
+    <title>Hello World from ferite</title>
+  </head>
+  
+  <body>
+    <h2>Hello World From Ferite</h2>
+    Congratulations! If you can see this, it means that the installation of the <a href="http://www.ferite.org">ferite</a> web server software on this system was successful. You may now add content to this directory and replace this page.
+  </body>
+</html>
+
+');

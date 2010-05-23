@@ -1,0 +1,883 @@
+/*
+ * Cross platform Ferite serial module.
+ * Copyright (C) 2002 Alex Holden <alex@alexholden.net>
+ */
+
+uses "serial.lib";
+
+module-header {
+#include <pwd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>
+#include <termios.h>
+
+struct Port_odata {
+	int fd;
+	char *lockfile;
+	struct termios ti;
+	struct termios si;
+};
+#define PORTFD (((struct Port_odata *)self->odata)->fd)
+#define PORTTI (((struct Port_odata *)self->odata)->ti)
+#define PORTSI (((struct Port_odata *)self->odata)->si)
+#define PORTLOCKFILE (((struct Port_odata *)self->odata)->lockfile)
+}
+
+/**
+ * @namespace Serial
+ * @brief A container class for serial access
+ */
+namespace Serial {
+
+	/* This will probably vary between OSes and even not be used at all
+	 * on some: */
+	string LOCKDIR="/var/lock";
+	string LOCKPNAME="ferite";
+
+/** @variable PARITY_NONE @type number @brief Parity option */
+	number PARITY_NONE = 0;
+/** @variable PARITY_EVEN @type number @brief Parity option */
+	number PARITY_EVEN = 1;
+/** @variable PARITY_ODD @type number @brief Parity option */
+	number PARITY_ODD = 2;
+/** @variable FC_NONE @type number @brief Flow control option */
+	number FC_NONE = 0;
+/** @variable FC_XONXOFF @type number @brief Flow control option */
+	number FC_XONXOFF = 1;
+/** @variable FC_RTSCTS @type number @brief Flow control option */
+	number FC_RTSCTS = 2;
+/** @variable FC_BOTH @type number @brief Flow control option */
+	number FC_BOTH = 3;
+
+/**
+ * @class Port
+ * @brief A Serial Port object.
+ */
+class Port
+{
+
+	/**
+	 * @function constructor
+	 * @declaration function constructor(string device)
+	 * @brief Open the specified serial device
+	 * @param string device The name of the serial device
+	 * @description The constructor for a Serial Port object. The device
+	 *		string is platform dependant name for the serial
+	 *		port device to open. Eg. the first standard serial
+	 *		port on Linux with devfs would be "/dev/tts/0". On
+	 *		failure, err.str and err.number are set and the object
+	 *		creation fails. The value EEXIST means that the device
+	 *		is locked, which usually means that another application
+	 *		has already opened it.
+	 */
+	native function constructor(string device)
+	{
+		int len, fd;
+		mode_t savmask;
+		pid_t pid = -1;
+		struct passwd *pw;
+		FeriteVariable *fv;
+		FeriteNamespaceBucket *nsb;
+		char *p, *lockfile, buf[128];
+
+		/* Generate the name of the lock file, including full path.
+		 * Unfortunately this method works rather badly with devfs
+		 * because /dev/tts/0 and /dev/someweirdserialboard/0 both end
+		 * up using the lock file $LOCKDIR/LCK..0. The only way I've
+		 * found to work around this which also works with other serial
+		 * programs like minicom is to use symlinks to give all the
+		 * serial devices you have unique names in /dev. */
+		if(!(p = strrchr(device->data, '/'))) p = device->data;
+		else p++;
+		if(!*p) {
+			ferite_set_error(script, -1, "Invalid device name");
+			FE_RETURN_NULL_OBJECT;
+		}
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Serial.LOCKDIR", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		len = VAS(fv)->length + strlen(p) + 7;
+		if(!(lockfile = fmalloc(len))) {
+			FE_RETURN_NULL_OBJECT;
+		}
+		snprintf(lockfile, len, "%s/LCK..%s", VAS(fv)->data, p);
+
+		/* Try to open the lock file read-only. If this fails because
+		 * the file doesn't exist, great- the device isn't locked. */
+		if(((fd = open(lockfile, O_RDONLY)) == -1) && errno != ENOENT) {
+			ffree(lockfile);
+			ferite_set_error(script, errno, "Couldn't open lock "
+				"file for reading: %s", strerror(errno));
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		if(fd != -1) {
+			/* The lock file exists, so if possible we read the
+			 * PID out of it, figure out if that PID exists, and
+			 * if not, try to remove the lock file. */
+			buf[127] = 0;
+			len = read(fd, buf, 127);
+			close(fd);
+			if(len == sizeof(pid_t)) {
+				/* Binary lock file: */
+				memcpy(&pid, buf, sizeof(pid_t));
+			} else if(len > sizeof(pid_t)) {
+				/* ASCII lock file: */
+				sscanf(buf, "%d", &pid);
+			}
+
+			if(pid > 1) {
+				/* We have a valid looking PID, so check if a
+				 * process with that ID exists: */
+				if(kill(pid, 0) == -1 && errno == ESRCH) {
+					/* Yep, no process with that ID exists
+					 * so it must be a stale lock file.
+					 * Try to remove it. */
+					if(unlink(lockfile) == -1) pid = -1;
+				}
+			}
+
+			/* If we couldn't figure out what PID owned the lock
+			 * file or the process was still running or if we
+			 * couldn't remove a stale lock file, return with an
+			 * appropriate error: */
+			if(pid <= 1) {
+				ffree(lockfile);
+				ferite_set_error(script, EEXIST, "Device is "
+								"locked");
+				FE_RETURN_NULL_OBJECT;
+			}
+		} else close(fd);
+
+		/* Try to create our own lock file: */
+		savmask = umask(0);
+		fd = open(lockfile, O_WRONLY | O_CREAT | O_EXCL, 0644);
+		umask(savmask);
+		if(fd == -1) {
+			ffree(lockfile);
+			ferite_set_error(script, errno, "Couldn't create lock "
+						"file: %s", strerror(errno));
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		/* Write ASCII format lock information into it: */
+		nsb = ferite_find_namespace(script, script->mainns,
+					"Serial.LOCKPNAME", FENS_VAR);
+		fv = (FeriteVariable *)nsb->data;
+		if(pw = getpwuid(getuid())) p = pw->pw_name;
+		else p = "?";
+		len = snprintf(buf, 128, "%10ld %s %.20s\n", getpid(),
+							VAS(fv)->data, p);
+		if(len > 127) len = 127;
+		write(fd, buf, len);
+		close(fd);
+
+		/* Try to open the serial port device itself: */
+		if((fd = open(device->data, O_NOCTTY | O_RDWR)) == -1) {
+			unlink(lockfile);
+			ffree(lockfile);
+			ferite_set_error(script, errno, "Couldn't open serial "
+						"device: %s", strerror(errno));
+			FE_RETURN_NULL_OBJECT;
+		}
+
+		/* Create and populate the port information structure which
+		 * is carried around with the object as self->odata: */
+		if(!(self->odata = fcalloc(sizeof(struct Port_odata), 1))) {
+			close(fd);
+			unlink(lockfile);
+			ffree(lockfile);
+			ferite_set_error(script, ENOMEM, "Out of memory");
+			FE_RETURN_NULL_OBJECT;
+		}
+		PORTFD = fd;
+		PORTLOCKFILE = lockfile;
+		if(tcgetattr(fd, &PORTTI) == -1) {
+			close(fd);
+			unlink(lockfile);
+			ffree(lockfile);
+			ferite_set_error(script, errno, "tcgetattr() failed: "
+						"%s", strerror(errno));
+			ffree(self->odata);
+			FE_RETURN_NULL_OBJECT;
+		}
+		memcpy(&PORTSI, &PORTTI, sizeof(struct termios));
+	}
+
+	/**
+	 * @function read
+	 * @declaration function read(number count)
+	 * @brief Reads up to count bytes from the serial port
+	 * @param number count The maximum number of bytes to read
+	 * @return A string containing the data read from the port
+	 * @description This function attempts to read the specified number of
+	 *		bytes from the serial port. It is possible under some
+	 *		circumstances for read to return when less than the
+	 *		specified number of bytes has been read. If an error
+	 *		occurs, an empty string will be returned. It is
+	 *		possible to tell the difference between a successful
+	 *		zero length return and an error because err.number will
+	 *		be zero if read() successfully read zero bytes (this
+	 *		can happen if for example a modem hangs up while we are
+	 *		waiting to read from it).
+	 */
+	native function read(number count)
+	{
+		int len;
+		char *buf;
+		FeriteVariable *fv;
+
+		if(!(buf = fmalloc((size_t)count))) {
+			ferite_set_error(script, ENOMEM, "Out of memory");
+			fv = ferite_create_string_variable_from_ptr(script, "",
+					"", 0, FE_CHARSET_DEFAULT, FE_STATIC);
+			FE_RETURN_VAR(fv);
+		}
+
+		do {
+			len = read(PORTFD, buf, (size_t)count);
+		} while(len == -1 && errno == EINTR);
+
+		if(len == -1) {
+			ferite_set_error(script, errno, "%s", strerror(errno));
+			buf[0] = 0;
+			len = 0;
+		} else ferite_set_error(script, 0, "");
+
+		fv = ferite_create_string_variable_from_ptr(script,
+					"Serial::Port::read", buf, len,
+					FE_CHARSET_DEFAULT, FE_STATIC);
+		ffree(buf);
+		FE_RETURN_VAR(fv);
+	}
+
+	/**
+	 * @function write
+	 * @declaration function write(string s)
+	 * @brief Tries to write the specified string to the serial port
+	 * @param string s The string to send to the serial port
+	 * @return The number of bytes which were written or -1 on error
+	 * @description This function attempts to write the specified string
+	 *		to the serial port. It is possible under some
+	 *		circumstances for write() to return before it has sent
+	 *		the entire string, or even for it to return 0 (if for
+	 *		example the modem hung up before we had sent any data
+	 *		to it). If an error occurs, -1 will be returned.
+	 */
+	native function write(string s)
+	{
+		int len;
+
+		do {
+			len = write(PORTFD, s->data, s->length);
+		} while(len == -1 && errno == EINTR);
+
+		if(len == -1)
+			ferite_set_error(script, errno, "%s", strerror(errno));
+
+		FE_RETURN_LONG(len);
+	}
+
+	/**
+	 * @function pwrite
+	 * @declaration function pwrite(string s)
+	 * @brief Tries to write the string to the serial port in one go
+	 * @param string s The string to send to the serial port
+	 * @return The number of bytes which were written
+	 * @description This function is basically the same as write()
+	 *		except that it is more persistent in that it
+	 *		automatically retries partial writes until the full
+	 *		string has been written, or until write() either returns
+	 *		an error or returns 0 (indicating that the data could
+	 *		not be written, probably because the modem hung up).
+	 *		The return value is the number of bytes which were
+	 *		successfully written out of the serial port. If it is
+	 *		less than the length of the string, err.number will be
+	 *		0 if the reason is that the last write() returned 0,
+	 *		and a system error value (> 0) if an error occured.
+	 */
+	native function pwrite(string s)
+	{
+		int len, curpos = 0;
+
+		do {
+			len = write(PORTFD, &s->data[curpos],
+					s->length - curpos);
+			if(len > 0) curpos += len;
+		} while((len == -1 && errno == EINTR) ||
+			(len > 0 && curpos < s->length));
+
+		if(len == -1) {
+			ferite_set_error(script, errno, "%s", strerror(errno));
+		} else if(len == 0) {
+			ferite_set_error(script, 0, "");
+		}
+
+		FE_RETURN_LONG(curpos);
+	}
+
+	/**
+	 * @function pauseTransmission
+	 * @declaration function pauseTransmission()
+	 * @brief Pauses the transmission of serial data
+	 * @return True on success or false on failure
+	 * @description This function temporarily pauses the transmission of
+	 *		data from the serial port. You can continue
+	 *		transmission again by calling the resumeTransmission()
+	 *		method.
+	 */
+	native function pauseTransmission()
+	{
+		if(tcflow(PORTFD, TCOOFF) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function resumeTransmission
+	 * @declaration function resumeTransmission()
+	 * @brief Resumes transmission after an earlier pauseTransmission()
+	 * @return True on success or false on failure
+	 * @description This function resumes the transmission of data from the
+	 *		serial port if it was earlier paused using the
+	 *		pauseTransmission() method.
+	 */
+	native function resumeTransmission()
+	{
+		if(tcflow(PORTFD, TCOON) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function initSettings()
+	 * @declaration function initSettings()
+	 * @brief Resets the settings of the interface
+	 * @return True on success or false on failure
+	 * @description When the serial port is first opened, it will
+	 *		typically have some settings already associated with
+	 *		it. Sometimes you will configure them with an external
+	 *		program and then use them unchanged, but if you want
+	 *		to choose your own settings you can call this function
+	 *		to initialise them to a known set of default values
+	 *		first. This function will set the serial port to
+	 *		8N1 9K6 in and out with no break or parity checking,
+	 *		no echoing of input data back to the sender, no
+	 *		translation of special sequences, and no flow control.
+	 */
+	native function initSettings()
+	{
+		PORTTI.c_iflag |= (IGNBRK | IGNPAR);
+		PORTTI.c_iflag &= ~(BRKINT | PARMRK | INPCK | ISTRIP |
+				INLCR | IGNCR | ICRNL | IXON | IXOFF);
+		PORTTI.c_oflag &= ~(OPOST
+#ifdef ONLCR
+                            | ONLCR
+#endif
+#ifdef OCNRL
+                            | OCRNL 
+#endif
+#ifdef ONOCR
+                            | ONOCR 
+#endif
+#ifdef ONLRET
+                            | ONLRET
+#endif
+                            );
+		PORTTI.c_cflag &= ~(CSIZE | CSTOPB | PARENB | HUPCL | CRTSCTS);
+		PORTTI.c_cflag |= (CS8 | CREAD | HUPCL);
+		PORTTI.c_lflag &= ~(ISIG | ICANON | ECHO | IEXTEN);
+		cfsetispeed(&PORTTI, B9600);
+		cfsetospeed(&PORTTI, B9600);
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function setDataBits
+	 * @declaration function setDataBits(number bits)
+	 * @brief Sets the number of data bits per byte
+	 * @param number bits The number of data bits in each byte
+	 * @return True on success or false on failure
+	 * @description This fuction sets the number of data bits to transmit
+	 *		in each byte and the number of data bits to expect in
+	 *		each byte of received data. Note that typical serial
+	 *		hardware can only deal with the following numbers:
+	 *		5, 6, 7 or 8. The parity bit (sometimes referred to as
+	 *		the ninth data bit) is dealt with seperately.
+	 */
+	native function setDataBits(number bits)
+	{
+		int flags;
+
+		switch((int)bits) {
+			case 5:
+				flags = CS5;
+				break;
+			case 6:
+				flags = CS6;
+				break;
+			case 7:
+				flags = CS7;
+				break;
+			case 8:
+				flags = CS8;
+				break;
+			default:
+				FE_RETURN_FALSE;
+		}
+
+		PORTTI.c_cflag &= ~CSIZE;
+		PORTTI.c_cflag |= flags;
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function getDataBits
+	 * @declaration function getDataBits()
+	 * @brief Finds the current number of data bits per byte
+	 * @return The current number of data bits per byte or -1 on error
+	 */
+	native function getDataBits()
+	{
+		int flags = PORTTI.c_cflag & CSIZE;
+
+		switch(flags) {
+			case CS5:
+				FE_RETURN_LONG(5);
+			case CS6:
+				FE_RETURN_LONG(6);
+			case CS7:
+				FE_RETURN_LONG(7);
+			case CS8:
+				FE_RETURN_LONG(8);
+		}
+
+		FE_RETURN_LONG(-1);
+	}
+
+	/**
+	 * @function setStopBits
+	 * @declaration function setStopBits(number bits)
+	 * @brief Sets the number of stop bits to use
+	 * @param number bits The number of bits (usually 1 or 2)
+	 * @return True on success or false on failure
+	 * @description This fuction sets the number of stop bits to send after
+	 *		each data byte and to expect in the received data
+	 *		stream. Note that most hardware only allows you to use
+	 *		either 1 or 2 stop bits.
+	 */
+	native function setStopBits(number bits)
+	{
+		if((int)bits == 1) PORTTI.c_cflag &= ~CSTOPB;
+		else if((int)bits == 2) PORTTI.c_cflag |= CSTOPB;
+		else {
+			FE_RETURN_FALSE;
+		}
+
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function getStopBits
+	 * @declaration function getStopBits()
+	 * @brief Finds the number of stop bits
+	 * @return The number of stop bits or -1 on error
+	 */
+	native function getStopBits()
+	{
+		if(PORTTI.c_cflag & CSTOPB) {
+			FE_RETURN_LONG(2);
+		}
+		FE_RETURN_LONG(1);
+	}
+
+	/**
+	 * @function setParity
+	 * @declaration function setParity(number type)
+	 * @brief Sets the parity to use
+	 * @param number parity The type of parity to use
+	 * @return True on success or false on failure
+	 * @description This function sets the kind of parity to use on the
+	 *		port. The types you can use are Serial.PARITY_NONE
+	 *		Serial.PARITY_EVEN and Serial.PARITY_ODD. By default
+	 *		input parity errors are ignored.
+	 */
+	native function setParity(number type)
+	{
+		switch((int)type) {
+			case 0: /* PARITY_NONE */
+				PORTTI.c_cflag &= ~PARENB;
+				break;
+			case 1: /* PARITY_EVEN */
+				PORTTI.c_cflag |= PARENB;
+				PORTTI.c_cflag &= ~PARODD;
+				break;
+			case 2: /* PARITY_ODD */
+				PORTTI.c_cflag |= PARENB;
+				PORTTI.c_cflag |= PARODD;
+				break;
+			default:
+				FE_RETURN_FALSE;
+		}
+
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function getParity
+	 * @declaration function getParity()
+	 * @brief Gets the port parity setting
+	 * @return One of Serial.PARITY_NONE, Serial.PARITY_EVEN, or Serial.PARITY_ODD
+	 */
+	native function getParity()
+	{
+		if(!(PORTTI.c_cflag & PARENB)) {
+			FE_RETURN_LONG(0); /* PARITY_NONE */
+		} else {
+			if(PORTTI.c_cflag & PARODD) {
+				FE_RETURN_LONG(2); /* PARITY_ODD */
+			} else {
+				FE_RETURN_LONG(1); /* PARITY_EVEN */
+			}
+		}
+	}
+	
+	/**
+	 * @function setFlowControl
+	 * @declaration function setFlowControl(number type)
+	 * @brief Sets the type of flow control to use on the port
+	 * @param number type The type of flow control to use
+	 * @return True on success or false on failure
+	 * @description This function sets the type of flow control to use on
+	 *		the serial port. The supported types are Serial.FC_NONE,
+	 *		Serial.FC_XONXOFF, Serial.RTSCTS, and Serial.BOTH (ie.
+	 *		both XONXOFF and RTSCTS). Note that it does not
+	 *		normally make any sense to enable both types of flow
+	 *		control but it is supported because there may be rare
+	 *		occasions where it is useful.
+	 */
+	native function setFlowControl(number type)
+	{
+		switch((int)type) {
+			case 0: /* FC_NONE */
+				PORTTI.c_cflag &= ~CRTSCTS;
+				PORTTI.c_iflag &= ~(IXON | IXOFF);
+				break;
+			case 1: /* FC_XONXOFF */
+				PORTTI.c_cflag &= ~CRTSCTS;
+				PORTTI.c_iflag |= (IXON | IXOFF);
+				break;
+			case 2: /* FC_RTSCTS */
+				PORTTI.c_cflag |= CRTSCTS;
+				PORTTI.c_iflag &= ~(IXON | IXOFF);
+				break;
+			case 3: /* FC_BOTH */
+				PORTTI.c_cflag |= CRTSCTS;
+				PORTTI.c_iflag |= (IXON | IXOFF);
+				break;
+			default:
+				FE_RETURN_FALSE;
+		}
+
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function getFlowControl
+	 * @declaration function getFlowControl()
+	 * @brief Gets the type of flow control in use on the port
+	 * @return The flow control type
+	 * @description This function returns the type of flow control which
+	 *		is in use on the serial port. The possible types are
+	 *		Serial.FC_NONE, Serial.FC_XONXOFF, Serial.RTSCTS, and
+	 *		Serial.BOTH (ie. both XONXOFF and RTSCTS).
+	 */
+	native function getFlowControl()
+	{
+		if(PORTTI.c_cflag & CRTSCTS) {
+			if(PORTTI.c_iflag & (IXON | IXOFF)) {
+				FE_RETURN_LONG(3); /* FC_BOTH */
+			}
+			FE_RETURN_LONG(2); /* FC_RTSCTS */
+		}
+		if(PORTTI.c_iflag & (IXON | IXOFF)) {
+			FE_RETURN_LONG(1); /* FC_XONXOFF */
+		}
+		FE_RETURN_LONG(0); /* FC_NONE */
+	}
+
+	/**
+	 * @function setSpeed
+	 * @declaration function setSpeed(number in, number out)
+	 * @brief Sets the input and output baud rate of the serial port
+	 * @param number in The input baud rate
+	 * @param number out The output baud rate
+	 * @return True on success or false on failure
+	 * @description Sets the input and output baud rates of the serial
+	 *		port. Note that on some systems only the following
+	 *		rates are allowed: 50, 75, 110, 134, 150, 200, 300,
+	 *		600, 1200, 1800, 2400, 4800, 9600, 19200, 38400,
+	 *		57600, 115200, 230400. Also, The special value 0
+	 *		means "hang up". Individual serial hardware may
+	 *		support an even smaller range of rates than the above.
+	 *		If only a single parameter is specified, it is used
+	 *		for both input and output baud rates.
+	 */
+	native function setSpeed(number in, number out)
+	{
+		int i;
+
+		if(((i = baudtoconst((long)in)) == -1) ||
+			(cfsetispeed(&PORTTI, i) == -1) ||
+			((i = baudtoconst((long)out)) == -1) ||
+			(cfsetospeed(&PORTTI, i) == -1) ||
+			(tcsetattr(PORTFD, TCSADRAIN, &PORTTI) == -1)) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+	function setSpeed(number baud)
+	{
+		return(.setSpeed(baud, baud));
+	}
+
+	/**
+	 * @function getInputSpeed
+	 * @declaration function getInputSpeed()
+	 * @brief Gets the input baud rate of the serial port
+	 * @return The baud rate or -1 on error
+	 */
+	native function getInputSpeed()
+	{
+		speed_t speed = cfgetispeed(&PORTTI);
+
+		if(speed == B0) speed = cfgetospeed(&PORTTI);
+
+		speed = consttobaud(speed);
+
+		FE_RETURN_LONG(speed);
+	}
+
+	/**
+	 * @function getOutputSpeed
+	 * @declaration function getOutputSpeed()
+	 * @brief Gets the Output baud rate of the serial port
+	 * @return The baud rate or -1 on error
+	 */
+	native function getOutputSpeed()
+	{
+		speed_t speed = cfgetispeed(&PORTTI);
+
+		speed = consttobaud(speed);
+
+		FE_RETURN_LONG(speed);
+	}
+
+	/**
+	 * @function sendXOFF
+	 * @declaration function sendXOFF()
+	 * @brief Transmits an XOFF character
+	 * @return True on success or false on failure
+	 * @description This function sends an XOFF character from the serial
+	 *		port. If the remote device is configured to use
+	 *		XON/XOFF flow control, this will cause it to pause
+	 *		transmission until it receives an XON command.
+	 */
+	native function sendXOFF()
+	{
+		if(tcflow(PORTFD, TCION) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function sendXON
+	 * @declaration function sendXON()
+	 * @brief Transmits an XON character
+	 * @return True on success or false on failure
+	 * @description This function sends an XON character from the serial
+	 *		port. If the remote device is configured to use
+	 *		XON/XOFF flow control, this will cause it to resume
+	 *		transmission after an earlier XOFF command.
+	 */
+	native function sendXON()
+	{
+		if(tcflow(PORTFD, TCION) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function sendBreak
+	 * @declaration function sendBreak()
+	 * @brief Sends a break
+	 * @return True on success or false on failure
+	 * @description This function sends a break (a continuous streamm of
+	 *		zero bits for between 0.25 and 0.5 seconds).
+	 */
+	native function sendBreak()
+	{
+		if(tcsendbreak(PORTFD, 0) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function waitForOutput
+	 * @declaration function waitForOutput()
+	 * @brief Waits for the output buffer to empty
+	 * @return True on success or false on failure
+	 */
+	native function waitForOutput()
+	{
+		if(tcdrain(PORTFD) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function flushInput
+	 * @declaration function flushInput()
+	 * @brief Flushes unread data from the input buffer
+	 * @return True on success or false on failure
+	 */
+	native function flushInput()
+	{
+		if(tcflush(PORTFD, TCIFLUSH) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function flushOutput
+	 * @declaration function flushOutput()
+	 * @brief Flushes unsent data from the output buffer
+	 * @return True on success or false on failure
+	 */
+	native function flushOutput()
+	{
+		if(tcflush(PORTFD, TCOFLUSH) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function flushIO
+	 * @declaration function flushIO()
+	 * @brief Flushes all data from both input and ouput buffers
+	 * @return True on success or false on failure
+	 */
+	native function flushIO()
+	{
+		if(tcflush(PORTFD, TCIOFLUSH) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function saveSettings
+	 * @declaration function saveSettings()
+	 * @brief Saves the port settings
+	 * @return True on success or false on failure
+	 * @description This function saves the serial port settings in such
+	 *		a way that they may later be restored using the
+	 *		restoresettings() method. The settings are saved
+	 *		automatically when the port is first opened, so you
+	 *		do not need to call savesettings() if all you want to
+	 *		do is restore the settings on program exit to what
+	 *		they were at startup.
+	 */
+	native function saveSettings()
+	{
+		if(tcgetattr(PORTFD, &PORTSI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/**
+	 * @function restoreSettings
+	 * @declaration function restoreSettings()
+	 * @brief Restores the saved port settings
+	 * @return True on success or false on failure
+	 * @description This function restores the serial port settings which
+	 *		were saved when the port was first opened or when
+	 *		the savesettings() function was last called. This is
+	 *		most useful for returning the serial port settings at
+	 *		program exit to what they were when the program
+	 *		started. The restored settings will not be put into
+	 *		place until after any data remaining data in the output
+	 *		buffer has been sent. Note that you must call this
+	 *		function before, not after, you call the close()
+	 *		method otherwise it will fail.
+	 */
+	native function restoreSettings()
+	{
+		if(tcsetattr(PORTFD, TCSADRAIN, &PORTSI) == -1) {
+			FE_RETURN_FALSE;
+		}
+		FE_RETURN_TRUE;
+	}
+
+	/* Used by Sys.select() */
+	native function getDescriptor()
+	{
+		FE_RETURN_LONG(PORTFD);
+	}
+
+	/**
+	 * @function close
+	 * @declaration function close()
+	 * @brief Closes the serial port device and removes the lock
+	 */
+	native function close()
+	{
+		close(PORTFD);
+		unlink(PORTLOCKFILE);
+	}
+
+	native function destructor()
+	{
+		if(PORTFD != -1) {
+			close(PORTFD);
+			unlink(PORTLOCKFILE);
+		}
+		ffree(PORTLOCKFILE);
+		ffree(self->odata);
+	}
+}
+/**
+ * @end
+ */
+}
+/**
+ * @end
+ */

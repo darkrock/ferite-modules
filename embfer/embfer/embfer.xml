@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<module>
+    <name>embfer</name>
+    <documentation-list>
+        <include>embfer.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

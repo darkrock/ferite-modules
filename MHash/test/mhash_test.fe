@@ -1,0 +1,53 @@
+#!/usr/bin/env ferite
+
+/*
+ * Ferite bindings to the MHash library.
+ * Copyright (C) 2002 Alex Holden <alex@alexholden.net>
+ */
+
+uses "MHash", "console", "string";
+
+string res;
+object hash;
+object keygen;
+
+Console.println("Creating MCRYPT Key Generator");
+keygen = new MHash.KeyGen(MHash.MCRYPT);
+Console.println("hash_algorithms = " + keygen.hashAlgorithms());
+Console.println("uses_salt = " + keygen.usesSalt());
+Console.println("uses_count = " + keygen.usesCount());
+Console.println("Setting salt to \"fred\"");
+keygen.setSalt("fred");
+Console.println("Setting hash algorithm 1 to SHA1");
+keygen.setHashAlgorithms(MHash.SHA1, 0);
+Console.print("8 byte key for password \"wibble\": ");
+res = keygen.generateKey("wibble", 8);
+Console.println(String.toHex(res));
+Console.println("");
+
+Console.println("Creating MD5 HMAC keyed hash engine with key \"fred\"");
+hash = new MHash.Hash(MHash.MD5, "fred");
+Console.println("Feeding in the string \"Ferite hashes hash algorithms\" in three parts");
+hash.addData("Fer");
+hash.addData("ite hashes hash al");
+hash.addData("gorithms");
+Console.println("Finalising and retrieving the hash digest");
+res = hash.getHash();
+Console.println("Result: " + String.toHex(res));
+Console.println("Repeating above test using hmac_string()");
+res = MHash.hmacString("Ferite hashes hash algorithms", "fred", MHash.MD5);
+Console.println("Result: " + String.toHex(res));
+Console.println("");
+
+Console.println("Creating SHA1 hash engine");
+hash = new MHash.Hash(MHash.SHA1);
+Console.println("Feeding in the string \"Ten green bottles standing on a wall\" in three parts");
+hash.addData("Ten green bottles st");
+hash.addData("a");
+hash.addData("nding on a wall");
+Console.println("Finalising and retrieving the hash digest");
+res = hash.getHash();
+Console.println("Result: " + String.toHex(res));
+Console.println("Repeating above test using hash_string()");
+res = MHash.hashString("Ten green bottles standing on a wall", MHash.SHA1);
+Console.println("Result: " + String.toHex(res));

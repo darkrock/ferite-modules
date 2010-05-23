@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<module>
+    <name>apache</name>
+    <documentation-list>
+        <include>apache.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

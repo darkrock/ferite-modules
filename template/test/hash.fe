@@ -1,0 +1,23 @@
+uses "console","template";
+
+class foo
+{
+    array hash;
+}
+
+array a, b;
+object o = new foo();
+object tmpl;
+
+a["name"] = "Kalle";
+a["title"] = "Devil";
+
+b["name"] = "Hobbe";
+b["title"] = "God";
+
+o.hash[] = a;
+o.hash[] = b;
+
+tmpl  = new Template( o );
+tmpl.parseFile("hash.tpl");
+Console.println( tmpl.run() );

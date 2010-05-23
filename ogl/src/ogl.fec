@@ -1,0 +1,5 @@
+
+uses "ogl.lib";
+
+uses "OpenGL.fec";
+uses "GLU.fec";

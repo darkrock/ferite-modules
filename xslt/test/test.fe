@@ -1,0 +1,19 @@
+uses "xml";
+uses "xslt";
+uses "console";
+
+object stylesheet = new XSLT.Transform("test.xsl");
+object parser = new XML.TreeParser();
+parser.parseFile("test.xml");
+
+stylesheet.apply( parser );
+Console.println( "======== xslt toString() =======" );
+Console.println( stylesheet.toString() );
+
+parser = stylesheet.getXMLTreeParser();
+Console.println( "-------- parser toString() -----" );
+Console.println( parser.toString() );
+
+
+
+

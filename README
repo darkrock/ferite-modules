@@ -1,0 +1,19 @@
+Module    Documentation ~ Compiled ~ Examples Install ~ Regen Docs
+
+apache          *            *             *                *
+aspell          *            *             *                *
+crypt           *            *             *                *
+curl            *            *             *                *
+curses          *            *             *                *
+dbi             *            *             *                *
+embfer          *            *             *                *
+gettext         *            *             *                *
+image           *            *             *                *
+mail
+MHash           *            *             *                *
+serial          *            *             *                *
+template        *            *             *                *
+ui              X            X
+uxml            X            X                              
+xslt            *            *             *                *
+zip             *            *             *                *

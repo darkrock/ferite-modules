@@ -1,0 +1,8 @@
+uses "curl","console";
+object crl;
+
+crl = new Curl.Curl();
+Console.println( "Curl Object: "+ crl );
+Console.println( "Set URL: "+ crl.setOption(Curl.CURLOPT_URL,"http://www.example.com") );
+Console.println( "Exec: "+ crl.exec() );
+

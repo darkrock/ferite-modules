@@ -1,0 +1,532 @@
+/*
+ * Copyright (C) 2007 Michael D. Henderson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this
+ *   list of conditions and the following disclaimer.
+ * o Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * o Neither the name of the ferite software nor the names of its contributors may
+ *   be used to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+ * ZLib is a zlib wrapper for ferite (www.ferite.org). The zpipe.c sample
+ * was used a lot (http://www.zlib.net/zpipe.c). Also, very much derived
+ * from the interface for PHP::zlib.
+ *
+ * Please make suggestions on how to make this module better to:
+ *   Michael Henderson  <blueronin@mdhenderson.com>
+ */
+
+uses "zlib.lib";
+
+module-header {
+#include <zlib.h>
+#include <stdlib.h>
+#include "utility.h"
+}
+
+module-init {
+  /* initialization stuff */
+  FeriteVariable *fvVar = 0;
+  FeriteNamespace *fnsZlib = 0;
+
+  /* create the ZLib namespace. why? good question. because we do this
+   * here, we have to modify the namespace below. that's because ferite
+   * calls the module-init code prior to running the rest of the .fec
+   * (which makes sense if you think about it).
+   */
+  fnsZlib = ferite_register_namespace(script, "ZLib", script->mainns);
+
+}
+
+module-register {
+  /*ZLib_Register();*/
+}
+
+module-unregister {
+  /*ZLib_UnRegister();*/
+}
+
+/** @namespace ZLib
+ * @brief The namespace for the ZLib module
+ * @description This module provides a wrapper to zlib,
+   allowing you to compress and uncompress gzip data. You
+   must have the zlib library installed to use this module.<nl/>
+   The design of this module is derived from PHP's implmentation
+   of zlib. References at zlib.net and php.net/manual/en/ref.zlib.php.
+ * @example <code>
+ <keyword>uses</keyword> "console" , "zlib";<nl/>
+ <type>string</type> zIn = "my friend is a walrus";<nl/>
+ for (number level = -1; level < 10; level++) {<nl/>
+   Console.println(ZLib.inflate(ZLib.deflate(zIn, level)));<nl/>
+   Console.println(ZLib.uncompress(ZLib.compress(zIn, level)));<nl/>
+  }<nl/>
+ </code><nl/>
+ */
+
+/** @variable useGZip
+ * @type number
+ */
+/** @variable useDeflate
+ * @type number
+ */
+
+namespace modifies ZLib {
+
+  /** ==============================================================================
+   * @function compress
+   * @declaration function compress(string data)
+   * @brief Compress data using ZLIB format
+   * @description Returns compressed data or nil if unable to compress data.
+   * @param string data The data to compress.
+   Uses the default compression level.
+   * @return string containing compressed data
+   */
+  function compress(string data)
+  {
+    return ZLib.compress(data, -1);
+  }
+
+  /** ==============================================================================
+   * @function compress
+   * @declaration static function compress(string data, number level)
+   * @brief Compress data using ZLIB format
+   * @description Returns compressed data or nil if unable to compress data.
+   * @param string data The data to compress
+   * @param number level Level of compression (0 is minimum, 9 is maximum)
+   * @return string containing compressed data
+   */
+  native function compress(string data, number level)
+  {
+    FeriteVariable *fvStrOutput = 0;
+    char           *strOutput   = 0;
+    long            strLength   = 0;
+    int             retVal;
+
+    retVal = ferite_zlib_priv_compres(level, data->data, data->length, &strOutput, &strLength);
+
+    if (retVal != Z_OK) {
+      ferite_error(script, 0, "error: zlib: %s\n", zError(retVal));
+      FE_RETURN_FALSE;
+    }
+    fvStrOutput = fe_new_str("strOutput", strOutput, strLength, FE_CHARSET_DEFAULT);
+    free(strOutput);
+    FE_RETURN_VAR(fvStrOutput);
+  }
+
+  /** ==============================================================================
+   * @function deflate
+   * @declaration function deflate(string data)
+   * @brief Compress data using DEFLATE format
+   * @description Returns compressed data or nil if unable to compress data.
+   Uses the default compression level.
+   * @param string data The data to compress
+   * @return string containing compressed data or false on failure
+   */
+  function deflate(string data)
+  {
+    return ZLib.deflate(data, -1);
+  }
+
+  /** ==============================================================================
+   * @function deflate
+   * @declaration function deflate(string data, number level)
+   * @brief Compress data using DEFLATE format
+   * @description Returns compressed data or nil if unable to compress data.
+   * @param string data The data to compress
+   * @param number level Level of compression (0 is minimum, 9 is maximum)
+   * @return string containing compressed data or false on failure
+   */
+  native function deflate(string data, number level)
+  {
+    FeriteVariable *fvStrOutput = 0;
+    char           *strOutput   = 0;
+    long            strLength   = 0;
+    int             retVal;
+
+    retVal = ferite_zlib_priv_deflate(level, data->data, data->length, &strOutput, &strLength);
+
+    if (retVal != Z_OK) {
+      ferite_error(script, 0, "error: zlib: %s\n", zError(retVal));
+      FE_RETURN_FALSE;
+    }
+    fvStrOutput = fe_new_str("strOutput", strOutput, strLength, FE_CHARSET_DEFAULT);
+    free(strOutput);
+    FE_RETURN_VAR(fvStrOutput);
+  }
+
+  /** ==============================================================================
+   * @function encode
+   * @declaration function encode(string data)
+   * @brief Compress data into .gz format
+   * @description Returns compressed data or false if unable to compress data.
+   * @param string data The data to compress
+   * @return string containing compressed data or false
+   */
+  function encode(string data)
+  {
+    return ZLib.encode(data, -1, -1);
+  }
+
+  /** ==============================================================================
+   * @function encode
+   * @declaration function encode(string data, number level)
+   * @brief Compress data into .gz format
+   * @description Returns compressed data or false if unable to compress data.
+   * @param string data The data to compress
+   * @param number level Level of compression (0 is minimum, 9 is maximum)
+   * @return string containing compressed data or false
+   */
+  function encode(string data, number level)
+  {
+    return ZLib.encode(data, level, -1);
+  }
+
+  /** ==============================================================================
+   * @function encode
+   * @declaration function encode(string data, number level, number flag)
+   * @brief Compress data into .gz format
+   * @description Returns compressed data or false if unable to compress data.
+   * @param string data The data to compress
+   * @param number level Level of compression (0 is minimum, 9 is maximum)
+   * @param number flag Either FORCE_GZIP or FORCE_DEFLATE
+   * @return string containing compressed data or false
+   */
+  function encode(string data, number level, number flag)
+  {
+    return "@@TODO@@";
+  }
+
+  /** ==============================================================================
+   * @function inflate
+   * @declaration function inflate(string data)
+   * @brief Uncompress data compressed with the DEFLATE method
+   * @description U
+   * @param string data The data to uncompress
+   * @return string containing uncompressed data
+   */
+  native function inflate(string data)
+  {
+    FeriteVariable *fvStrOutput = 0;
+    char           *strOutput   = 0;
+    long            strLength   = 0;
+    int             retVal;
+
+    retVal = ferite_zlib_priv_inflate(data->data, data->length, &strOutput, &strLength);
+
+    if (retVal != Z_OK) {
+      ferite_error(script, 0, "error: zlib: %s\n", zError(retVal));
+      FE_RETURN_FALSE;
+    }
+    fvStrOutput = fe_new_str("strOutput", strOutput, strLength, FE_CHARSET_DEFAULT);
+    free(strOutput);
+    FE_RETURN_VAR(fvStrOutput);
+  }
+
+  /** ==============================================================================
+   * @function open
+   * @declaration function open(string fileName)
+   * @brief Open .gz file
+   * @description Open a file?
+   * @param string fileName Name of the file to open
+   * @return ZLib object to twiddle with bits
+   * =============================================================================*/
+  function open(string fileName)
+  {
+    return ZLib.ZLib(fileName, "gzip", -1);
+  }
+
+  /** ==============================================================================
+   * @function toArray
+   * @declaration function file(string fileName)
+   * @brief Reads compressed file into an array
+   * @description Returns an array containing one line per record in the file.
+   * @param string fileName Name of compressed file to read in
+   * @return array of string containing one string per record in the file
+   */
+  function toArray(string fileName)
+  {
+    return "@@TODO@@";
+  }
+
+  /** ==============================================================================
+   * @function toString
+   * @declaration function file(string fileName)
+   * @brief Reads compressed file into a string
+   * @description Returns a string
+   * @param string fileName Name of compressed file to read in
+   * @return string containing contents of the file
+   */
+  function toString(string fileName)
+  {
+    return "@@TODO@@";
+  }
+
+  /** ==============================================================================
+   * @function uncompress
+   * @declaration function uncompress(string data)
+   * @brief Uncompress data compressed with the ? method
+   * @description Uncompresses
+   */
+  native function uncompress(string data)
+  {
+    FeriteVariable *fvStrOutput = 0;
+    char           *strOutput   = 0;
+    long            strLength   = 0;
+    int             retVal;
+
+    retVal = ferite_zlib_priv_uncompr(data->data, data->length, &strOutput, &strLength);
+
+    if (retVal != Z_OK) {
+      ferite_error(script, 0, "error: zlib: %s\n", zError(retVal));
+      FE_RETURN_FALSE;
+    }
+    fvStrOutput = fe_new_str("strOutput", strOutput, strLength, FE_CHARSET_DEFAULT);
+    free(strOutput);
+    FE_RETURN_VAR(fvStrOutput);
+  }
+
+
+
+
+
+
+
+
+
+
+
+  /** ==============================================================================
+   * @class ZLib
+   * @brief A simple wrapper for the zlib compression library.
+   * @example <code>
+ <keyword>uses</keyword> "console", "zlib";<nl/>
+ <nl/>
+ <type>object</type> gz = ZLib.open("fred.gz");<nl/>
+ <nl/>
+ </code><nl/>
+  */
+  class ZLib {
+    /** ==============================================================================
+     * @variable compressionLevel
+     * @type number
+     * @private
+     * @brief Level of compression to use (0 is minimum, 9 is maximum).
+     Set using the compressLevel function.
+     * @description This variable controls the level of compression when writing data
+     to a stream. It is not used when compressing strings or extracting data. If it
+     is used, it must be set prior to calling a write function. The default value is
+     something.
+    */
+    private number compressionLevel;
+
+    /** ==============================================================================
+     * @variable compressionType
+     * @type string
+     * @private
+     * @brief Type of compression used (GZIP or DEFLATE).
+     Set when the stream is opened.
+     * @description This variable controls the type of compression.
+     */
+    private string compressionType;
+
+    /** ==============================================================================
+     * @variable streamName
+     * @type string
+     * @private
+     * @brief Name of stream
+     */
+    private string streamName;
+
+    /** ==============================================================================
+     * @function constructor
+     * @private
+     * @declaration function constructor(string fileName, string type, number level)
+     * @brief Create a ZLib instance
+     * @description The constructor will return a ZLib object.
+     */
+    function constructor(string name, string type, number level)
+    {
+      compressionLevel = -1;
+      compressionType  = type;
+      streamName       = "@@TODO@@";
+    }
+
+    /** ==============================================================================
+     * @function destructor
+     * @private
+     * @declaration function destructor
+     * @brief Destroy a ZLib instance
+     * @description The destructor will destroy a ZLib object.
+     */
+    function destructor()
+    {
+    }
+
+    /** ==============================================================================
+     * @function close
+     * @declaration function close
+     * @brief Closes an open gzip stream.
+     * @description Closes the compressed file and releases resources. After the
+     stream is closed, the object should be deleted. You can not use it to read or
+     write data.
+     * @return boolean True if able to close stream, false otherwise.
+     */
+    native function close()
+    {
+    }
+
+    /** ==============================================================================
+     * @function compressLevel
+     * @declaration function compressLevel(number level)
+     * @brief Set the compression level for stream
+     * @description 0 is minimum, 9 is maximum, -1 is use library default value
+     * @param number level Level of compression
+     */
+    function compressLevel()
+    {
+      return compressionLevel;
+    }
+
+    /** ==============================================================================
+     * @function eof
+     * @declaration function eof()
+     * @brief Test for end of compressed file
+     * @description Test for end of file
+     * @return boolean true if at end of file, false otherwise
+     */
+    native function eof()
+    {
+    }
+
+    /** ==============================================================================
+     * @function errmsg
+     * @declaration function errmsg()
+     * @brief Returns text of last error
+     * @description Retrieve text of most recent error.
+     * @return string containing text of last error message
+     */
+    native function errorMessage()
+    {
+      /* use last status */
+    }
+
+    /** ==============================================================================
+     * @function getc
+     * @declaration function getc()
+     * @brief Returns next character from the compressed stream
+     * @description Returns next character from the compressed stream, EOF otherwise.
+     * @return char value of next character from the compressed stream
+     */
+    native function getc()
+    {
+    }
+
+    /** ==============================================================================
+     * @function gets
+     * @declaration function gets()
+     * @brief Returns next line from the compressed stream
+     * @description Returns next line from the compressed stream, EOF otherwise.
+     */
+    native function gets()
+    {
+    }
+
+    /** ==============================================================================
+     * @function passthru
+     * @declaration function passthru()
+     * @brief Output all remaining data
+     * @description U
+     */
+    native function passthru()
+    {
+    }
+
+    /** ==============================================================================
+     * @function puts
+     * @declaration function puts(string data)
+     * @brief Compresses data and write to output stream
+     * @description U
+     * @param string data The data to compress and write to the output stream
+     * @return number I think
+     */
+    native function puts(string data)
+    {
+    }
+
+    /** ==============================================================================
+     * @function read
+     * @declaration function read()
+     * @brief Binary safe .gz read
+     * @description U
+     * @return good question
+     */
+    native function read()
+    {
+    }
+
+    /** ==============================================================================
+     * @function rewind
+     * @declaration function rewind()
+     * @brief Reset file pointer to start of stream
+     * @description U
+     */
+    native function rewind()
+    {
+    }
+
+    /** ==============================================================================
+     * @function seek
+     * @declaration function seek(number offset)
+     * @brief Move file pointer
+     * @description U
+     * @param number offset The number of bytes to seek
+     * @param number whence Where to seek from
+     */
+    native function seek()
+    {
+    }
+
+    /** ==============================================================================
+     * @function tell
+     * @declaration function tell()
+     * @brief Location of file pointer
+     * @description U
+     */
+    native function tell()
+    {
+    }
+
+    /** ==============================================================================
+     * @function write
+     * @declaration function write()
+     * @brief Binary safe .gz file write
+     * @description U
+     */
+    native function write()
+    {
+    }
+  } /** @end *//* END class ZLib */
+} /** @end *//* END namespace ZLib */
+
+
+

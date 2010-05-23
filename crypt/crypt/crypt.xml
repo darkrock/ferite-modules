@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<module>
+    <name>crypt</name>
+    <documentation-list>
+        <include>crypt.fec</include>
+    </documentation-list>
+    <dependance-list>
+    </dependance-list>
+</module>

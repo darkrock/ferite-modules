@@ -1,0 +1,29 @@
+uses "mail","Mime","console";
+
+//object m=new multipart();
+
+object mess = new mail.mailobj();
+object conn = new mail.connection();
+object s = new mail.part();
+
+object to = new mail.address("cms","cention.se");
+object from = new mail.address("cms","cention.se");
+from.name = "Svenne";
+
+ mess.header = new mail.mail_header();
+ mess.header.to.add( to );
+ mess.header.from.add( from );
+ mess.header.subject = "Testar igen";
+
+
+ s.type=Mime.TYPETEXT;
+ s.subtype="plain";
+ s.content="Hej sveinung\r\n Bifogar modulkoden\r\nEftersom";
+
+ s.charset="iso-8859-1";
+//m.add_part(s);
+
+//m.add_attachment("/home/sveinung/mod_mail_fe.tar");
+
+mess.content=s;
+conn.send_mail( "mail.cention.se",mess);

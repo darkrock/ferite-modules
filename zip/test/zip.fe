@@ -1,0 +1,18 @@
+uses "console";
+uses "zip";
+
+
+object z = Zip.open( "/home/cms/test.zip" );
+object e = null;
+
+while( e = z.read( ) ) {
+
+    Console.println("Filename: " + e.name());
+    Console.println("Size: " + e.size());
+    Console.println("Compressed Size: " + e.compressedSize());
+    Console.println("Compressed Method: " + e.compressionMethod());
+    Console.println("Content: " + e.data());
+
+}
+
+

@@ -1,0 +1,104 @@
+uses "ogl";
+uses "GLUT";
+uses "string";
+
+global {
+    number RAMPSIZE=16;
+    number RAMP1START=32;
+    number RAMP2START=48;
+
+    number rotAngle = 0;
+}
+
+/*
+# Initialize antialiasing for color index mode,
+# including loading a green color ramp starting
+# at RAMP1START, and a blue color ramp starting
+# at RAMP2START. The ramps must be a multiple of 16.
+ */
+function myinit() {
+    for( number i = 0; i < RAMPSIZE; i++ ) {
+        number shade = (i + 0.0 )/RAMPSIZE;
+        GLUT.SetColor(RAMP1START+i, 0, shade, 0.0);
+        GLUT.SetColor(RAMP2START+i, 0, 0, shade);
+    }
+    
+    GL.Enable(GL.LINE_SMOOTH);
+    GL.Hint(GL.LINE_SMOOTH_HINT, GL.DONT_CARE);
+    GL.LineWidth(1.5);
+
+    GL.ClearIndex(RAMP1START);
+}
+
+object display = closure {
+   GL.Clear(GL.COLOR_BUFFER_BIT);
+
+   GL.Indexi(RAMP1START);
+   GL.PushMatrix();
+   GL.Rotate(-rotAngle, 0.0, 0.0, 0.1);
+   GL.Begin(GL.LINES);
+      GL.Vertex(-0.5, 0.5);
+      GL.Vertex(0.5, -0.5);
+   GL.End;
+   GL.PopMatrix();
+
+   GL.Indexi(RAMP2START);
+   GL.PushMatrix();
+   GL.Rotate(rotAngle, 0.0, 0.0, 0.1);
+   GL.Begin(GL.LINES);
+      GL.Vertex(0.5, 0.5);
+      GL.Vertex(-0.5, -0.5);
+   GL.End;
+   GL.PopMatrix();
+
+   GL.Flush();
+};
+
+object reshape = closure( w, h ) {
+   GL.Viewport(0, 0,  w,  h);
+   GL.MatrixMode(GL.PROJECTION);
+   GL.LoadIdentity();
+   if (w <= h) 
+      GLU.Ortho2D(-1.0, 1.0, (-h + 0.0)/w, (h + 0.0)/w);
+   else 
+      GLU.Ortho2D((w + 0.0)/(h + 0.0), (w + 0.0)/(h + 0.0), -1.0, 1.0);
+   GL.MatrixMode(GL.MODELVIEW);
+   GL.LoadIdentity();
+};
+
+object keyboard = closure ( key, x, y ) {
+    switch( key ) { 
+        case String.charToNum('r'):
+        {
+            rotAngle += 20;
+            if (rotAngle >= 360)
+                rotAngle = 0;
+            GLUT.PostRedisplay();	
+            break;
+        }
+        case String.charToNum('R'):
+        {
+            rotAngle -= 20;
+            if (rotAngle <= 0)
+                rotAngle = 360;
+            GLUT.PostRedisplay();	
+            break;
+        }
+        case 27:
+            GLUT.ExitMainLoop();
+    } 
+};
+/*
+#  Main Loop
+#  Open window with initial window size, title bar, 
+#  color index display mode, and handle input events.
+#*/
+GLUT.Init(argv);
+GLUT.InitDisplayMode (GLUT.SINGLE | GLUT.INDEX | GLUT.RGBA );
+GLUT.InitWindowSize(200, 200);
+GLUT.CreateWindow("aaindex");
+myinit();
+GLUT.ReshapeFunc(reshape);
+GLUT.KeyboardFunc(keyboard);
+GLUT.DisplayFunc(display);
+GLUT.MainLoop();

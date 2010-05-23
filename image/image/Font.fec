@@ -1,0 +1,122 @@
+uses "image.lib";
+
+/**
+ * @class Font
+ * @brief Objects of this class hold a font that can be used for writting text on to an image.
+ */ 		
+class Font
+{
+    /**
+     * @variable color
+     * @type object
+     * @brief A color object used for drawing the text.
+     */
+    object color;    
+
+    /**
+     * @function constructor
+     * @declaration function constructor(string face, number size ) 
+     * @brief This is the constructor for class font.
+     * @param string face the font face to use.
+     * @param number size the size of the font
+     * @return object a newly create object of class font.
+     */
+    function constructor(string face, number size ) 
+    {
+	string font;
+	self.color = new Color( 0, 0, 0, 255);
+	font = face + "/$size";
+	return self._load_font(font);
+    }
+
+    private native function _load_font( string font ) 
+    {		
+	Imlib_Font fnt;
+		
+	if( SelfFont ) {
+	    imlib_context_set_font( SelfFont ); 
+	    imlib_free_font();
+	}
+		
+	fnt = imlib_load_font( font->data );
+	
+	if( fnt == NULL ) {
+	    ferite_error(script, 0,"[Ferite::Font] Error, couldn't load font %s\n", font->data );
+	    FE_RETURN_FALSE;
+	}
+	else {
+	    self->odata = fnt;
+	    FE_RETURN_TRUE;
+	}
+	
+    }
+
+    /**
+     * @function getTextSize
+     * @declaration function getTextSize( string str ) 
+     * @brief This function makes it possible to get the size of a given string within the loaded font.
+     * @param string str the string to measure
+     * @return A Point object. The x value in the object indicates the width of the string, the y value 
+        represents the height of the string.
+     */
+    native function getTextSize( string str ) 
+    {
+	FeriteNamespaceBucket *nsb;
+	FeriteVariable *point,*tmp;
+	int x,y;
+	
+	if( SelfFont == NULL )
+	    ferite_error(script, 0, "[Ferite::Font] Error in get_text_size(). Font  object is NULL\n");
+
+	imlib_context_set_font(SelfFont);	
+	imlib_get_text_size( str->data, &x ,&y );
+	
+	nsb = ferite_find_namespace( script, script->mainns, "Point", FENS_CLS );
+	if( nsb == NULL )
+	    ferite_error(script, 0,"[Ferite::Font] Error in get_text_size(). Couldn't create point object\n");
+	
+	point  = ferite_new_object( script, nsb->data, NULL);
+	if( point == NULL ) {
+	    ferite_error(script, 0,"[Ferite::Font] Error. Couldn't create point object\n");
+	    FE_RETURN_FALSE;
+	}
+	
+	tmp = ferite_object_get_var(script,VAO(point),"x");
+	if( tmp == NULL ) {
+	    ferite_error(script, 0,"[Ferite::Font] Error\n");
+	    FE_RETURN_FALSE;
+	}
+	VAI(tmp)=x;
+	
+	tmp = ferite_object_get_var(script,VAO(point),"y");
+	if( tmp == NULL ) {
+	    ferite_error(script, 0,"[Ferite::Font] Error\n");
+	    FE_RETURN_FALSE;
+	}
+	VAI(tmp)=y;
+	
+	FE_RETURN_VAR(point);
+	
+    }
+
+    /**
+     * @function destroy
+     * @warning This function no longer exists and will throw an exception.
+     */
+    function destroy() {
+	Sys.error( 0, "image.Font.destroy() no longer works. Please don't call it.\n" );
+    }
+
+    native function destructor() {
+	if( SelfFont ) {
+	    imlib_context_set_font( SelfFont ); 
+	    imlib_free_font();
+	    self->odata = NULL;
+	}
+	
+    }
+}
+/**
+ * @end class font
+ */
+

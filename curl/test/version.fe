@@ -1,0 +1,4 @@
+uses "curl","console";
+
+Console.println( "Version String: "+ Curl.version() );
+Console.println( "Version Info: "+ Curl.versionInfo() );

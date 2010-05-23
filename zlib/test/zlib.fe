@@ -1,0 +1,41 @@
+#!/usr/bin/env ferite
+
+uses "console" , "zlib";
+
+number idx;
+number zLevel;
+string zIn = "my friend is a walrus";
+string zOut;
+string zTmp;
+
+// test deflate + inflate and compress + uncompress
+zIn = "This is a test string. My friend is a walrus. 00000000.";
+
+for (number zLevel = -1; zLevel < 10; zLevel++) {
+  Console.println(ZLib.inflate(ZLib.deflate(zIn, zLevel)));
+  Console.println(ZLib.uncompress(ZLib.compress(zIn, zLevel)));
+  Console.println(ZLib.inflate(ZLib.deflate(zIn)));
+}
+
+// test compress + uncompress
+zIn = "This is a test string. My friend is a walrus. 00000000compres.";
+zLevel = -1;
+while (zLevel < 10) {
+  for (idx = 0; idx < 5; idx++) {
+    zOut = ZLib.compress(zIn, zLevel);
+    zTmp = ZLib.uncompress(zOut);
+  }
+  Console.println("${zIn.length()} -> ${zOut.length()} -> ${zTmp.length()} -> ${zTmp}");
+  zLevel++;
+}
+
+// test compress + uncompress
+zIn = "This is a test string. My friend is a walrus. 00000000compres.";
+zLevel = -1;
+while (zLevel < 10) {
+  for (idx = 0; idx < 5; idx++) {
+    zOut = ZLib.uncompress(ZLib.compress(zIn, zLevel));
+  }
+  Console.println("${zIn.length()} -> ${zOut.length()} -> ${zOut}");
+  zLevel++;
+}

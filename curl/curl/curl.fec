@@ -1,0 +1,926 @@
+/*
+ * Written by Paul Querna <chip force-elite.com>
+ *
+ */
+
+uses "curl.lib", "array";
+
+module-header {
+		#include "utility.h"
+}
+
+
+module-init {
+
+		/* This is borrowed from the Curses Module 
+		   as a way to create many static defines */
+
+		int i;
+		char *name = NULL;
+		FeriteVariable *fv;
+		FeriteNamespace *CurlNS;
+
+		/** XXXX: There are more options than what are listed here. */
+
+		/* If you add a constant to these arrays, make sure it is in the same
+		 * place in both tables and that you put it before the last entry in the
+		 * arrays. */
+		int constant_values[] = { 
+							   /* Longs */
+										CURLOPT_INFILESIZE,
+										CURLOPT_VERBOSE,
+										CURLOPT_HEADER,
+										CURLOPT_NOPROGRESS,
+										CURLOPT_NOBODY,
+										CURLOPT_FAILONERROR,
+										CURLOPT_UPLOAD,
+										CURLOPT_POST,
+										CURLOPT_FTPLISTONLY,
+										CURLOPT_FTPAPPEND,
+										CURLOPT_NETRC,
+										CURLOPT_FOLLOWLOCATION,
+										CURLOPT_PUT,
+/*										CURLOPT_MUTE, */
+										CURLOPT_TIMEOUT,
+										CURLOPT_LOW_SPEED_LIMIT,
+										CURLOPT_LOW_SPEED_TIME,
+										CURLOPT_RESUME_FROM,
+										CURLOPT_CAINFO,
+										CURLOPT_SSL_VERIFYPEER,
+										CURLOPT_SSLVERSION,
+										CURLOPT_SSL_VERIFYHOST,
+										CURLOPT_TIMECONDITION,
+										CURLOPT_TIMEVALUE,
+										CURLOPT_RETURNTRANSFER,
+										CURLOPT_IPRESOLVE,
+										CURL_IPRESOLVE_WHATEVER,
+										CURL_IPRESOLVE_V4,
+										CURL_IPRESOLVE_V6,
+										CURLPROXY_HTTP,
+										CURLPROXY_SOCKS5,
+										CURL_NETRC_OPTIONAL,
+										CURL_NETRC_IGNORED,
+										CURL_NETRC_REQUIRED,
+										CURLAUTH_BASIC,
+										CURLAUTH_DIGEST,
+										CURLAUTH_GSSNEGOTIATE,
+										CURLAUTH_NTLM,
+										CURLAUTH_ANY,
+										CURLAUTH_ANYSAFE,
+										CURL_TIMECOND_IFMODSINCE,
+										CURL_TIMECOND_IFUNMODSINCE,
+										CURL_HTTP_VERSION_NONE,
+										CURL_HTTP_VERSION_1_0,
+										CURL_HTTP_VERSION_1_1,
+										CURLCLOSEPOLICY_LEAST_RECENTLY_USED,
+										CURLCLOSEPOLICY_OLDEST,
+										
+
+							   /* Strings */
+										CURLOPT_URL,
+										CURLOPT_USERPWD,
+										CURLOPT_PROXYUSERPWD,
+										CURLOPT_RANGE,
+										CURLOPT_POSTFIELDS,
+										CURLOPT_REFERER,
+										CURLOPT_USERAGENT,
+										CURLOPT_FTPPORT,
+										CURLOPT_COOKIE,
+										CURLOPT_SSLCERT,
+										CURLOPT_SSLCERTPASSWD,
+										CURLOPT_COOKIEFILE,
+										CURLOPT_CUSTOMREQUEST,
+										CURLOPT_PROXY,
+										CURLOPT_INTERFACE,
+										CURLOPT_KRB4LEVEL,
+										CURLOPT_HTTPHEADER, 
+										CURLOPT_QUOTE,
+										CURLOPT_POSTQUOTE,
+
+							   /* File Pointers */
+										CURLOPT_FILE,
+										CURLOPT_INFILE,
+										CURLOPT_WRITEHEADER,
+										CURLOPT_STDERR,
+
+										0 /* END */
+								 };
+
+		char *constant_names[] = {
+							   /* Longs */
+										"CURLOPT_INFILESIZE",
+										"CURLOPT_VERBOSE",
+										"CURLOPT_HEADER",
+										"CURLOPT_NOPROGRESS",
+										"CURLOPT_NOBODY",
+										"CURLOPT_FAILONERROR",
+										"CURLOPT_UPLOAD",
+										"CURLOPT_POST",
+										"CURLOPT_FTPLISTONLY",
+										"CURLOPT_FTPAPPEND",
+										"CURLOPT_NETRC",
+										"CURLOPT_FOLLOWLOCATION",
+										"CURLOPT_PUT",
+/*										"CURLOPT_MUTE", */
+										"CURLOPT_TIMEOUT",
+										"CURLOPT_LOW_SPEED_LIMIT",
+										"CURLOPT_LOW_SPEED_TIME",
+										"CURLOPT_RESUME_FROM",
+										"CURLOPT_CAINFO",
+										"CURLOPT_SSL_VERIFYPEER",
+										"CURLOPT_SSLVERSION",
+										"CURLOPT_SSL_VERIFYHOST",
+										"CURLOPT_TIMECONDITION",
+										"CURLOPT_TIMEVALUE",
+										"CURLOPT_RETURNTRANSFER",
+										"CURLOPT_IPRESOLVE",
+										"CURL_IPRESOLVE_WHATEVER",
+										"CURL_IPRESOLVE_V4",
+										"CURL_IPRESOLVE_V6",
+										"CURLPROXY_HTTP",
+										"CURLPROXY_SOCKS5",
+										"CURL_NETRC_OPTIONAL",
+										"CURL_NETRC_IGNORED",
+										"CURL_NETRC_REQUIRED",
+										"CURLAUTH_BASIC",
+										"CURLAUTH_DIGEST",
+										"CURLAUTH_GSSNEGOTIATE",
+										"CURLAUTH_NTLM",
+										"CURLAUTH_ANY",
+										"CURLAUTH_ANYSAFE",
+										"CURL_TIMECOND_IFMODSINCE",
+										"CURL_TIMECOND_IFUNMODSINCE",
+										"CURL_HTTP_VERSION_NONE",
+										"CURL_HTTP_VERSION_1_0",
+										"CURL_HTTP_VERSION_1_1",
+										"CURLCLOSEPOLICY_LEAST_RECENTLY_USED",
+										"CURLCLOSEPOLICY_OLDEST",
+
+							   /* Strings */
+										"CURLOPT_URL",
+										"CURLOPT_USERPWD",
+										"CURLOPT_PROXYUSERPWD",
+										"CURLOPT_RANGE",
+										"CURLOPT_POSTFIELDS",
+										"CURLOPT_REFERER",
+										"CURLOPT_USERAGENT",
+										"CURLOPT_FTPPORT",
+										"CURLOPT_COOKIE",
+										"CURLOPT_SSLCERT",
+										"CURLOPT_SSLCERTPASSWD",
+										"CURLOPT_COOKIEFILE",
+										"CURLOPT_CUSTOMREQUEST",
+										"CURLOPT_PROXY",
+										"CURLOPT_INTERFACE",
+										"CURLOPT_KRB4LEVEL",
+										"CURLOPT_HTTPHEADER", 
+										"CURLOPT_QUOTE",
+										"CURLOPT_POSTQUOTE",
+
+							   /* File Pointers */
+										"CURLOPT_FILE",
+										"CURLOPT_INFILE",
+										"CURLOPT_WRITEHEADER",
+										"CURLOPT_STDERR",
+
+										""
+								 };
+
+		CurlNS = ferite_register_namespace(script, "Curl", script->mainns);
+
+		/* Create the constants: */
+		for(i = 0; *constant_names[i]; i++) {
+				fv = ferite_create_number_long_variable(script,
+						constant_names[i], constant_values[i], FE_STATIC);
+				MARK_VARIABLE_AS_FINALSET(fv);
+				ferite_register_ns_variable(script, CurlNS, constant_names[i], fv);
+		}
+}
+
+/**
+ * @namespace Curl
+ * @brief Curl provides a set of url based tools for fetching information over the
+   internet.
+   @description There are about 5 different example scripts within the <prefix/>/share/doc/ferite/examples
+   directory which can be used for further guidance.
+ */
+
+/**
+ * @variable CURLOPT_INFILESIZE
+ * @type number
+ * @brief Use Curl.CURLOPT_INFILESIZE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_VERBOSE
+ * @type number
+ * @brief Use Curl.CURLOPT_VERBOSE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_HEADER
+ * @type number
+ * @brief Use Curl.CURLOPT_HEADER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_NOPROGRESS
+ * @type number
+ * @brief Use Curl.CURLOPT_NOPROGRESS with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_NOBODY
+ * @type number
+ * @brief Use Curl.CURLOPT_NOBODY with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FAILONERROR
+ * @type number
+ * @brief Use Curl.CURLOPT_FAILONERROR with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_UPLOAD
+ * @type number
+ * @brief Use Curl.CURLOPT_UPLOAD with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_POST
+ * @type number
+ * @brief Use Curl.CURLOPT_POST with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FTPLISTONLY
+ * @type number
+ * @brief Use Curl.CURLOPT_FTPLISTONLY with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FTPAPPEND
+ * @type number
+ * @brief Use Curl.CURLOPT_FTPAPPEND with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_NETRC
+ * @type number
+ * @brief Use Curl.CURLOPT_NETRC with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FOLLOWLOCATION
+ * @type number
+ * @brief Use Curl.CURLOPT_FOLLOWLOCATION with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_PUT
+ * @type number
+ * @brief Use Curl.CURLOPT_PUT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_MUTE
+ * @type number
+ * @brief Use Curl.CURLOPT_MUTE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_TIMEOUT
+ * @type number
+ * @brief Use Curl.CURLOPT_TIMEOUT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_LOW_SPEED_LIMIT
+ * @type number
+ * @brief Use Curl.CURLOPT_LOW_SPEED_LIMIT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_LOW_SPEED_TIME
+ * @type number
+ * @brief Use Curl.CURLOPT_LOW_SPEED_TIME with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_RESUME_FROM
+ * @type number
+ * @brief Use Curl.CURLOPT_RESUME_FROM with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_CAINFO
+ * @type number
+ * @brief Use Curl.CURLOPT_CAINFO with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_SSL_VERIFYPEER
+ * @type number
+ * @brief Use Curl.CURLOPT_SSL_VERIFYPEER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_SSLVERSION
+ * @type number
+ * @brief Use Curl.CURLOPT_SSLVERSION with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_SSL_VERIFYHOST
+ * @type number
+ * @brief Use Curl.CURLOPT_SSL_VERIFYHOST with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_TIMECONDITION
+ * @type number
+ * @brief Use Curl.CURLOPT_TIMECONDITION with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_TIMEVALUE
+ * @type number
+ * @brief Use Curl.CURLOPT_TIMEVALUE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_RETURNTRANSFER
+ * @type number
+ * @brief Use Curl.CURLOPT_RETURNTRANSFER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_IPRESOLVE
+ * @type number
+ * @brief Use Curl.CURLOPT_IPRESOLVE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_IPRESOLVE_WHATEVER
+ * @type number
+ * @brief Use Curl.CURL_IPRESOLVE_WHATEVER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_IPRESOLVE_V4
+ * @type number
+ * @brief Use Curl.CURL_IPRESOLVE_V4 with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_IPRESOLVE_V6
+ * @type number
+ * @brief Use Curl.CURL_IPRESOLVE_V6 with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLPROXY_HTTP
+ * @type number
+ * @brief Use Curl.CURLPROXY_HTTP with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLPROXY_SOCKS5
+ * @type number
+ * @brief Use Curl.CURLPROXY_SOCKS5 with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_NETRC_OPTIONAL
+ * @type number
+ * @brief Use Curl.CURL_NETRC_OPTIONAL with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_NETRC_IGNORED
+ * @type number
+ * @brief Use Curl.CURL_NETRC_IGNORED with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_NETRC_REQUIRED
+ * @type number
+ * @brief Use Curl.CURL_NETRC_REQUIRED with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_BASIC
+ * @type number
+ * @brief Use Curl.CURLAUTH_BASIC with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_DIGEST
+ * @type number
+ * @brief Use Curl.CURLAUTH_DIGEST with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_GSSNEGOTIATE
+ * @type number
+ * @brief Use Curl.CURLAUTH_GSSNEGOTIATE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_NTLM
+ * @type number
+ * @brief Use Curl.CURLAUTH_NTLM with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_ANY
+ * @type number
+ * @brief Use Curl.CURLAUTH_ANY with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLAUTH_ANYSAFE
+ * @type number
+ * @brief Use Curl.CURLAUTH_ANYSAFE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_TIMECOND_IFMODSINCE
+ * @type number
+ * @brief Use Curl.CURL_TIMECOND_IFMODSINCE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_TIMECOND_IFUNMODSINCE
+ * @type number
+ * @brief Use Curl.CURL_TIMECOND_IFUNMODSINCE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_HTTP_VERSION_NONE
+ * @type number
+ * @brief Use Curl.CURL_HTTP_VERSION_NONE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_HTTP_VERSION_1_0
+ * @type number
+ * @brief Use Curl.CURL_HTTP_VERSION_1_0 with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURL_HTTP_VERSION_1_1
+ * @type number
+ * @brief Use Curl.CURL_HTTP_VERSION_1_1 with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLCLOSEPOLICY_LEAST_RECENTLY_USED
+ * @type number
+ * @brief Use Curl.CURLCLOSEPOLICY_LEAST_RECENTLY_USED with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLCLOSEPOLICY_OLDEST
+ * @type number
+ * @brief Use Curl.CURLCLOSEPOLICY_OLDEST with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_URL
+ * @type number
+ * @brief Use Curl.CURLOPT_URL with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_USERPWD
+ * @type number
+ * @brief Use Curl.CURLOPT_USERPWD with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_PROXYUSERPWD
+ * @type number
+ * @brief Use Curl.CURLOPT_PROXYUSERPWD with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_RANGE
+ * @type number
+ * @brief Use Curl.CURLOPT_RANGE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_POSTFIELDS
+ * @type number
+ * @brief Use Curl.CURLOPT_POSTFIELDS with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_REFERER
+ * @type number
+ * @brief Use Curl.CURLOPT_REFERER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_USERAGENT
+ * @type number
+ * @brief Use Curl.CURLOPT_USERAGENT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FTPPORT
+ * @type number
+ * @brief Use Curl.CURLOPT_FTPPORT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_COOKIE
+ * @type number
+ * @brief Use Curl.CURLOPT_COOKIE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_SSLCERT
+ * @type number
+ * @brief Use Curl.CURLOPT_SSLCERT with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_SSLCERTPASSWD
+ * @type number
+ * @brief Use Curl.CURLOPT_SSLCERTPASSWD with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_COOKIEFILE
+ * @type number
+ * @brief Use Curl.CURLOPT_COOKIEFILE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_CUSTOMREQUEST
+ * @type number
+ * @brief Use Curl.CURLOPT_CUSTOMREQUEST with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_PROXY
+ * @type number
+ * @brief Use Curl.CURLOPT_PROXY with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_INTERFACE
+ * @type number
+ * @brief Use Curl.CURLOPT_INTERFACE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_KRB4LEVEL
+ * @type number
+ * @brief Use Curl.CURLOPT_KRB4LEVEL with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_HTTPHEADER
+ * @type number
+ * @brief Use Curl.CURLOPT_HTTPHEADER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_QUOTE
+ * @type number
+ * @brief Use Curl.CURLOPT_QUOTE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_POSTQUOTE
+ * @type number
+ * @brief Use Curl.CURLOPT_POSTQUOTE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_FILE
+ * @type number
+ * @brief Use Curl.CURLOPT_FILE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_INFILE
+ * @type number
+ * @brief Use Curl.CURLOPT_INFILE with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_WRITEHEADER
+ * @type number
+ * @brief Use Curl.CURLOPT_WRITEHEADER with the function setOption within a Curl.Curl object.
+ */
+
+/**
+ * @variable CURLOPT_STDERR
+ * @type number
+ * @brief Use Curl.CURLOPT_STDERR with the function setOption within a Curl.Curl object.
+ */
+
+namespace modifies Curl {
+ 
+	/**
+	 * @function version
+	 * @declaration function version()
+	 * @brief Get a string describing the version of curl the module uses
+	 * @return A string containing the version information.
+	 */
+	static native function version( ) 
+	{
+		FE_RETURN_VAR( fe_new_str("curl_version", curl_version( ), 0, FE_CHARSET_DEFAULT ));
+	}
+
+	/**
+	 * @function versionInfo
+	 * @declaration function versionInfo()
+	 * @brief Get a keyed array describing the version information of curl the module uses
+	 * @return A keyed array.
+	 * @description The array has the following string values: 'version', 'host', 'ssl_version', 'libz_version'.
+	The array also contains an array 'protocols' which lists all the protocols that are availiable to the
+	programmer.
+	 */
+	static native function versionInfo( ) 
+	{
+		curl_version_info_data *data;
+	FeriteVariable *v_val, *v_info, *v_proto;
+
+		data = curl_version_info(CURLVERSION_NOW);
+
+		if (data == NULL) {
+			 FE_RETURN_FALSE;
+		}
+
+	v_info = ferite_create_uarray_variable( script, "version_info", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+
+	v_val = fe_new_str( "v_info-value", (char *)data->version, 0, FE_CHARSET_DEFAULT );
+	ferite_uarray_add( script, VAUA(v_info), v_val, "version", FE_ARRAY_ADD_AT_END );
+
+	v_val = fe_new_str( "v_info-value", (char *)data->host, 0, FE_CHARSET_DEFAULT );
+	ferite_uarray_add( script, VAUA(v_info), v_val, "host", FE_ARRAY_ADD_AT_END );
+
+	v_val = fe_new_str( "v_info-value", data->ssl_version, 0, FE_CHARSET_DEFAULT );
+	ferite_uarray_add( script, VAUA(v_info), v_val, "ssl_version", FE_ARRAY_ADD_AT_END );
+
+	v_val = fe_new_str( "v_info-value", (char *)data->libz_version, 0, FE_CHARSET_DEFAULT );
+	ferite_uarray_add( script, VAUA(v_info), v_val, "libz_version", FE_ARRAY_ADD_AT_END );
+
+		char **p = (char **) data->protocols;
+
+	v_proto = ferite_create_uarray_variable( script, "proto_info", FE_ARRAY_DEFAULT_SIZE, FE_STATIC );
+
+		while (*p != NULL) {
+		v_val = fe_new_str( "v_proto-value", *p++, 0, FE_CHARSET_DEFAULT );
+			ferite_uarray_push( script, VAUA(v_proto), v_val );
+		}
+
+	ferite_uarray_add( script, VAUA(v_info), v_proto, "protocols", FE_ARRAY_ADD_AT_END );
+
+		FE_RETURN_VAR(v_info);
+	}
+ 
+	/**
+	 * @class Curl
+	 * @brief Curl objects can be used to download files, pages etc. over http, ftp and various other supported
+	   protocols.
+	 */
+	class Curl
+	{
+		native function constructor( )
+		{
+			self->odata = ferite_curl_object_init( script );
+
+			if (self->odata == NULL) {
+				ferite_error( script, 0, "[Ferite::Curl] Curl Handle could not be created");
+			}
+			else {
+				struct curl_object *crl = self->odata;
+				if(crl->handle == NULL) {
+					ferite_error( script, 0, "[Ferite::Curl] Curl Handle is NULL, but odata is not?");
+				}
+			}
+
+			FE_RETURN_TRUE;
+		}
+
+		native function destructor( )
+		{
+			struct curl_object *crl = self->odata;
+			int i = 0;
+			
+			if(crl != NULL) {
+			   // XXXX: this needs to clean up other stuff?
+			   curl_easy_cleanup( crl->handle );
+				for( i = 0; i <= crl->string_stack->stack_ptr; i++ ) {
+					if( crl->string_stack->stack[i] )
+						ffree( crl->string_stack->stack[i] );
+				}
+				ferite_delete_stack( script, crl->string_stack );
+
+				/* clear out header stacks */
+				for( i = 0; i <= crl->headers_stack->stack_ptr; i++ ) {
+					if( crl->headers_stack->stack[i] )
+						curl_slist_free_all( crl->headers_stack->stack[i] );
+				}
+				ferite_delete_stack( script, crl->headers_stack );
+
+				ffree( crl );
+			}
+		}
+
+	/**
+		 * @function exec
+		 * @declaration function exec()
+		 * @brief exec will, with the url and options set, execute the fetch process.
+		 * @return true on success, false otherwise.
+		 */
+		native function exec ( ) 
+		{
+			struct curl_object *crl = self->odata;
+			int res;
+
+			if( crl->handle == NULL ) {
+				ferite_error( script, 0, "[Ferite::Curl] Invalid Curl Handle sent to exec()");
+				FE_RETURN_FALSE;
+			}
+
+			res = curl_easy_perform( crl->handle );
+
+			if (res != 0) {
+				FE_RETURN_FALSE;
+			}
+			else {
+				FE_RETURN_TRUE;
+			}
+		}
+
+	/**
+		 * @function getContent
+		 * @declaration function getContent()
+		 * @brief Get a string with the contents of the previous execution of this object.
+		 * @return A string containing the contents.
+		 */
+		native function getContent()
+		{
+			struct curl_object *crl = self->odata;
+			if( crl->content_buffer != NULL ) {
+				FE_RETURN_STR( VAS(crl->content_buffer) , FE_FALSE);
+			}
+			FE_RETURN_VAR( fe_new_str("content", "", 0, FE_CHARSET_DEFAULT )) ;
+		}
+		/**
+		 * @function setContent
+		 * @declaration native function setContent( string s )
+		 * @brief Set the content that will be used to upload the data
+		 * @description Upload some data
+		 * @param string s The content
+		 */
+		native function setContent( string s ) {
+			struct curl_object *crl = self->odata;
+			if( crl->content_buffer != NULL ) {
+				ferite_variable_destroy( script, crl->content_buffer );
+				crl->content_buffer = NULL;
+			}
+			curl_easy_setopt( crl->handle, CURLOPT_READDATA, self->odata );
+			crl->content_buffer = ferite_create_string_variable( script, "", s, FE_STATIC );
+		}
+
+	/**
+		 * @function getHeaders
+		 * @declaration function getHeaders()
+		 * @brief Get a string with the contents of the previous executions headers.
+		 * @return A string containing the contents.
+		 */
+		native function getHeaders()
+		{
+			struct curl_object *crl = self->odata;
+			if( crl->header_buffer != NULL ) {
+				FE_RETURN_STR( VAS(crl->header_buffer) , FE_FALSE );
+			} 
+			FE_RETURN_VAR( fe_new_str("headerst", 
+						   "", 0, FE_CHARSET_DEFAULT )) ;
+		}
+
+	/**
+		 * @function setOption
+		 * @declaration function setOption( number opt, string value )
+		 * @brief Set a string option on the curl object
+	 * @return true on success, false otherwise
+ 	 * @param number opt The option to use. This value can be anyone of the following Curl namespace
+	   constants:										 "CURLOPT_URL",
+										"CURLOPT_USERPWD",
+										"CURLOPT_PROXYUSERPWD",
+										"CURLOPT_RANGE",
+										"CURLOPT_POSTFIELDS",
+										"CURLOPT_REFERER",
+										"CURLOPT_USERAGENT",
+										"CURLOPT_FTPPORT",
+										"CURLOPT_COOKIE",
+										"CURLOPT_SSLCERT",
+										"CURLOPT_SSLCERTPASSWD",
+										"CURLOPT_COOKIEFILE",
+										"CURLOPT_CUSTOMREQUEST",
+										"CURLOPT_PROXY",
+										"CURLOPT_INTERFACE",
+										"CURLOPT_KRB4LEVEL",
+										"CURLOPT_HTTPHEADER", 
+										"CURLOPT_QUOTE",
+										"CURLOPT_POSTQUOTE",
+		   @param string value The value to set.
+		 */
+		native function setOption ( number opt, string value )
+		{
+			struct curl_object *crl = self->odata;
+			char *real_value;
+			int res;
+
+			if( crl->handle == NULL ) {
+				ferite_error( script, 0, "[Ferite::Curl] Invalid Curl Handle sent to set_option(string)");
+				FE_RETURN_FALSE;
+			}
+
+			if( opt == CURLOPT_HTTPHEADER ) {
+				struct curl_slist *pHeaders = NULL; 
+				real_value = fstrdup( value->data );
+				pHeaders = curl_slist_append(pHeaders, real_value);
+				ferite_stack_push( script, crl->string_stack, real_value );
+				ferite_stack_push( script, crl->headers_stack, pHeaders );
+				res = curl_easy_setopt( crl->handle, opt, pHeaders );
+			} else {
+				real_value = fstrdup( value->data );
+				ferite_stack_push( script, crl->string_stack, real_value );
+				res = curl_easy_setopt( crl->handle, opt, real_value );
+			}
+			if(res == 0) {
+				FE_RETURN_TRUE;
+			}
+			else {
+				FE_RETURN_FALSE;
+			}
+		}
+
+	/**
+		 * @function setOption
+		 * @declaration function setOption( number opt, number value )
+		 * @brief Set a numerical option on the curl object
+	 * @return true on success, false otherwise
+ 	 * @param number opt The option to use. This value can be anyone of the Curl namespace defines, not mentioned in the string
+		   setOption.
+		   @param string value The value to set.
+		 */
+		native function setOption ( number opt, number value )
+		{
+			struct curl_object *crl = self->odata;
+			int res;
+
+			if( crl->handle == NULL ) {
+				ferite_error( script, 0, "[Ferite::Curl] Invalid Curl Handle sent to set_option(number)");
+				FE_RETURN_FALSE;
+			}
+
+			if( opt == CURLOPT_RETURNTRANSFER ) {
+
+				const curl_write_callback c_cb =  ferite_curl_content_callback;
+				const curl_write_callback h_cb =  ferite_curl_header_callback;
+
+				crl->content_buffer = ferite_create_string_variable( script, "curl_content_buffer", NULL, FE_ALLOC );
+				curl_easy_setopt( crl->handle, CURLOPT_WRITEDATA, self->odata );
+				curl_easy_setopt( crl->handle, CURLOPT_WRITEFUNCTION, c_cb );
+
+				crl->header_buffer = ferite_create_string_variable( script, "curl_header_buffer", NULL, FE_ALLOC );
+				curl_easy_setopt( crl->handle, CURLOPT_HEADERFUNCTION, h_cb );
+				curl_easy_setopt( crl->handle, CURLOPT_WRITEHEADER, self->odata );
+
+				FE_RETURN_TRUE;
+			} 
+			else if( opt == CURLOPT_INFILE ) {
+				if( value )
+					curl_easy_setopt( crl->handle, CURLOPT_READFUNCTION, ferite_curl_read_callback );
+				else
+					curl_easy_setopt( crl->handle, CURLOPT_READFUNCTION, NULL );
+			}
+			else {
+				res = curl_easy_setopt( crl->handle, opt, value );
+				if(res == 0) {
+					 FE_RETURN_TRUE;
+				}
+				else {
+					FE_RETURN_FALSE;
+				}
+			}
+		}
+	}
+	/**
+	 * @end
+	 */
+}
+/**
+ * @end
+ */

@@ -1,0 +1,200 @@
+uses "xslt.lib";
+uses "xml";
+
+module-header
+{
+  #include <libxml/xmlmemory.h>
+  #include <libxml/debugXML.h>
+  #include <libxml/HTMLtree.h>
+  #include <libxml/xmlIO.h>
+  #include <libxml/xinclude.h>
+  #include <libxml/catalog.h>
+  #include <libxslt/xslt.h>
+  #include <libxslt/xsltInternals.h>
+  #include <libxslt/transform.h>
+  #include <libxslt/xsltutils.h>	
+
+typedef struct XMLDoc_ 
+{
+    xmlDocPtr doc;
+    xmlNodePtr node;
+} XMLDoc;
+
+typedef struct XSLTDoc_
+{
+    xmlDocPtr         doc;
+    xsltStylesheetPtr style;
+} XSLTDoc;
+
+}
+
+module-deinit
+{
+    xsltCleanupGlobals();
+}
+
+/**
+ * @namespace XSLT
+ * @brief The XSLT namesapce contains a set of tools for providing XSLT transforms on an XML.TreeParser.
+ */
+namespace XSLT {
+	
+	/**
+	 * @class Transform
+	 * @brief The core class of the XSLT module, this class provides the mechanism for doing XSLT transformations.
+	 * @description Objects from this class are instantiated with an xsl stylesheet and can be applied to more than
+	   one XML.TreeParser object.
+	    * @example <code>         
+	   <keyword>uses</keyword> "xml";<nl/>
+	   <keyword>uses</keyword> "xslt";<nl/>
+	   <keyword>uses</keyword> "console";<nl/>
+	   <nl/>
+	   <type>object</type> stylesheet = <keyword>new</keyword> XSLT.Trans<keyword>f<keyword>or</span></span>m("test.xsl");<nl/>
+	   <type>object</type> parser = <keyword>new</keyword> XML.TreeParser();<nl/>
+	   parser.parseFile("test.xml");<nl/>
+	   <nl/>
+	   stylesheet.apply( parser );<nl/>
+	   Console.println( "======== xslt toString() =======" );<nl/>
+	   Console.println( stylesheet.toString() );<nl/>
+	   <nl/>
+	   parser = stylesheet.getXMLTreeParser();<nl/>
+	   Console.println( "-------- parser toString() -----" );<nl/>
+	   Console.println( parser.toString() );</code><nl/>
+	   */
+	class Transform {
+	   
+	      /**
+	       * @function constructor
+	       * @brief Create and load an instance of an xsl style sheet
+	       * @declaration function constructor( string xslt )
+	       * @param string xslt The path to the xslt style sheet to load.
+	       * @return null if the stylesheet failed to load, an object otherwise
+	       */
+        native function constructor( string xslt ) 
+        {
+            xsltStylesheetPtr style = NULL;
+            style = xsltParseStylesheetFile( xslt->data );
+            if( style == NULL) 
+                FE_RETURN_NULL_OBJECT;
+            
+            self->odata = fmalloc( sizeof( XSLTDoc ) );
+            ((XSLTDoc*)self->odata)->doc = NULL;
+            ((XSLTDoc*)self->odata)->style = style;            
+        }
+        native function destructor() 
+        {
+            if( self->odata != NULL ) 
+            {
+                XSLTDoc *doc = self->odata;
+                if( doc->style != NULL )
+                    xsltFreeStylesheet( doc->style );
+                if( doc->doc != NULL )
+                    xmlFreeDoc( doc->doc );
+                ffree( doc );
+            }
+            self->odata = NULL;
+        }
+        
+        /**
+         * @function apply
+         * @declaration function apply( object xml )
+         * @brief This will take an XML.TreeParser object and apply the xsl style sheet.
+         * @description This does not change the TreeParser object. To get the new TreeParser 
+         * tree, you need to call getXMLTreeParser()
+         * @param object xml An XML.TreeParser object.
+         */
+        native function apply( object xml ) 
+        {
+            FeriteClass *cls = NULL;
+            XSLTDoc *xslt = self->odata;
+            XMLDoc *tree = xml->odata;
+            
+            if( tree->doc != NULL && xslt->style != NULL) 
+            {
+                if( xslt->doc != NULL )
+                {
+                    xmlFreeDoc( xslt->doc );
+                    xslt->doc = NULL;
+                }
+                xslt->doc = xsltApplyStylesheet( xslt->style, tree->doc, NULL);
+            }
+        }
+        
+        /**
+         * @function getXMLTreeParser
+         * @declaration function getXMLTreeParser()
+         * @brief This will return an XML.TreeParser object with the style sheet applied.
+         * @return An XML.TreeParser object.
+         */
+        native function getXMLTreeParser()
+        {
+            FeriteVariable *obj = NULL;
+            FeriteClass *klass = NULL;
+            XSLTDoc *xslt = self->odata;
+            
+            if( xslt->doc != NULL ) 
+            {                 
+                if(( klass = ferite_find_class( script, script->mainns, "XML.TreeParser" ) ) == NULL) 
+                {
+                    ferite_error( script , 0, "Can't locate class XML.TreeParser" );
+                }
+                obj = ferite_new_object( script, klass, NULL );
+                ((XMLDoc *)VAO(obj)->odata)->doc = xmlCopyDoc( xslt->doc, 1 );
+                ((XMLDoc *)VAO(obj)->odata)->node = xmlDocGetRootElement( ((XMLDoc *)VAO(obj)->odata)->doc );
+                FE_RETURN_VAR( obj );
+            }
+            FE_RETURN_NULL_OBJECT;        
+        }
+        
+        /**
+         * @function toString
+         * @declaration function toString()
+         * @brief This will return an XML.TreeParser object represented as a string.
+         * @return A string.
+         */
+        native function toString()
+        {
+            XSLTDoc *xslt = self->odata;
+            FeriteVariable *v = NULL;
+            
+            if( xslt->doc != NULL )
+            {
+                xmlChar *outputstring = NULL;
+                int len = 0;
+                
+                xsltSaveResultToString( &outputstring, &len, xslt->doc, xslt->style );
+                v = fe_new_str_static( "xslt", (char *)outputstring, len, FE_CHARSET_DEFAULT );
+                xmlFree( outputstring );
+            }
+            else
+                v = fe_new_str_static( "xslt", "", 0, FE_CHARSET_DEFAULT );
+            
+            FE_RETURN_VAR( v );            
+        }
+        
+         /**
+         * @function saveToFile
+         * @declaration function saveToFile()
+         * @brief This save an XML.TreeParser object represented as a string to disk
+         * @param string filename The path to the file you wish to save.
+         */
+        native function saveToFile( string filename )
+        {
+            XSLTDoc *xslt = self->odata;
+            
+            if( xslt->doc != NULL )
+            {
+                if( xsltSaveResultToFilename( filename->data, xslt->doc, xslt->style, 1 ) )
+                    FE_RETURN_TRUE;
+            }
+            FE_RETURN_FALSE;
+            
+        }
+    }
+    /**
+     * @end
+     */
+}
+/**
+ * @end
+ */
