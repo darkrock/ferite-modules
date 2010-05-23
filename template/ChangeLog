@@ -1,0 +1,71 @@
+--------------------------------------------------------------------------------
+05.01.2006 11:41 (UTC), cms
+
+
+   * Added the < operator to move context up one level. 
+     So you can now use templates like this: 
+     [@objects:
+	      [buffalo: [] = [<size]]
+     ]
+
+     When having code like this:
+
+     class foo
+     {
+	    array objects;
+     }
+
+
+     class bar
+     {
+	    string buffalo;
+	    number size;
+
+	    constructor( string buffalo, number size ) {
+	        self.buffalo = buffalo;
+	        self.size = size;
+	    }
+     }
+
+     object o = new foo();
+     o.objects[] = new bar("water", 28);
+     o.objects[] = new bar("step", 18);
+	
+     Before it was impossible to reach size when in the context of buffalo. 
+
+--------------------------------------------------------------------------------
+15.07.2004 18:33 (BST), chris
+
+ * Fix for the updated api in ferite
+
+--------------------------------------------------------------------------------
+09.08.2002 15:52 (CEST), cms
+
+  * build fix.
+--------------------------------------------------------------------------------
+17.06.2002 21:17 (CEST), sem
+
+* Added non parsed text blocks to be able to print [] characters
+
+--------------------------------------------------------------------------------
+16.06.2002 23:14 (CEST), sem
+
+* #include should work correctly now
+* .dump() method to view parser tree
+* Should be stable now
+
+--------------------------------------------------------------------------------
+03.06.2002 14:17 (CEST), sem
+
+* Added $_ like operator for arrays => []
+
+--------------------------------------------------------------------------------
+03.06.2002 12:57 (CEST), sem
+
+* Added support for hash-type arrays. It should be called upon as an object.
+
+--------------------------------------------------------------------------------
+27.05.2002 16:52 (CEST), sem
+
+* Initial import into cvs
+

@@ -1,0 +1,23 @@
+--------------------------------------------------------------------------------
+16.12.2002 11:02 (GMT), alex
+Make the constants actually constant, so the user can't accidentally modify
+their value.
+
+--------------------------------------------------------------------------------
+11.12.2002 11:58 (GMT), alex
+Removed the ncurses mouse support because it is obviously pretty much unusable
+(the X mouse support partially worked but the GPM support didn't work at all).
+Plus it was the only non portable extension in the module anyway.
+
+--------------------------------------------------------------------------------
+08.12.2002 21:59 (GMT), alex
+Added many more functions and tidied up the autoconf files.
+
+--------------------------------------------------------------------------------
+08.12.2002 16:37 (GMT), alex
+Added Pads and subwindow support.
+
+--------------------------------------------------------------------------------
+08.12.2002 15:12 (GMT), alex
+Initial checkin
+

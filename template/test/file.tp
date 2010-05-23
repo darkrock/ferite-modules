@@ -1,0 +1,9 @@
+Display A List Of Developers.
+[@a:	[name] = [title] 
+]
+Display The Contents Of An Array
+[@b:	[] -> [.d] 
+]
+Check to see if C is true
+[c:C is true]
+[!c:C is false]

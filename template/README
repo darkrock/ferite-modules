@@ -1,0 +1,98 @@
+Template module
+
+    Copyright (C) 2002,
+	Stephan Engström <sem@cention.se>
+    All Rights Reserved.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+There is no manual for this module, since it has been for for internal use only.
+It is mainly used for web development, but could be used for a number of things.
+
+[foo: ]  	// Basicly does a 'if(foo)'
+[foo]    	// Substitutes for the variable name foo
+[foo.bar.baz]	// Walks the tree does the above
+[@foo: ]	// Does a foreach
+[foo][foo][foo]	// If 'foo' is an array, it will walk three items in the array
+[.foo]		// This will start the walk from the root node
+
+Crash course:
+
+--------------------------------------------------------------------------------
+
+uses "console","template";
+
+// Create a data structure
+
+class Group {
+    string name;
+    number admin;
+}
+class Person {
+    string name;
+    string nick;
+    array groups;
+}
+class Root {
+    array persons;
+    string title;
+}
+object t, p, g1, g2, o = new Root();
+o.title = "User listing";
+
+g1 = new Group();
+g1.name = "UserGroup A";
+g1.admin = 0;
+
+g2 = new Group();
+g2.name = "Admin";
+g2.admin = 1;
+p = new Person();
+
+p.name = "Stephan Engström";
+p.groups[] = g1;
+p.groups[] = g2;
+o.persons[] = p;
+
+p = new Person();
+p.name = "Chris Ross";
+p.nick = "boris";
+p.groups[] = g2;
+p.persons[] = p;
+
+t = new Template( o );
+t.parse_file("my_template.tpl");
+
+--------------------------------------------------------------------------------
+my_template.tpl:
+
+<html>
+<head>
+<title>[title]</title>
+</head>
+<body>
+<table>
+[@persons:
+    <tr><td>[name] [nick: aka '[]']</td><td></td></tr>
+    [@groups:
+        <tr><td></td><td>[admin: <font color="red">]
+			 [!admin: <font color="blue">]
+			 [name] </font> </td></tr>
+    ]
+]
+</table>
+
+

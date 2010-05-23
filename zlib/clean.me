@@ -1,0 +1,50 @@
+#!/bin/bash
+if [ -f Makefile ]
+then
+	echo make clean
+fi
+
+for file in			\
+	aclocal.m4		\
+	config.h		\
+	config.h.in		\
+	config.log		\
+	config.guess		\
+	config.status		\
+	config.sub		\
+	configure		\
+	depcomp			\
+	install-sh		\
+	libtool			\
+	ltmain.sh		\
+	missing			\
+	stamp-h1		\
+	Makefile		\
+	Makefile.in		\
+	zlib/zlib_ZLib.c	\
+	zlib/zlib_ZLib_ZLib.c	\
+	zlib/zlib_core.c	\
+	zlib/zlib_header.h	\
+	zlib/zlib_misc.c	\
+	zlib/zlib.xml		\
+	zlib/Makefile		\
+	zlib/Makefile.in
+do
+	if [ -f "${file}" ]
+	then
+		rm -f "${file}"
+	fi
+done
+
+for dir in			\
+	autom4te.cache		\
+	zlib/.deps		\
+	zlib/.libs
+do
+	if [ -d "${dir}" ]
+	then
+		rm -rf "${dir}"
+	fi
+done
+
+exit 0

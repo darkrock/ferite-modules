@@ -1,0 +1,6 @@
+
+- All Options that use Lists
+- Test All Protocols
+- cURL "non-easy" for multiple downloads in the same thread
+- Allow ferite functions to be the callback functions.
+- Documentation

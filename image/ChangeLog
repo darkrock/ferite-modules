@@ -1,0 +1,43 @@
+--------------------------------------------------------------------------------
+26.05.2005 19:29 (BST), chris
+
+  * Sort out the gcc 4.0 issues
+
+--------------------------------------------------------------------------------
+20.04.2005 15:16 (BST), chris
+
+  * Image.toARGBString() and Image.toRGBAString() (needed for the ogl module)
+  * farm.yard file to make building this thing sane
+
+--------------------------------------------------------------------------------
+15.12.2004 16:50 (GMT), chris
+
+ * Update, change the class names to fit with the scheme ferite endorses
+
+--------------------------------------------------------------------------------
+05.09.2004 23:32 (BST), chris
+
+ * Not all file systems are case sensitive, Image.fec -> ImageClass.fec
+
+--------------------------------------------------------------------------------
+18.06.2004 17:25 (CEST), cms
+
+ * Starting to make documentation for this module.
+ * class Image is done ... *puh* 
+	
+--------------------------------------------------------------------------------
+31.07.2003 14:36 (CEST), cms
+
+ * Compile fixes.
+
+--------------------------------------------------------------------------------
+09.08.2002 15:11 (CEST), cms
+
+ * build fixes and checks.
+
+--------------------------------------------------------------------------------
+27.05.2002 12:50 (CEST), sem
+
+* Initial import of ferite::image
+
+

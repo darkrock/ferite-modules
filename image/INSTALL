@@ -1,0 +1,12 @@
+
+To install this package you need to follow three steps:
+
+	1) Run ./configure
+	2) Run make
+	3) Run make install
+	
+The install will cause the ferite documentation to be regenerated including 
+the newly installed module. Any examples will be copied to the ferite examples
+directory.
+
+You can use farm to install this module.

@@ -1,0 +1,5 @@
+
+  This module provides a wrapper around libxslt (http://xmlsoft.org)
+
+It allows you to apply xslt transforms to the trees created using the
+ferite supplied xml module.

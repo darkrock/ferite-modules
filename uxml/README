@@ -1,0 +1,68 @@
+uXML - a small XML like parser module
+
+    Copyright (C) 2002,
+	Stephan Engström <sem@cention.se>
+    All Rights Reserved.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+
+This is a module for handling XML like data. It doesn't
+conform to any standard but is quite nice to work with.
+This module solves the problem I have, it will probably
+not solve your problems. If you're looking for a real
+XML parser that does everything by the book, move along.
+
+The bases for this module is that the data gets parsed
+into a tree that you can work with and even add data
+to it after it has been parsed.
+There are two methods that can be used to extract nodes
+from the tree. One is to transform the tree into an
+object. The backside is that you have to know the layout
+of the XML file and the structure has to be very strict.
+The other side is using a path description to navigate
+the tree:
+
+<a>
+  <b>Foo</b>
+</a>
+
+To extract the above 'b' node:
+
+uses "uxml","console";
+object xml = new uXML();
+xml.parse("<a><b>Foo</b></a>");
+if( xml.path_asString("a.b") != "Foo" )
+    Console.println("node 'b' didn't contain the right value");
+
+
+You can also create new pointers into the tree. This
+example will create a new uXML instance pointing into
+the main tree. Just make sure that the base tree do
+not fall out of scope. Since it points into the base
+class and the base class gets garbage collected, very
+strange things can happen.
+
+uses "uxml","console";
+object o, xml = new uXML();
+xml.parse("<a><b>Foo</b></a>");
+o = xml.path_asRef("a");
+if( o.path_asString("b") != "Foo" )
+    Console.println("node 'b' didn't contain the right value");
+
+There is no manual, to have a look at the interface
+there is a file 'test/test.fe' that will use all the methods.
+
+

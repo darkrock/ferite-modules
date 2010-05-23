@@ -1,0 +1,15 @@
+This module is a Ferite binding to the MHash library. If your OS doesn't have a
+standard package for the MHash library, you can obtain it from:
+http://mhash.sourceforge.net/
+
+At the time of writing, the supported hash algorithms include:
+CRC32, MD5, SHA1, HAVAL256, RIPEMD160, TIGER, GOST, CRC32B, HAVAL224, HAVAL192,
+HAVAL160, HAVAL128, TIGER128, TIGER160, MD4, and SHA256.
+
+Because the MHash module obtains the list of algorithms dynamically, if you
+upgrade the MHash library to one which includes a new hash algorithm, the
+MHash module will automatically support it.`
+
+See the mhash library manual page and MHash/MHash.fec for more documentation.
+
+The MHash module was written by Alex Holden <alex@alexholden.net>.

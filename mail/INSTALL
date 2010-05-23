@@ -1,0 +1,16 @@
+I've had no success using RPM-versions of imap-devel
+Compile a new c-client (IMAP) with source from http://www.washington.edu/imap/
+
+On RedHat 7.3 i do this:
+	tar -xvzf imap.tar.Z
+	cd imap-*
+	make slx
+	cd c-client
+	mv /usr/include/imap/ /usr/include/imap_old
+	mkdir /usr/include/imap/                      
+	cp *.h linkage.c /usr/include/imap
+	mv /usr/lib/c-client.a /usr/lib/c-client_old.a 
+	cp c-client.a /usr/lib/                                  
+
+
+sveinung.haslestad@cention.se

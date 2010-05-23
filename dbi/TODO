@@ -1,0 +1,6 @@
+* encodings. 
+  Today dbi only connect with the encoding that is the default for the database
+  client library. 
+  We need to change this so that we can connect with another encoding. 
+
+        

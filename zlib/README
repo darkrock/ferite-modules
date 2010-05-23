@@ -1,0 +1,10 @@
+This module implements a zlib wrapper for ferite. It is very much derived
+from the PHP implementation.
+
+Information on zlib can be found at http://zlib.org.
+
+Information on PHP can be found at http://php.net.
+
+Requirements ---------------------------------------------------------------
+
+This module depends on the zlib library.

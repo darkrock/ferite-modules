@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<yard name="apache">
+
+    <property id="ApacheCFlags" type="C">
+        <line>-DENABLE_EMBFER</line>
+        <line>-DLIBRARY_DIR=\"$(FeriteLibraryDir)\"</line>
+        <line>-DNATIVE_LIBRARY_DIR=\"$(FeriteModuleNativeDir)\"</line>
+        <line>-DXPLAT_LIBRARY_DIR=\"$(FeriteModuleSourceDir)\"</line>
+        <line>-I<program-output program="apxs2,apxs" arguments="-q INCLUDEDIR" /></line>
+        <program-output program="apr-config" arguments="--includes --cflags" />
+        <program-output program="apu-config" arguments="--includes" />
+        <program-output program="ferite-config" arguments="--cflags" />
+        <program-output program="embfer-config" arguments="--cflags" />  
+    </property>
+     
+    <property id="ApacheLDFlags" type="LD">
+        <program-output program="apr-config" arguments="--link-ld --libs" />
+        <program-output program="apu-config" arguments="--link-ld --libs" />
+        <program-output program="ferite-config" arguments="--libs" />  
+        <program-output program="embfer-config" arguments="--libs" />  
+    </property>
+
+    <module id="apache">
+        <property type="C" value="$(ApacheCFlags)" />
+        <property type="LD" value="$(ApacheLDFlags)" />
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+        <list type="source">
+            <file name="apache/apache.fec" />
+            <fileset dir="apache" match="\.[ch]$" />
+        </list>
+    </module>
+    
+    <module id="mod_ferite">
+        <property type="C" value="$(ApacheCFlags)" />
+        <property type="LD" value="$(ApacheLDFlags)" />
+        <property id="prefix" type="prefix"><program-output program="apxs2,apxs" arguments="-q LIBEXECDIR" /></property>
+        <list type="source">
+            <fileset dir="mod_ferite" match="\.[ch]$" />
+        </list>
+    </module>
+    
+    <property id="feriteConfPrefix"><program-output program="apxs2,apxs" arguments="-q SYSCONFDIR" /></property>
+    
+    <phase id="install" depends="build">
+        <perform action="install" target="apache" />
+        <perform action="install" target="mod_ferite" />
+        <copy file="apache/apache.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/apache.xml" target="$(FeriteModuleDescriptionDir)" />
+        <copy file="mod_ferite/ferite.conf" target="$(feriteConfPrefix)" filter="on" />
+        <execute program="feritedoc" arguments="--regenerate" />
+    </phase>
+    
+</yard>

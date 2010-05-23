@@ -1,0 +1,14 @@
+
+This module provides a DataBase Interface for Ferite  using the libdbi library.
+
+To use this module you will need a version of libdbi >= 0.6.7
+libdbi is availible from http://libdbi.sf.net
+
+You will also need a libdbi-driver. 
+The libdbi drivers are avaliable trough the libdbi-drivers project on sourceforge. 
+http://libdbi-drivers.sf.net
+
+There are currently drivers for MySQL, PostgreSQL, SQLite, mSQL, Oracle and Firebird/Interbase.
+
+More are on the way.   
+

@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<yard name="embfer">
+
+    <property id="version" value="1.0.0" />
+    <property id="feriteC"><program-output program="ferite-config" arguments="--cflags" /></property>
+    <property id="feriteLD"><program-output program="ferite-config" arguments="--libs" /></property>
+
+    <shared-library id="embfer-lib">
+        <property type="name" value="embfer" />
+        <list type="source">
+            <fileset dir="libembfer" match="embfer\.[ch]$" />
+        </list>
+        <property type="C" value="$(feriteC)" />
+        <property type="LD" value="$(feriteLD)" />
+        <property type="prefix" value="$(prefix)/lib" />
+    </shared-library>
+    
+    <module id="embfer-ferite-module">
+        <property type="name" value="embfer" />
+        <list type="source">
+            <file name="embfer/embfer.fec" />
+            <fileset dir="embfer" match="utils\.[ch]$" />
+        </list>
+        <property type="C" value="$(feriteC) -Ilibembfer/" />
+        <property type="LD" value="$(feriteLD)" />
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />        
+    </module>
+    
+    <executable id="embfer-exe">
+        <property type="name" value="embfer" />    
+        <list type="source">
+            <file name="tool/main.c" />
+        </list>
+        <property type="C" value="$(feriteC) -Ilibembfer/" />
+        <property type="LD" value="$(feriteLD) -L$(ProductDir) -lembfer" />
+        <property type="prefix" value="$(prefix)/bin" />  
+    </executable>
+    
+    <phase id="install" depends="build">
+        <perform action="install" target="embfer-lib" />
+        <perform action="install" target="embfer-ferite-module" />
+        <perform action="install" target="embfer-exe" />
+        <copy file="embfer/embfer.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/embfer.xml" target="$(FeriteModuleDescriptionDir)" />
+        <execute program="feritedoc" arguments="--regenerate" />
+    </phase>
+    
+</yard>

@@ -1,0 +1,192 @@
+-e --------------------------------------------------------------------------------
+08.07.2008 11:06 (BST), chris
+
+ * A function for queryUpdateInsert
+ * A new part of the module dbi_sql.fe which provides code based SQL query generation
+
+-e --------------------------------------------------------------------------------
+27.06.2008 10:16 (BST), chris
+
+ * Query tracking with timestamps
+
+--------------------------------------------------------------------------------
+22.09.2006 14:54 (CEST), cms
+
+  * added an overloaded connect function that takes the port number as a
+    parameter.
+
+--------------------------------------------------------------------------------
+13.03.2006 23:41 (UTC), cms
+
+  * Added some metadata functions. 
+   
+ 	 columnName( number column )
+	 columnLength( number column )   	 
+	 columnIsNull( number column )
+	 columns( )
+
+--------------------------------------------------------------------------------
+10.01.2006 22:02 (UTC), cms
+
+   * Make dbi free its malloc'ed memory as soon as its not needed any more. 
+     Before all the memory was free'ed from Dbis destructor which was a bit
+     devastating for daemons and such which might run for a very long time and
+     alloc alot of DbiResults.
+
+   * Some cleanups and documentation.
+
+--------------------------------------------------------------------------------
+08.01.2006 12:30 (GMT), chris
+
+ * Make stored procedures much better
+
+--------------------------------------------------------------------------------
+23.11.2005 13:24 (GMT), chris
+
+  * You can now call stored procedures by calling SP_NAMEOFPROC() on the 
+    dbi object
+
+--------------------------------------------------------------------------------
+16.12.2004 10:17 (GMT), chrison
+
+  * Change to the build script to use prefix
+
+--------------------------------------------------------------------------------
+07.09.2004 20:19, cms
+	* removed the free() on error strings.
+          libdbi now take care of free()'ing the error strings.
+
+--------------------------------------------------------------------------------
+21.08.2004 14:10 (CEST), cms
+
+	* Renamed function names from function_name style to functionName style
+          as this is the standard way for ferite....
+
+--------------------------------------------------------------------------------
+25.03.2004 16:33 (CET), cms
+
+ * interfaces made "protocol" a reserved word.
+
+
+--------------------------------------------------------------------------------
+18.12.2003 13:34 (UTC), cms
+
+  * Some cleanups
+
+--------------------------------------------------------------------------------
+15.12.2003 10:27 (CET), cms
+
+ * fix for a segfault
+
+--------------------------------------------------------------------------------
+18.02.2003 12:41 (CET), cms
+
+ * fix for function parameter count.
+
+--------------------------------------------------------------------------------
+07.08.2002 12:28 (CEST), cms
+
+  * Handle Integers correctly.
+
+
+
+--------------------------------------------------------------------------------
+03.08.2002 18:26 (CEST), cms
+
+  * Sync DBI build process with ferite's (Solaris safe) and cleanups
+
+
+
+--------------------------------------------------------------------------------
+17.07.2002 14:16 (CEST), cms
+
+ * make dbi duplicate script safe.
+
+
+
+--------------------------------------------------------------------------------
+10.07.2002 16:25 (BST), chris
+
+  * fix to some comments
+
+--------------------------------------------------------------------------------
+05.07.2002 19:13 (CEST), cms
+
+* bug fix, cleanup and make query_binary() return NULL.
+
+
+
+--------------------------------------------------------------------------------
+05.07.2002 17:27 (BST), chris
+
+  * Return a null object if we are not connected to the database
+
+--------------------------------------------------------------------------------
+14.06.2002 18:47 (CEST), cms
+
+** Warning This commit will break all code using dbi. Warning **
+
+* Cleanup.
+* disconnect is back. 
+* Removed connect();
+
+  The constructor now does the connection. 
+ 
+ 	uses  "dbi","console";
+	object dbh = new Dbi(protocal, username, ...); 
+	if(dbh == null)
+		Console.println("Danger ...");
+
+
+--------------------------------------------------------------------------------
+14.06.2002 18:18 (CEST), cms
+
+seq_curr_val();
+seq_next_val();
+
+
+
+--------------------------------------------------------------------------------
+14.06.2002 11:04 (CEST), sem
+
+* Removed the Self* macro to make debugging easier
+* Removed Destruct for dbi_rresult
+* Removed the dbi_result::finished() and dbi::disconnect()
+* Took away module-deinit{} that contained dbi_shutdown()
+* All the problems was due to dbi_shutdown() running before GC
+
+--------------------------------------------------------------------------------
+31.05.2002 17:04 (CEST), cms
+
+* removed query_placholders(). Query now has this functionality. 
+	*** Warning this will probably break stuff ***
+
+--------------------------------------------------------------------------------
+31.05.2002 14:12 (CEST), cms
+
+* first attempt om emulated placeholders 
+  called query_placeholders untill its tested enough to become query.
+
+--------------------------------------------------------------------------------
+31.05.2002 11:21 (CEST), andreas
+
+Added function driver_name which retreives the name of the driver
+mysql for MySQL
+pgsql for PostGreSQL
+
+--------------------------------------------------------------------------------
+27.05.2002 22:16 (CEST), sem
+
+* Added all_records() to return an array of arrays
+
+--------------------------------------------------------------------------------
+27.05.2002 21:59 (CEST), sem
+
+* You can return a database row as an object, without methods that is
+
+--------------------------------------------------------------------------------
+27.05.2002 15:26 (CEST), sem
+
+*updated test script to use new "sys" module, for use with cvs ferite
+
+

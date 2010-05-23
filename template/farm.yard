@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<yard name="template">
+
+    <module id="template">
+        <list type="source">
+            <file name="template/template.fec" />
+            <fileset dir="template" match="utility\.[ch]$" />
+        </list>
+        <property type="C"><program-output program="ferite-config" arguments="--cflags" /></property>
+        <property type="LD"><program-output program="ferite-config" arguments="--libs" /></property>
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+    </module>
+    
+    <phase id="install" depends="build">
+        <perform action="install" target="template" />
+        <copy file="template/template.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/template.xml" target="$(FeriteModuleDescriptionDir)" />
+        <execute program="feritedoc" arguments="--regenerate" />
+    </phase>
+    
+</yard>

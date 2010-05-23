@@ -1,0 +1,17 @@
+--------------------------------------------------------------------------------
+14.12.2002 13:39 (GMT), chris
+
+  * Added a set of #ifdef's as there seem to be some missing defines within
+    OSX's termios layer
+
+--------------------------------------------------------------------------------
+12.12.2002 18:49 (GMT), alex
+Added support for configuring, and retrieving the configuration of, the number
+of stop bits, the number of data bits, the flow control mode, and the parity
+mode.
+
+--------------------------------------------------------------------------------
+12.12.2002 11:46 (GMT), alex
+Initial commit. It is basically usable, but doesn't yet support configuring any
+port settings other than the baud rate.
+

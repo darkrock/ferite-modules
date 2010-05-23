@@ -1,0 +1,38 @@
+To install mod_ferite issue the following commands:
+
+$ ./configure --with-apache-dir=/serverroot 
+$ make
+$ su -c "make install"
+
+You will have to edit your http.conf file and add something like
+these lines:
+
+# loads mod_ferite into apache.
+LoadModule ferite_module modules/mod_ferite.so
+
+# Let mod-ferite handle all files of the type .fe 
+AddHandler ferite-handler .fe
+
+# Make text/html the default contenttype for ferite scripts.
+# You can change contenttype from with in your ferite scripts using the apache module.
+#
+# uses "apache";
+# object req = new request();
+# req.content_type("text/plain");
+
+AddType text/html FE
+
+You can also add:
+
+DirectoryIndex index.fe
+
+so that you can use ferite scripts as directory index.
+
+restart Apache on you should be up and running.
+
+You can find a sample config file in mod_ferite/ferite.conf
+You can include this in httpd.conf using the Include directive.
+
+Include conf/ferite.conf
+
+Happy mod_ferite'ing!

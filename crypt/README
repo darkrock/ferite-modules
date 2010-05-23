@@ -1,0 +1,8 @@
+This package provides tools to allow the encryption and decryption of strings within ferite.
+
+It has the following dependancies:
+
+	latest stable ferite (1.0.0) - http://www.ferite.org
+	libmcrypt 2.5.0 - http://mcrypt.sourceforge.net/
+	mhash 0.8.14 - http://mhash.sourceforge.net/
+

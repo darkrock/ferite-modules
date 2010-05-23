@@ -1,0 +1,55 @@
+<?xml version="1.0" ?>
+<yard name="OpenGL">
+
+    <module id="ogl">
+        <!-- C flags -->
+        <property type="C"><program-output program="ferite-config" arguments="--cflags" /></property>
+        <add-property type="C" value="-framework OpenGL -DMACOSX" platform="Darwin" />
+        <add-property type="C" value="-I/usr/include -DLINUX" platform="Linux" />
+        
+        <!-- LD flags -->
+        <property type="LD"><program-output program="ferite-config" arguments="--libs" /></property>
+        <add-property type="LD" value="-framework OpenGL" platform="Darwin" />
+        <add-property type="LD" value="-lGL -lGLU" platform="Linux" />
+
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+        
+        <list type="source">
+            <file name="src/ogl.fec" />
+            <fileset dir="src" match="OpenGL_utility\.[ch]$" />
+            <file name="src/utility.h" />
+        </list>
+    </module>
+    
+    <module id="glut">
+        <!-- C flags -->
+        <property type="C"><program-output program="ferite-config" arguments="--cflags" /></property>
+        <add-property type="C" value="-framework OpenGL -framework GLUT -DMACOSX" platform="Darwin" />
+        <add-property type="C" value="-I/usr/include -DLINUX" platform="Linux" />
+        
+        <!-- LD flags -->
+        <property type="LD"><program-output program="ferite-config" arguments="--libs" /></property>
+        <add-property type="LD" value="-framework OpenGL -framework GLUT" platform="Darwin" />
+        <add-property type="LD" value="-lGL -lglut" platform="Linux" />
+        
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+        
+        <list type="source">
+            <file name="src/GLUT.fec" />
+            <fileset dir="src" match="GLUT_utility\.[ch]$" />
+            <file name="src/utility.h" />
+        </list>
+    </module>
+    
+    <phase id="install" depends="build">
+        <perform action="install" target="ogl" />
+        <perform action="install" target="glut" />
+        <copy file="src/ogl.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="src/OpenGL.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="src/GLU.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="src/GLUT.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/ogl.xml" target="$(FeriteModuleDescriptionDir)" />
+        <copy file="$(ProductDir)/glut.xml" target="$(FeriteModuleDescriptionDir)" />
+    </phase>
+    
+</yard>

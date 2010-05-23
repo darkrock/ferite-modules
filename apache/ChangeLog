@@ -1,0 +1,232 @@
+--------------------------------------------------------------------------------
+08.10.2007 19:34 (CEST), cms
+
+  * Merging POST and GET data into the array returned by Request.current().query() 
+    Feels a bit naughty but some others like php are doing it and it can sure be useful
+    When dealing with input coming from mod_rewrite etc. 
+
+
+
+--------------------------------------------------------------------------------
+14.01.2006 13:29 (UTC), cms
+
+   * Update mod_ferite to use the new ferite functions that attach data to the script
+     before its compiled. 
+     This makes it possible to create objects of the class Request from scripts that have been 
+     included by a uses "script.fe". 
+
+     Also it's a cleaner solution then sending pointers around in void 
+     variables. 
+
+--------------------------------------------------------------------------------
+23.12.2005 10:46 (GMT), chris
+
+  * If you have a multipart form that doesn't have that encoding, the query 
+    data will be NULL. This can cause a segfault. This change makes it such
+    that we supply an empty string
+
+--------------------------------------------------------------------------------
+15.12.2004 15:53 (GMT), chris
+
+ * Make embfer support optional
+ * Update mod_ferite to use the new XPLAT_LIBRARY_PATH
+
+--------------------------------------------------------------------------------
+31.08.2004 08:59 (BST), chris
+
+ * Added embfer support. Now need to make it do caching and make it optional
+
+--------------------------------------------------------------------------------
+16.07.2004 12:15 (BST), chris
+
+ * Slight name change to request to Request
+
+--------------------------------------------------------------------------------
+16.07.2004 09:09 (BST), chris
+
+ * Some fixes to the build system to make it more useful:
+ 	- Added --with-apxs=
+	- Added --with-apachectl=
+	- Changed the Makefile.am to use apxs for the path names 
+	- Change the version string to include the ferite version aswell
+
+--------------------------------------------------------------------------------
+22.05.2003 22:46 (CEST), cms
+
+  * added uri()
+    returns the unparsed uri for the request.
+
+--------------------------------------------------------------------------------
+18.05.2003 14:28 (BST), chris
+
+  * Some fixes to get the apache module working on a Mac OS X and recent apache2
+  * The apache module is automatically loaded now whenever a script is built
+  
+
+--------------------------------------------------------------------------------
+02.10.2002 10:14 (CEST), cms
+
+  * Use Apache apr functions instedd of home made ones.
+
+
+
+--------------------------------------------------------------------------------
+23.09.2002 18:01 (CEST), cms
+
+  * Fix for multipart filenames can now contain spaces.
+
+
+
+--------------------------------------------------------------------------------
+05.09.2002 14:51 (CEST), cms
+
+  * Small bug fix for content_type().
+
+
+
+--------------------------------------------------------------------------------
+10.08.2002 19:04 (CEST), cms
+
+ * small cleanups 
+ * remote_host() does not return the ip-address if it can't lookup the hostname anymore it now returns ""
+   I think this is the correct thing to do. 
+
+--------------------------------------------------------------------------------
+09.08.2002 15:25 (CEST), cms
+
+ * build fixes.
+
+
+
+--------------------------------------------------------------------------------
+17.07.2002 11:22 (CEST), cms
+
+  * renaming of functions mod_ferite specific function now use the prefix mod_ferite_*
+  * New config directive FeriteCache tells mod_ferite if it should use caching or not.
+  * mod_feritealize caching.
+
+
+--------------------------------------------------------------------------------
+16.07.2002 23:20 (BST), chris
+
+  * Initial caching implementation - requires testing but should work. Pays
+    attention to the modification time on the disk file an updates itself
+
+--------------------------------------------------------------------------------
+15.07.2002 16:09 (CEST), cms
+
+  * Start documentation. Its far from finished. Please help me.
+
+--------------------------------------------------------------------------------
+
+12.07.2002 22:30 (CEST), cms
+
+  * added INSTALL to the repository.
+
+--------------------------------------------------------------------------------
+12.07.2002 20:56 (BST), chris
+
+  * A readme and code formating
+
+--------------------------------------------------------------------------------
+08.07.2002 10:05 (BST), chris
+
+  * The output error for apache should format properly so it can be seen
+
+--------------------------------------------------------------------------------
+08.07.2002 10:14 (CEST), cms
+
+  * new functions server_root() && document_root()
+
+--------------------------------------------------------------------------------
+19.06.2002 13:10 (CEST), cms
+
+  * Make mod_ferite send propper HTTP-headers.
+
+--------------------------------------------------------------------------------
+17.06.2002 12:38 (CEST), cms
+
+  * ferite_sys_init() && ferite_sys_deinit();
+
+  * We only want to call ferite_init/deinit() at server startup...
+    This change will make it possible to do a major cleanup of mod_ferite.
+    /* So much to do, so little time. */
+
+--------------------------------------------------------------------------------
+14.06.2002 15:39 (CEST), cms
+
+  * fixed some bugs in the autostuff. 
+
+
+
+--------------------------------------------------------------------------------
+14.06.2002 13:05 (BST), chris
+
+  * Added a bunch of .cvsignore files to ingore various autogenerated stuff
+  
+
+--------------------------------------------------------------------------------
+14.06.2002 12:58 (BST), chris
+
+  * Made the mod_ferite/ directory autoconf awares
+
+--------------------------------------------------------------------------------
+12.06.2002 14:54 (CEST), cms
+
+  * server config 
+  * apache_internal module for touching thing that need the server_rec ..
+  * FeriteInitScript runs a script in server startup from it you can set server global variables using apache_internal.
+
+
+
+--------------------------------------------------------------------------------
+06.06.2002 15:45 (CEST), sem
+
+  * added get_params() call
+
+--------------------------------------------------------------------------------
+06.06.2002 10:40 (CEST), sem
+
+  * started to break apart query(), needed for get_params()
+  * Changed self->odata to contain a context struct instead
+
+--------------------------------------------------------------------------------
+03.06.2002 23:02 (CEST), cms
+
+  * modify mod_ferite to return ferite parser errors. 
+
+--------------------------------------------------------------------------------
+03.06.2002 17:10 (CEST), cms
+
+  * added FeriteWorkingDirectory 
+
+--------------------------------------------------------------------------------
+30.05.2002 14:48 (CEST), cms
+
+  * added error_log()
+
+--------------------------------------------------------------------------------
+30.05.2002 14:15 (CEST), cms
+
+  * added refferer()/remote_host()/user_agent()
+
+--------------------------------------------------------------------------------
+30.05.2002 13:45 (CEST), cms
+
+  * added remote_ip() 
+
+--------------------------------------------------------------------------------
+30.05.2002 11:57 (CEST), sem
+
+  * Added multi-part decoding
+
+2002-05-29  Christian M. Stamgren  <christian@centiongroup.com>
+
+  * urlencode/urldecode.
+  * Cleanups.
+	
+2002-05-28  Christian M. Stamgren  <christian@centiongroup.com>
+
+  * Added config directivs (FeriteSetVar/FeriteErrors).
+  * Added Cookie functions (set_cookie/cookies).
+

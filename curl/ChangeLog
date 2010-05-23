@@ -1,0 +1,19 @@
+--------------------------------------------------------------------------------
+19.06.2007 10:16 (BST), chris
+
+	* Fix for httpheader directive use.
+
+--------------------------------------------------------------------------------
+29.09.2005 16:37 (BST), chris
+
+  * Fix for libcurl string interaction. It doesn't copy strings, so the
+    curl module has to
+
+--------------------------------------------------------------------------------
+29.12.2003 07:21 (UTC), firechipmunk
+    - Updated configure.ac to detect curl-config
+    - Added Various Distro Files (AUTHORS, ChangeLog.. etc)
+    - Updated Test Scripts
+
+
+

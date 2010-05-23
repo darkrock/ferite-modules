@@ -1,0 +1,6 @@
+This is a Ferite serial interface module. Currently it only supports BSD
+termios but the API is designed to be generic enough to support other serial
+port systems without needing to change the API too dramatically.
+
+This module was written by Alex Holden <alex@alexholden.net>.
+It is distributed under the same license as Ferite itself, ie. the BSD license.

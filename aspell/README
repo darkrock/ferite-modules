@@ -1,0 +1,6 @@
+
+This package wraps the aspell library providing a mechanism for
+spell checking within ferite.
+
+You need to make sure you have the libaspell headers installed
+(either via source or the development packages for your platform)

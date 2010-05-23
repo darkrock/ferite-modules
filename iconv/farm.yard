@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<yard name="iconv">
+	<property id="name" value="ferite-iconv" />
+	<property id="version" value="1.0" />
+
+    <module id="iconv">
+        <!-- C flags -->
+        <property type="C">
+			<program-output program="ferite-config" arguments="--cflags" />
+		</property>
+        
+        <!-- LD flags -->
+        <add-property type="LD">
+			<program-output program="ferite-config" arguments="--libs" />
+		</add-property>
+		<add-property type="LD" value="-liconv -lintl" platform="Darwin" />
+
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+        
+        <list type="source">
+            <file name="src/iconv.fec" />
+            <fileset dir="src" match="utility\.[ch]$" />
+        </list>
+
+		<list type="test">
+			<file name="test/iconv.fe" />
+		</list>
+    </module>
+        
+    <phase id="install" depends="build">
+        <perform action="install" target="iconv" />
+        <copy file="src/iconv.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/iconv.xml" target="$(FeriteModuleDescriptionDir)" />
+    </phase>
+    
+</yard>

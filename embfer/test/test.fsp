@@ -1,0 +1,11 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+    <head><title>embfer test</title></head>
+    <body>
+        <h1>embfer test</h1>
+        <? Console.println( "hello world" ); ?><br />
+        current time: <?= Sys.getBuildDate() ?><br />
+        <?# this is a comment line. ?>
+        <?= Embfer.import( "foo.fsp" ) ?>
+    </body>
+</html>

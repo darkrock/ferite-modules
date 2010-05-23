@@ -1,0 +1,3 @@
+#!/bin/bash
+
+gcc -o main -framework GLUT -framework OpenGL -framework Cocoa `ferite-config --cflags` `ferite-config --libs` main.c

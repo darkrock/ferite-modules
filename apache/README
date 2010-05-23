@@ -1,0 +1,22 @@
+mod_ferite - the apache webserver ferite module
+
+This README has been shamelessly stolen from mod_perl
+
+Apache version 2.0.36 or higher is required.
+
+ferite version 1.0.0 or higher is required.
+
+Only DSO build of mod_ferite is currently supported, static builds
+will be support in the future if there is demand for it.
+
+For comments, questions, bug-reports, etc. please send by email
+to ferite@centiongroup.com
+
+mod_ferite was designed and written by the people mentioned
+in AUTHORS
+
+-------------------------------------------------------------
+
+Please make sure you have the apr development files installed.
+
+The best way to install into a distribution apache2 is to specify --with-apxs

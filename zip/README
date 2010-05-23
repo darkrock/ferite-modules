@@ -1,0 +1,7 @@
+This module provides the posibility for ferite to open and read 
+Zip-archives. 
+
+We are depending on the zzip library found at: http://zziplib.sourceforge.net/
+
+Zziplib is very lightweight and does only provide read access. 
+

@@ -1,0 +1,9 @@
+
+
+TODO:
+
+	All classes in this modules is potential memory leaks.
+	The classes has destroy functions that free's, 
+	allocated memory, but this should really be done in 
+	the destructors, becouse people might not call the destroy
+	function  .....

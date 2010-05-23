@@ -1,0 +1,4 @@
+This is the ferite interface to the CURL library.
+
+Please make sure that you have the curl development headers
+installed.

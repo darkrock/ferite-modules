@@ -1,0 +1,8 @@
+This TODO list is sorted in order of priority.
+
+o File functions.
+
+o Update documentation.
+
+o Fix autoconf to detect zlib installation in standard and non-standard
+  locations.

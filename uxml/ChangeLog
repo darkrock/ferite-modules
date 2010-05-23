@@ -1,0 +1,54 @@
+--------------------------------------------------------------------------------
+05.04.2003 00:49 (CEST), stephan_eng
+
+* Syncing up with current ferite CVS
+* Fixing comments correctly... erh.. ignoring them atleast.
+
+--------------------------------------------------------------------------------
+09.08.2002 15:16 (CEST), cms
+
+  * build fixes.
+
+--------------------------------------------------------------------------------
+23.06.2002 17:02 (CEST), sem
+
+* Added attribute parsing and API for the same, and more
+
+--------------------------------------------------------------------------------
+20.06.2002 21:51 (CEST), sem
+
+* Added methods to operate on current node:
+	asLong(), asDouble(), asArray(), asString()
+* Added node navigation: nodeNext(), nodeChild
+* Added nodeName()
+
+--------------------------------------------------------------------------------
+20.06.2002 19:00 (CEST), sem
+
+* Finally decided on a license, it's LGPL
+
+--------------------------------------------------------------------------------
+12.06.2002 19:24 (CEST), sem
+
+* Added path discovery and full tree traveling
+
+--------------------------------------------------------------------------------
+03.06.2002 16:09 (CEST), sem
+
+* Started API change, should be able to search the tree using some sort of path
+
+--------------------------------------------------------------------------------
+30.05.2002 16:56 (CEST), sem
+
+Changed function prefix tag => uxml
+
+--------------------------------------------------------------------------------
+30.05.2002 12:15 (CEST), sem
+
+* Added parsefile() method
+
+--------------------------------------------------------------------------------
+29.05.2002 13:16 (CEST), sem
+
+* First version of uXML
+

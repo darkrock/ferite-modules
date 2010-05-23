@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<yard name="image">
+
+    <module id="image">
+        <list type="source">
+            <file name="image/image.fec" />
+            <fileset dir="image" match="utility\.[ch]$" />
+        </list>
+        <add-property type="C">
+            <program-output program="ferite-config" arguments="--cflags" />
+            <program-output program="imlib2-config" arguments="--cflags" />
+	    <line>-g</line>
+        </add-property>
+        <add-property type="LD">
+            <program-output program="ferite-config" arguments="--libs" />
+            <program-output program="imlib2-config" arguments="--libs" />
+	    <line>-g</line>
+        </add-property>
+        <property type="prefix" value="$(FeriteModuleNativeDir)" />
+    </module>
+    
+    <phase id="install" depends="build">
+        <perform action="install" target="image" />
+        <copy file="image/image.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="image/Font.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="image/Fontdir.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="image/ImageClass.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="image/Polygon.fec" target="$(FeriteModuleSourceDir)" />
+        <copy file="$(ProductDir)/image.xml" target="$(FeriteModuleDescriptionDir)" />
+        <execute program="feritedoc" arguments="--regenerate" />
+    </phase>
+    
+</yard>

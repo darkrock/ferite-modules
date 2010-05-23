@@ -1,0 +1,30 @@
+This is a Ferite binding to the standard Unix Curses terminal interface library.
+It has currently only been tested with the ncurses library, but I have tried to
+avoid non-portable features so it should hopefully work with little or no
+modification on other flavours of Curses.
+
+The binding supports most of the commonly used features of Curses, but does not
+implement support for the printw and scanw functions, or various rarely used
+features such as dumping windows and screens to files, or opening multiple
+terminals. It also doesn't provide any of the ncurses extensions.
+
+Note to Curses newbies: If many of the functions seem oddly named, or if it
+seems strange that the same functionality often overlaps several different
+functions, it is because I have tried to stay fairly faithful to the actual C
+Curses library. After getting used to the Ferite Curses binding it should not
+be too painful for you to learn to use the C Curses library directly. The main
+difference is that the Ferite bindings simplify the API by cutting down as
+much as possible on the many functions which do slight variations on the
+same thing.
+
+Note to Curses experts: Most of the functions which don't specify a window (and
+hence operate on the root window) aren't available- you instead need to call
+the desired method on the root window object you obtained from the Curses.init()
+function. When you previously would have used different functions for moving
+the cursor or not moving the cursor before an operation, you now use the same
+method for both and either specify or don't specify the coordinates to move to.
+The Curses coordinate and dimension argument order (h, w, y, x) has been
+reversed to the much more common (x, y, w, h) arrangement.
+
+This Binding was written by Alex Holden <alex@alexholden.net>.
+It is distributed under the same license as Ferite itself, ie. the BSD license.
