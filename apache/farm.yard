@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<yard name="apache">
+<yard name="ferite-module-apache">
 
     <property id="ApacheCFlags" type="C">
         <line>-DENABLE_EMBFER</line>
@@ -37,17 +37,29 @@
         <list type="source">
             <fileset dir="mod_ferite" match="\.[ch]$" />
         </list>
+		<list type="configuration">
+			<file name="mod_ferite/ferite.conf" />
+			<file name="mod_ferite/gdb" />
+		</list>
     </module>
+
+	<collection id="examples">
+		<property type="prefix" value="$(FeriteExampleDir)/apache" />
+		<list type="source">
+			<file name="scripts/hello_world.fe" />
+		</list>
+	</collection>
     
     <property id="feriteConfPrefix"><program-output program="apxs2,apxs" arguments="-q SYSCONFDIR" /></property>
     
     <phase id="install" depends="build">
         <perform action="install" target="apache" />
         <perform action="install" target="mod_ferite" />
+		<perform action="install" target="examples" />
+		
         <copy file="apache/apache.fec" target="$(FeriteModuleSourceDir)" />
         <copy file="$(ProductDir)/apache.xml" target="$(FeriteModuleDescriptionDir)" />
         <copy file="mod_ferite/ferite.conf" target="$(feriteConfPrefix)" filter="on" />
         <execute program="feritedoc" arguments="--regenerate" />
     </phase>
-    
 </yard>
