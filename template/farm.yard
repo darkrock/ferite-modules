@@ -3,11 +3,11 @@
 
     <module id="template">
         <list type="source">
-            <file name="template/template.fec" />
             <fileset dir="template" match="utility\.[ch]$" />
+            <file name="template/template.fec" />
         </list>
-        <property type="C"><program-output program="ferite-config" arguments="--cflags" /></property>
-        <property type="LD"><program-output program="ferite-config" arguments="--libs" /></property>
+        <add-property type="C"><program-output program="ferite-config" arguments="--cflags" /></add-property>
+        <add-property type="LD"><program-output program="ferite-config" arguments="--libs" /></add-property>
         <property type="prefix" value="$(FeriteModuleNativeDir)" />
     </module>
     

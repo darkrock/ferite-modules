@@ -221,7 +221,7 @@ struct node *tag_parse( FeriteScript * script, struct tag_ctx *ctx, char *str )
 
 	    if( (p = strrchr( buf, '/' ) ) )
 	    {
-	        snprintf( newpath, 200, "%.*s",p - buf, buf );
+	        snprintf( newpath, 200, "%.*s", (int)(p - buf), buf );
 	        oldpath = ctx->path;
 	        ctx->path = newpath;
 	    }
