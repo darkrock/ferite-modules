@@ -1,21 +1,29 @@
 <?xml version="1.0" ?>
-<yard name="template">
 
-    <module id="template">
-        <list type="source">
-            <fileset dir="template" match="utility\.[ch]$" />
-            <file name="template/template.fec" />
-        </list>
-        <add-property type="C"><program-output program="ferite-config" arguments="--cflags" /></add-property>
-        <add-property type="LD"><program-output program="ferite-config" arguments="--libs" /></add-property>
-        <property type="prefix" value="$(FeriteModuleNativeDir)" />
-    </module>
-    
-    <phase id="install" depends="build">
-        <perform action="install" target="template" />
-        <copy file="template/template.fec" target="$(FeriteModuleSourceDir)" />
-        <copy file="$(ProductDir)/template.xml" target="$(FeriteModuleDescriptionDir)" />
-        <execute program="feritedoc" arguments="--regenerate" />
-    </phase>
-    
+<yard name="ferite-module-template">
+	<module id="template">
+		<list type="source">
+			<fileset dir="template" match="utility\.[ch]$" />
+			<file name="template/template.fec" />
+		</list>
+		<add-property type="C"><program-output program="ferite-config" arguments="--cflags" /></add-property>
+		<add-property type="LD"><program-output program="ferite-config" arguments="--libs" /></add-property>
+		<property type="prefix" value="$(FeriteModuleNativeDir)" />
+	</module>
+
+	<collection id="examples">
+		<property type="prefix" value="$(FeriteExampleDir)/template" />
+		<list type="source">
+			<fileset dir="test" match="\.fe$" />
+			<fileset dir="test" match="\.tpl?$" />
+		</list>
+	</collection>
+
+	<phase id="install" depends="build">
+		<perform action="install" target="template" />
+		<perform action="install" target="examples" />
+		<copy file="template/template.fec" target="$(FeriteModuleSourceDir)" />
+		<copy file="$(ProductDir)/template.xml" target="$(FeriteModuleDescriptionDir)" />
+		<execute program="feritedoc" arguments="--regenerate" />
+	</phase>
 </yard>
