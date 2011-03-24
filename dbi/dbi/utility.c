@@ -30,6 +30,40 @@
 #include "utility.h"
 
 
+DBIData *ferite_dbi_connect_sq3( FeriteScript *script, FeriteString *protocol,
+			     FeriteString *database, FeriteString *dbdir,
+			     int timeout )
+{
+
+    DBIData *dbi = fmalloc( sizeof( DBIData ) );
+    dbi->connected = 0;
+    dbi->conn = NULL;
+    dbi->version = dbi_version( );
+    dbi->result_list = NULL;
+    
+    if( ( dbi->conn = dbi_conn_new( protocol->data ) ) == NULL ) {
+		ferite_error(script, -1, "Failed to activate driver [%s] libdbi version: %s\n",
+					   protocol->data, dbi->version ); 
+					   ffree( dbi );
+					   return NULL;
+    }
+
+    dbi_conn_set_option( dbi->conn, "dbname", database->data );
+    dbi_conn_set_option( dbi->conn, "sqlite3_dbdir", dbdir->data );
+    
+    dbi_conn_set_option_numeric( dbi->conn, "sqlite3_timeout", timeout );
+
+    if ( dbi_conn_connect( dbi->conn ) != 0 ) {
+		const char *error_msg = NULL;
+		dbi_conn_error( dbi->conn, &error_msg );
+		ferite_error( script, 0, "Unable to connect to database: '%s'\n", error_msg );
+		ffree( dbi );
+		return NULL;
+    }
+    dbi->connected = 1;
+    return dbi;
+}
+
 DBIData *ferite_dbi_connect( FeriteScript *script, FeriteString *protocol,
 	                     FeriteString *username, FeriteString *password,
 	                     FeriteString *hostname, int port, 
