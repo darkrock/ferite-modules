@@ -181,20 +181,36 @@ FeriteVariable *ferite_dbi_get_entry( FeriteScript *script, dbi_result result, i
 			
 			attribs = dbi_result_get_field_attribs_idx(result, col);
 			
-			switch( attribs &  ~DBI_INTEGER_UNSIGNED ) {
+			switch( attribs & DBI_INTEGER_SIZEMASK ) {
 				
 				case DBI_INTEGER_SIZE1:
-					longcol = ( attribs & DBI_INTEGER_UNSIGNED ) ? dbi_result_get_uchar( result, name) : dbi_result_get_char( result, name);
+					if( attribs & DBI_INTEGER_UNSIGNED ) {
+						longcol = dbi_result_get_uchar( result, name );
+					} else {
+						longcol = dbi_result_get_char( result, name );
+					}
 					break;
 				case DBI_INTEGER_SIZE2:
-					longcol = ( attribs & DBI_INTEGER_UNSIGNED ) ? dbi_result_get_ushort( result, name) : dbi_result_get_short( result, name);
+					if( attribs & DBI_INTEGER_UNSIGNED ) {
+						longcol = dbi_result_get_ushort( result, name );
+					} else {
+						longcol = dbi_result_get_short( result, name );
+					}
 					break;
 				case DBI_INTEGER_SIZE3:
 				case DBI_INTEGER_SIZE4:
-					longcol = ( attribs & DBI_INTEGER_UNSIGNED ) ? dbi_result_get_uint( result, name) : dbi_result_get_int( result, name);
+					if( attribs & DBI_INTEGER_UNSIGNED ) {
+						longcol = dbi_result_get_ulong( result, name );
+					} else {
+						longcol = dbi_result_get_long( result, name );
+					}
 					break;
 				case DBI_INTEGER_SIZE8:
-					longcol = ( attribs & DBI_INTEGER_UNSIGNED ) ? dbi_result_get_ulonglong( result, name) : dbi_result_get_longlong( result, name);
+					if( attribs & DBI_INTEGER_UNSIGNED ) {
+						longcol = dbi_result_get_ulonglong( result, name );
+					} else {
+						longcol = dbi_result_get_longlong( result, name );
+					}
 					break;
 				default:
 					ferite_error( script, 0, "Unimplemented. Integer type." );
@@ -257,7 +273,7 @@ FeriteVariable *ferite_dbi_get_entry( FeriteScript *script, dbi_result result, i
 	
 		case DBI_TYPE_BINARY:
 			stringcol = (char *) dbi_result_get_binary( result, name);
-			longcol = dbi_result_get_field_length( result, name );
+			longcol = dbi_result_get_field_size( result, name );
 			value = fe_new_str( name, stringcol, longcol, FE_CHARSET_DEFAULT );
 			break;
 			
