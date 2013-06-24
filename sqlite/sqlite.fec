@@ -1,0 +1,50 @@
+uses 'sqlite.lib';
+
+module-header
+{
+	#include <sqlite3.h>
+	#include "utility.h"
+}
+
+class SQLite
+{
+	native constructor() {
+		FE_RETURN_NULL_OBJECT;
+	}
+	native constructor( string filename ) {
+		sqlite3 *database = NULL;
+		int result = sqlite3_open(filename->data, &database);
+		if( result == SQLITE_OK ) {
+			self->odata = database;
+		} else {
+			ferite_error(script, 0, "%s\n", sqlite3_errmsg(database));
+		}
+	}
+
+	native destructor() {
+		if( self->odata ) {
+			sqlite3 *database = self->odata;
+			sqlite3_close(database);
+		}
+	}
+
+	native function exec( string sql ) {
+		sqlite3 *database = self->odata;
+		char *error_message = NULL;
+		int result;
+		FeriteVariable *list = ferite_create_uarray_variable(script, "rows", 1, FE_STATIC);
+		
+		FeriteSQLite data;
+		data.script = script;
+		data.list = list;
+
+		result = sqlite3_exec(database, sql->data, ferite_sqlite_exec_callback, &data, &error_message);
+		if( result != SQLITE_OK ) {
+			ferite_error(script, 0, "%s\n", error_message);
+			sqlite3_free(error_message);
+		}
+
+		FE_RETURN_VAR(list);
+	}
+}
+

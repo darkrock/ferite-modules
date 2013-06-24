@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<yard name="sqlite">
+
+	<property id="name" value="ferite-sqlite" />
+	<property id="version" value="0.1" />
+
+	<module id="sqlite">
+		<property type="C">
+			<program-output program="ferite-config" arguments="--cflags" />
+		</property>
+
+		<property type="LD">
+			<program-output program="ferite-config" arguments="--libs" />
+		</property>
+
+		<add-property type="LD" value="-lsqlite3" />
+
+		<property type="prefix" value="$(FeriteModuleNativeDir)" />        
+
+		<list type="source">
+			<file name="sqlite.fec" />
+			<file name="utility.h" />
+			<file name="utility.c" />
+		</list>
+	</module>
+
+	<phase id="install" depends="build">
+		<perform action="install" target="sqlite" />
+		<copy file="sqlite.fec" target="$(FeriteModuleSourceDir)" />
+		<copy file="$(ProductDir)/sqlite.xml" target="$(FeriteModuleDescriptionDir)" />
+	</phase>
+
+</yard>
+
