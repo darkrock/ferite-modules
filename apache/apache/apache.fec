@@ -98,6 +98,12 @@ class Request
 		ctx->r->content_type = NULL;
 	}
 
+	native function responseCode( number code )
+	{
+		struct apache_ctx *ctx = self->odata;
+		ctx->r->status = (int)code;
+	}
+
 	/**
 	* @function print
 	* @declaration  function print( string s )
