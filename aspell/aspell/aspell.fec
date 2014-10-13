@@ -58,15 +58,15 @@ class Aspell
 	 * @declaration function constructor(string lang)
 	 * @param    string the language to use
 	 */
-	native function constructor(string lang) 
+	native function constructor(string lang, string encoding) 
 	{
 		
 		aspell_rec_t *arec = self->odata = fmalloc( sizeof( aspell_rec_t ));
 		AspellCanHaveError *possible_err;
 		
 		arec->config = new_aspell_config(); 
-		aspell_config_replace( arec->config, "lang",lang->data ); 
-		
+		aspell_config_replace( arec->config, "lang", lang->data ); 
+		aspell_config_replace( arec->config, "encoding", encoding->data);
 		possible_err = new_aspell_speller( arec->config );
 		
 		if ( aspell_error_number( possible_err ) != 0)
@@ -76,9 +76,11 @@ class Aspell
 		
 	}
 
-	function constructor( ) 
-        {
-		self.aspell("sv_SE");
+	function constructor {
+		self("sv_SE");
+	}
+	function constructor( string language ) {
+		self(language, "UTF-8");
 	}
 
 	native function desctructor( ) 
