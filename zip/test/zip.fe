@@ -1,17 +1,23 @@
 uses "console";
 uses "zip";
+uses "filesystem";
 
 
-object z = Zip.open( "/home/cms/test.zip" );
+object z = Zip.open( "test.zip" );
 object e = null;
+object fp;
+object dir;
 
+Directory.make("test",0777);
+fp = File.create("test/"+"image.txt",0777);
 while( e = z.read( ) ) {
 
     Console.println("Filename: " + e.name());
     Console.println("Size: " + e.size());
     Console.println("Compressed Size: " + e.compressedSize());
     Console.println("Compressed Method: " + e.compressionMethod());
-    Console.println("Content: " + e.data());
+    if(e.name() == "test/index.html")
+    	Console.println("Content: " + e.data());
 
 }
 
