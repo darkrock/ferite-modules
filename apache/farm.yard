@@ -37,10 +37,10 @@
         <list type="source">
             <fileset dir="mod_ferite" match="\.[ch]$" />
         </list>
-		<list type="configuration">
-			<file name="mod_ferite/ferite.conf" />
-			<file name="mod_ferite/gdb" />
-		</list>
+        <list type="configuration">
+            <file name="mod_ferite/ferite.conf" />
+            <file name="mod_ferite/gdb" />
+        </list>
     </module>
 
 	<collection id="examples">
@@ -55,8 +55,8 @@
     <phase id="install" depends="build">
         <perform action="install" target="apache" />
         <perform action="install" target="mod_ferite" />
-		<perform action="install" target="examples" />
-		
+        <perform action="install" target="examples" />
+
         <copy file="apache/apache.fec" target="$(FeriteModuleSourceDir)" />
         <copy file="$(ProductDir)/apache.xml" target="$(FeriteModuleDescriptionDir)" />
         <copy file="mod_ferite/ferite.conf" target="$(feriteConfPrefix)" filter="on" />
