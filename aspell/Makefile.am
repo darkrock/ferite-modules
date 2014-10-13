@@ -13,6 +13,4 @@ EXTRA_DIST = INSTALL
 
 install-data-local:
 	@$(NORMAL_INSTALL)
-	if test -z "$DESTDIR"; then \
-		$(prefix)/bin/feritedoc --regenerate ; \
-	fi
+	$(prefix)/bin/feritedoc --regenerate ;
