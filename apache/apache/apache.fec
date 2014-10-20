@@ -40,6 +40,10 @@ module-header
 
 }
 
+namespace Apache {
+	object request;
+}
+
 /**
  * @class Request
  * @brief This class provides an interface to apache. 
@@ -652,7 +656,10 @@ class Request
 	* @return A Request object which can then be used to gleam valuable information.
 	*/
 	static function current() {
-		return new Request();
+		if ( ! Apache.request ) {
+			Apache.request = new Request();
+		}
+		return Apache.request;
 	}
 }
 /**
