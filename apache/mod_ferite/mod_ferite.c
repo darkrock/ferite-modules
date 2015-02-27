@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2002 Christian M. Stamgren, Stephan Engström, Chris Ross
+ * Copyright (C) 2002 Christian M. Stamgren, Stephan EngstrÃ¶m, Chris Ross
  *
  * All rights reserved.
  *
@@ -95,10 +95,10 @@ static int mod_ferite_hook_handler( request_rec *r)
 		if( str != NULL )
 		{
 			script = mod_ferite_new_script( r );
-			mod_ferite_mark_checkpoint( script, "[embfer] Script Created" );
-			mod_ferite_mark_checkpoint( script, "[embfer] Start Compliation" );
+			// mod_ferite_mark_checkpoint( script, "[embfer] Script Created" );
+			// mod_ferite_mark_checkpoint( script, "[embfer] Start Compliation" );
 			script = ferite_compile_string_with_script_and_path( script, str->data, args );
-			mod_ferite_mark_checkpoint( script, "[embfer] End Compliation" );
+			// mod_ferite_mark_checkpoint( script, "[embfer] End Compliation" );
 			
 			ferite_str_destroy( FE_NoScript, str );
 		}
@@ -112,12 +112,12 @@ static int mod_ferite_hook_handler( request_rec *r)
 	if( script == NULL )
 	{
 		script = mod_ferite_new_script( r );
-		mod_ferite_mark_checkpoint( script, "Script Created" );
-		mod_ferite_mark_checkpoint( script, "Start Compliation" );
+		// mod_ferite_mark_checkpoint( script, "Script Created" );
+		// mod_ferite_mark_checkpoint( script, "Start Compliation" );
 		script = ferite_script_compile_with_script_and_path( script, r->filename, args );
-		if( ! ferite_has_compile_error( script ) ) {
-			mod_ferite_mark_checkpoint( script, "End Compliation" );
-		}
+		// if( ! ferite_has_compile_error( script ) ) {
+		// 	mod_ferite_mark_checkpoint( script, "End Compliation" );
+		// }
 	}
 	
 	if( script != NULL )
@@ -128,9 +128,9 @@ static int mod_ferite_hook_handler( request_rec *r)
 		if( ferite_has_compile_error( script ) )
 			return mod_ferite_handle_error( script, r, cfg->debug  );
 		
-		mod_ferite_mark_checkpoint( script, "Creating Global Variables" );
+		// mod_ferite_mark_checkpoint( script, "Creating Global Variables" );
 		mod_ferite_create_global_variables(script, cfg);
-		mod_ferite_mark_checkpoint( script, "Executing Script" );
+		// mod_ferite_mark_checkpoint( script, "Executing Script" );
 		ferite_script_execute( script );
 		
 		if( ferite_has_runtime_error( script ) )
