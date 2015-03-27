@@ -88,6 +88,35 @@ class Dbi
 	 */
 	private string lastQuery;
 
+	/**
+	 * @function constructor
+	 * @declaration function constructor( string type, string username, string password,
+	 *		string hostname, string database )
+	 * @brief	Create a database connection.
+	 * @param	string type
+	 *		   The database driver to use. (e.g. sqlite/sqlite3)
+	 * @param	string database
+	 *		   The database to connect to. (filename)
+	 * @param	string dbdir
+	 *		   The directory path root to resolve database filename.
+	 * @param	int timeout
+	 *		   The sqlite3_timeout option to dbd-sqlite3 (in milliseconds)
+
+	 * @description The constructor will return a null object if the connection to the database fails.
+	 *			  You should check for this in your code.
+	 *			  
+	 */
+
+	native function constructor( string type, string database, string dbdir, number timeout )
+	{
+		self->odata = ferite_dbi_connect_sq3( script, type, database, dbdir, timeout );
+		if( self->odata == NULL )
+			FE_RETURN_NULL_OBJECT;
+		{
+			FeriteVariable *recordQueryMetrics = ferite_object_get_var( script, self, "recordQueryMetrics" );
+			VAB(recordQueryMetrics) = FE_FALSE;
+		}
+	}
 
 	/**
 	 * @function constructor
@@ -182,6 +211,37 @@ class Dbi
 		string hostname, number port, string database )
 	{
 		DBIData *dbi = ferite_dbi_connect( script, type, username, password, hostname, (int)port, database );
+		FeriteClass *cls = NULL;
+		FeriteVariable *obj = NULL;
+		
+		if( dbi == NULL )
+			FE_RETURN_NULL_OBJECT;
+		cls = ferite_find_class( script, script->mainns, "Dbi" );
+		obj = ferite_build_object( script, cls );
+		VAO(obj)->odata = dbi;
+		FE_RETURN_VAR( obj );
+	}
+
+	/**
+	 * @function connect
+	 * @static
+	 * @declaration function connect( string type, string username, string password,
+	 *		string hostname, number port, string database )
+	 * @brief	Static function. connect's a dbi object to a database.
+	 * @return   An object of the class dbi.
+	 * @param	string type
+	 *		   The database driver to use. (e.g. sqlite/sqlite3)
+	 * @param	string database
+	 *		   The database file to connect to.
+	 * @param	string dbdir
+	 *		   The directory root of databases in ("/tmp" is ok, instead
+	 *		   of "/tmp/")
+	 */
+
+	static native function connect( string type, string database, string dbdir,
+		number timeout )
+	{
+		DBIData *dbi = ferite_dbi_connect_sq3( script, type, database, dbdir, (int)timeout );
 		FeriteClass *cls = NULL;
 		FeriteVariable *obj = NULL;
 		

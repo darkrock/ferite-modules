@@ -57,6 +57,9 @@ struct llist
 	struct llist *next;
 };
 
+DBIData        *ferite_dbi_connect_sq3( FeriteScript *script, FeriteString *protocol, 
+	                     FeriteString *database, FeriteString *dbdir,
+			     int timeout );
 DBIData        *ferite_dbi_connect( FeriteScript *script, FeriteString *protocol, 
 	                     FeriteString *username, FeriteString *password, 
 	                     FeriteString *hostname, int port, FeriteString *database );
